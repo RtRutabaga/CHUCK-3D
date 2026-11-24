@@ -176,7 +176,10 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             const bool bPad = IsPad(Target.X, Target.Y);
             if (bPad && Dist < 32.f) { ++R->Next; R->Best = 1e9f; R->LastGain = W->GetTimeSeconds(); R->bJumped = false; return; }
             if (bPad && Dist > 45.f && Dist < 90.f && Chuck->GetCharacterMovement()->IsMovingOnGround() && (IsPad(L.X, L.Y) || !InDeepWater(L.X, L.Y))) Chuck->Jump();
-            if (!bPad && Dist < (bWay ? 130.f : 210.f)) { ++R->Next; R->Best = 1e9f; R->LastGain = W->GetTimeSeconds(); R->bJumped = false; return; }
+            // (2026-11-23) By a root gap on the maze's way, each point is met closely, so he lines up with the hole and crawls
+            // straight through (counted a metre and more short, he cut across at it and stuck on the hedge beside it).
+            bool bByGap = false; for (const FMazeGap& G : MazeGaps()) bByGap |= FVector2D::Distance(FVector2D(Target), G.C) < 400.f;
+            if (!bPad && Dist < (bByGap ? 35.f : bWay ? 130.f : 210.f)) { ++R->Next; R->Best = 1e9f; R->LastGain = W->GetTimeSeconds(); R->bJumped = false; return; }
             if (Dist < R->Best - 30.f) { R->Best = Dist; R->LastGain = W->GetTimeSeconds(); }
             const float Stall = W->GetTimeSeconds() - R->LastGain;
             if (Stall > 2.5f && !R->bJumped) { Chuck->Jump(); R->bJumped = true; }
@@ -505,8 +508,10 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             case 55:   // a statue turns while he looks away
             {
-                const TArray<FVector2D>& De = MazeDeadEnds(); const FVector2D Sq = De.IsValidIndex(3) ? De[3] : FVector2D::ZeroVector;
-                if (!R->bPlaced) { R->Hits0 = AFeyLife::StatueTurns; Put(FVector(Sq, 0.f) + FVector(220.f, 0.f, 0.f), FVector(1, 0, 0)); R->bPlaced = true; R->PhaseStart = Now; return; }
+                // (2026-11-23) the first turning statue on the way through: him in the corridor's middle 2.6 m along, facing away
+                FMazeMark Mk; for (const FMazeMark& M : MazeMarks()) if (M.Kind == 1) { Mk = M; break; }
+                const FVector2D Tn(-Mk.In.Y, Mk.In.X), Sq = Mk.P + Mk.In * 82.f + Tn * 260.f;
+                if (!R->bPlaced) { R->Hits0 = AFeyLife::StatueTurns; Put(FVector(Sq, 0.f), FVector(Tn, 0.f)); R->bPlaced = true; R->PhaseStart = Now; return; }
                 if (Since < 2.f) return;
                 Check(AFeyLife::StatueTurns > R->Hits0, TEXT("statue_turns"));
                 R->bPlaced = false; R->CrackStep = 56; R->PhaseStart = Now; return;
@@ -549,7 +554,7 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             {
                 const int32 Want = Step == 58 ? 3 : Step == 59 ? 0 : Step == 60 || Step == 63 ? 1 : 2;
                 static const TCHAR* Names[] = {TEXT("trellis"), TEXT("hoops"), TEXT("walkway"), TEXT("thorns")};
-                const TArray<FMazeParkour>& Pks = MazeParkour(); int32 Pi = -1; for (int32 I = 0; I < Pks.Num() && Pi < 0; ++I) if (Pks[I].Kind == Want && (Step != 60 || Pks[I].bOffWay) && (Step != 63 || !Pks[I].bOffWay)) Pi = I;
+                const TArray<FMazeParkour>& Pks = MazeParkour(); int32 Pi = -1; for (int32 I = 0; I < Pks.Num() && Pi < 0; ++I) if (Pks[I].Kind == Want && (Want != 1 || (Step == 63) == (Pks[I].NHoop == 3))) Pi = I;
                 if (Pi < 0) { Check(false, *FString::Printf(TEXT("%s_built"), Names[Want])); R->bPlaced = false; R->CrackStep = Step + 1; R->PhaseStart = Now; return; }
                 const FMazeParkour& P = Pks[Pi];
                 FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
@@ -624,13 +629,80 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 const FMazeGap& G = MazeGaps()[0]; const float Yr = FMath::DegreesToRadians(G.Yaw + 90.f); const FVector Th(FMath::Cos(Yr), FMath::Sin(Yr), 0.f), C(G.C, LandZ(Maze, G.C.X, G.C.Y));
                 if (!R->bPlaced) { Put(C - Th * 105.f, Th); R->Hits1 = Chuck->GetCrawls(); R->bShort = false; R->bPlaced = true; R->PhaseStart = Now; return; }
                 const FVector L = FeyLocal(Chuck->GetActorLocation()); const float Through = FVector::DotProduct(L - C, Th);
-                if (R->Frame % 15 == 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_GAP through=%.0f gait=%s"), Through, Chuck->GetGaitName());
+                if (R->Frame % 15 == 0)
+                {
+                    FHitResult Hb; FCollisionQueryParams Qb(SCENE_QUERY_STAT(FeyGapProbe), false, Chuck);
+                    const FVector Fw = Chuck->GetActorLocation();
+                    const bool bHb = Chuck->GetWorld()->LineTraceSingleByChannel(Hb, Fw, Fw + FVector(Th.X, Th.Y, 0.f) * 60.f, ECC_Pawn, Qb);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_GAP through=%.0f gait=%s ahead=%s at=%.0f z=%.0f"), Through, Chuck->GetGaitName(), bHb && Hb.GetComponent() ? *Hb.GetComponent()->GetName() : TEXT("-"), bHb ? Hb.Distance : -1.f, L.Z - C.Z);
+                }
                 if (Chuck->IsCrawling() && !R->bShort) { Shot(TEXT("MazeRootGap")); R->bShort = true; }
                 const FVector Side(-Th.Y, Th.X, 0.f);
                 if (Since < 6.f && Through < 110.f) { Drive(Th + Side * FMath::Clamp(FVector::DotProduct(C - L, Side) / 30.f, -.5f, .5f)); return; }
                 Check(Chuck->GetCrawls() > R->Hits1, TEXT("gap_crawls"));
                 Check(Through > 80.f, TEXT("gap_through"));
                 R->bPlaced = false; R->CrackStep = 63; R->PhaseStart = Now; return;
+            }
+            case 64:   // (2026-11-23) a squeeze: wall jumps from bulge to bulge up to the hedge tops, and the bees knock him back down
+            {
+                if (!MazeSqueezes().Num()) { Check(false, TEXT("squeeze_built")); R->CrackStep = 65; return; }
+                const FMazeMark& Sq = MazeSqueezes()[0]; const FVector C(Sq.P, LandZ(Maze, Sq.P.X, Sq.P.Y)), In(Sq.In, 0.f);
+                const FVector L = FeyLocal(Chuck->GetActorLocation()); const float Up = L.Z - Stand - C.Z;
+                if (!R->bPlaced) { Put(C - In * (SqueezeGap * .5f - 28.f), In); R->PkLastJump = 0.f; R->Hits0 = AFeyLife::BeeKnocks; R->Hits1 = Chuck->GetWallJumps(); R->MinDist = 0.f; R->PkT0 = -1.f; R->bShort = false; R->bPlaced = true; R->PhaseStart = Now; return; }
+                R->MinDist = FMath::Max(R->MinDist, Up);
+                if (R->Frame % (Up > 150.f ? 2 : 15) == 0)
+                {
+                    const FVector V = Chuck->GetVelocity(); const FVector2D Tn(-Sq.In.Y, Sq.In.X);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_SQUEEZE up=%.0f gait=%s wall_jumps=%d knocks=%d across=%.0f along=%.0f v=%.0f,%.0f,%.0f"), Up, Chuck->GetGaitName(), Chuck->GetWallJumps() - R->Hits1, AFeyLife::BeeKnocks - R->Hits0,
+                        FVector2D::DotProduct(FVector2D(L) - Sq.P, Sq.In), FVector2D::DotProduct(FVector2D(L) - Sq.P, Tn), FVector2D::DotProduct(FVector2D(V), Sq.In), FVector2D::DotProduct(FVector2D(V), Tn), V.Z);
+                }
+                if (Since > .4f && !Chuck->IsWallRunning() && Chuck->GetCharacterMovement()->IsMovingOnGround() && Now - R->PkLastJump > 1.2f) { Chuck->SetTestStickWorld(In); Chuck->AddMovementInput(In, 1.f, true); Chuck->JumpPressed(); R->PkLastJump = Now; }
+                // Kick off each wall soon into its run; at the top, on and up. Each kick carries him a little along the slot,
+                // so the stick leans back toward its middle, as a player steers.
+                { const FVector2D Tn(-Sq.In.Y, Sq.In.X); const float Al = FVector2D::DotProduct(FVector2D(L) - Sq.P, Tn); if (Since > .5f) Chuck->SetTestStickWorld((In - FVector(Tn, 0.f) * FMath::Clamp(Al / 50.f, -1.f, 1.f)).GetSafeNormal()); }
+                const bool bWall = Chuck->IsWallRunning();
+                if (bWall && R->PkT0 < 0.f) R->PkT0 = Now;
+                if (!bWall) R->PkT0 = -1.f;
+                if (bWall && R->PkT0 > 0.f && Now - R->PkT0 > .12f) { Chuck->JumpPressed(); R->PkT0 = -1.f; }
+                // (in a kick's flight, jump held ready: the next wall is kicked off as soon as it is caught, as a quick player does)
+
+                if (Chuck->IsHanging()) Chuck->JumpPressed();
+                if (Up > 600.f && !R->bShort) { Shot(TEXT("MazeSqueeze")); R->bShort = true; }
+                if (Since < 25.f && AFeyLife::BeeKnocks == R->Hits0) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_SQUEEZE_END top=%.0f wall_jumps=%d knocks=%d"), R->MinDist, Chuck->GetWallJumps() - R->Hits1, AFeyLife::BeeKnocks - R->Hits0);
+                Check(R->MinDist > 650.f, TEXT("squeeze_climbs"));
+                Check(AFeyLife::BeeKnocks > R->Hits0, TEXT("squeeze_bees_knock"));
+                R->bPlaced = false; R->CrackStep = 65; R->PhaseStart = Now; return;
+            }
+            case 65:   // (2026-11-23) stills of the second round's things: a smiling head, a satyr, a frowning head, a lantern, low fog
+            {
+                // Each seen from along its corridor (they are 2.6 m wide): In toward the corridor's middle, Over cm out that way.
+                struct FView { const TCHAR* Name; FVector2D P, In; float Over, Along, Up, AimUp; };
+                TArray<FView> Views; int32 Smiles = 0;
+                for (const FMazeMark& Mk : MazeMarks()) if (Mk.Kind == 0)
+                {
+                    const int32 K = Smiles++;
+                    if (K == 0) Views.Add({TEXT("MazeSmile"), Mk.P, Mk.In, 160.f, 90.f, 150.f, 155.f});
+                    if (K == 1) Views.Add({TEXT("MazeSatyr"), Mk.P, Mk.In, 150.f, 260.f, 130.f, 120.f});
+                }
+                if (MazeFrowns().Num())
+                {
+                    const FVector4& F = MazeFrowns()[0]; Views.Add({TEXT("MazeFrown"), FVector2D(F.X, F.Y), FVector2D(F.Z, F.W), 120.f, 0.f, 135.f, 155.f});
+                    Views.Add({TEXT("MazeFrownWide"), FVector2D(F.X, F.Y), FVector2D(F.Z, F.W), 330.f, 0.f, 260.f, 100.f});
+                    if (Since < .05f) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_FROWN at=%.0f,%.0f face=%.2f,%.2f"), F.X, F.Y, F.Z, F.W);
+                }
+                for (const FVector4& Dc : MazeDecor()) if (int32(Dc.W) == 0) { Views.Add({TEXT("MazeLantern"), FVector2D(Dc.X, Dc.Y), FVector2D(FMath::Cos(Dc.Z), FMath::Sin(Dc.Z)), 160.f, 380.f, 110.f, 180.f}); break; }
+                for (const FVector4& Dc : MazeDecor()) if (int32(Dc.W) == 4) { Views.Add({TEXT("MazeFog"), FVector2D(Dc.X, Dc.Y), FVector2D::ZeroVector, 0.f, 700.f, 70.f, 20.f}); break; }
+                const int32 Vi = int32(Since / 1.6f);
+                if (Vi >= Views.Num()) { Uncam(); R->CrackStep = 66; R->PhaseStart = Now; return; }
+                FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+                const FView& V = Views[Vi]; const float Z = LandZ(Maze, V.P.X, V.P.Y);
+                const FVector2D Rad = (V.P - Hub).GetSafeNormal(), Tn(-Rad.Y, Rad.X);
+                const FVector2D E2 = V.P + V.In * V.Over + Tn * V.Along;
+                Cam(FVector(E2, Z + V.Up), FVector(V.P, Z + V.AimUp));
+                const float Ph = Since - Vi * 1.6f;
+                if (Ph > .8f && Ph < .8f + FApp::GetDeltaTime() * 1.5f) Shot(V.Name);
+                return;
             }
             default:
                 if (Since < 1.f) return;

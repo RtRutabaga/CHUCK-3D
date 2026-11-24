@@ -6,6 +6,12 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Feywild: the start's narrow cut, the maze laid from its way, marble satyrs (November 23, Claude):**
+  - The cut beside the arrival: no blue streaks down its walls, and no floating petals.
+  - The maze laid from its way through: all hazards, parkour, crawl gaps and smiling marble satyrs are on the way. Frowning satyrs (the same public-domain scan, re-carved) are in the dead ends.
+  - A squeeze to chimney-jump to the hedge tops, where the bees knock him down.
+  - Dim blue lanterns, low fog patches, urns, benches and plants throughout. See [regions/FEYWILD.md](regions/FEYWILD.md#the-starts-narrow-cut-and-the-mazes-third-round-2026-11-23).
+  - Editor: `=life` 0 failures; route 0 failures, 0 stuck. Package verified 50/50, 182 passes; promoted as FeywildMaze3. Not played by hand.
 - **Feywild: parkour on the way through, walkway timber, modelled bees (November 23, Claude):**
   - Three ivy hoops over thorns on the maze's way through itself.
   - The raised walkways in weathered timber (`M_FeyPlank`), with board steps.

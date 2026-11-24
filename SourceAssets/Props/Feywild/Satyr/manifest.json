@@ -1,0 +1,43 @@
+{
+    "scan":  "SMK plaster casts, Public Domain Mark 1.0: KAS460 Medici Faun (dancing satyr), KAS350 Silenus with the infant Dionysus, KAS208 Barberini Faun (https://open.smk.dk/artwork/image/KAS460 etc.)",
+    "marble":  "Poly Haven marble_01, CC0-1.0 (https://polyhaven.com/a/marble_01)",
+    "downloaded":  "2026-11-23 (Claude, at the user\u0027s request)",
+    "files":  [
+                  {
+                      "file":  "KAS460_small.stl",
+                      "source":  "https://api.smk.dk/api/v1/download-3d/44558j590_KAS460_small.stl",
+                      "bytes":  20000884,
+                      "sha256":  "fc89e4c4d1c079c4f3248cb5e91e2dc5967214908efd14bd4b3e67c91d441124"
+                  },
+                  {
+                      "file":  "KAS350_small.stl",
+                      "source":  "https://api.smk.dk/api/v1/download-3d/cn69m904m_KAS350_small.stl",
+                      "bytes":  786675,
+                      "sha256":  "075d58f1b9d5f3e569a77cb6e7c978ee5c4867a288dc3015f7d62213346de5d3"
+                  },
+                  {
+                      "file":  "KAS208_small.stl",
+                      "source":  "https://api.smk.dk/api/v1/download-3d/8w32rb332_KAS208_small.stl",
+                      "bytes":  20005084,
+                      "sha256":  "b424afd7f8d9f44930ca2e9ebd301be6025779c82a597895a39b987c2526e05e"
+                  },
+                  {
+                      "file":  "marble_01_diff_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/marble_01/marble_01_diff_2k.jpg",
+                      "bytes":  1269188,
+                      "sha256":  "d403786171716f86718bdd67eba923d4fb6125c0636bacef0e6a21dd5d623a48"
+                  },
+                  {
+                      "file":  "marble_01_nor_dx_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/marble_01/marble_01_nor_dx_2k.jpg",
+                      "bytes":  380229,
+                      "sha256":  "d4a48b1e08207295b1b34f89ee38fd137d4cccf10b9e8c9073654bfb2532370a"
+                  },
+                  {
+                      "file":  "marble_01_rough_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/marble_01/marble_01_rough_2k.jpg",
+                      "bytes":  281388,
+                      "sha256":  "1b970e033856c93ee7390d947da5340e101b489fc8c1463354ea9e6655ce039a"
+                  }
+              ]
+}

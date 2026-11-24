@@ -339,6 +339,42 @@ The user: "Do the parkour and thorn hazards". Built in `FeyMap` (where they go, 
   - The bees are drawn in fresh geometry every frame they show (up to 56).
   - Nothing has been played by hand.
 
+## The start's narrow cut, and the maze's third round (2026-11-23)
+
+The user: the gaps through the rock and the floating petals in the first canyon after the start; hazards and unusual things only on the way he must take through the maze (follow them and you get through), with frowning statues in the dead ends and smiling ones on the way, real satyrs rather than cartoon heads, some detailed marble satyrs, the Deepwood's blue lamps (dimmer), low fog in parts, more decor, and spots narrow enough to wall-jump to the hedge tops (and be knocked off by the bees). The Cloud Staircase needs no more testing: it will become an escalator cutscene.
+
+- **The narrow cut behind the arrival** (not a threshold: the path pressed 6 m into the rise west of the pond, in the look slice and on into the Riverbank).
+  - The "gaps" were long dark-blue streaks down its walls. The path's wet sheen (vertex colour) ran up the steep wall triangles and mirrored the sky. Dampness and path colour are now off on steep faces, in the slice and the districts.
+  - Plants and petals were placed on and beside the walls, where the true ground and the mesh part most. Nothing is now planted on ground steeper than 45 degrees, or within 80 cm of it. So the petals lie on the floor.
+  - The Riverbank's land was 123 cm cells, too coarse for the cut's walls (they smeared, and its grid met the slice's at a seam). It is 41 cm there now, and the slice's land runs a metre under it.
+  - Stills: `Local/shots/feywild-startcut/` (`Tools/shots/feywild-startcut.txt`).
+- **The maze is laid out from its way.** The way through is laid first: straight runs along every other ring (2 to 4 cells), then a turn inward. The rest grows from it with no loops, so it stays the only way through (458 m, was 195 m).
+  - **On the way only:** all the parkour over thorns (on each run, sized to the run between the opening it comes in by and the one it leaves by: 3 trellises, 3 five-hoop runs, 2 walkways, 3 three-hoop runs, 2 short beds) and three root gaps you must crawl through (the redcaps cannot follow, and none is near them).
+  - Also on the way only: the smiling satyrs, the statues that turn, the thorn mites, cigarettes, and a squeeze.
+  - The hit plants' shortcuts all come out on the way.
+- **Statues.**
+  - Along the way: marble satyrs on plinths at every smiling mark (17), SMK's public-domain scan of the Medici Faun, laughing as carved. Two more flank the heart's arch.
+  - In about twenty dead ends: the same faun re-carved to a scowl (`Tools/build_fey_satyr.py`: mouth corners down, lips pressed, brows drawn down and together). Each is set back from the dead end's way in and faces it.
+  - Sources and licences: `Tools/Fetch-FeySatyr.ps1`. The scan is under the Public Domain Mark; the marble is Poly Haven marble_01, CC0.
+  - `Tools/import_fey_satyr.py` makes `SM_FeySatyr`, `SM_FeySatyrFrown` and `M_FeyMarble`. The material is projected from three sides (the scan has no UVs), with a little grime and moss low down.
+- **Squeezes.** On the way, the hedges bulge in to leave a slot 80 cm wide and 3.6 m long for the hedges' full height, with flat faces to run on. He chimney-jumps to the top (8.5 m in 17 kicks in the test), and the bees knock him down.
+- **Decor, spread evenly over the whole maze:**
+  - 285 of the Deepwood's blue lanterns on crooked posts at the hedges' feet. Every fourth is lit, 20 cd within 9.5 m (the Deepwood's are 70 cd), 64 lights at most.
+  - Ferns, glowing caps, foxgloves and celandine at the hedges' feet.
+  - Stone urns of flowers, stone benches, and fallen petals.
+  - 39 patches of low fog: veils lying 20 to 40 cm over the floor, shown when near.
+- **Checked:** `=life` from step 50 in the editor, 0 failures (`Local/feymaze-18.log`; marks 17, gaps 3, shortcuts 3, squeezes 1). Route walk 0 failures, 0 stuck, worst threshold frame 53.1 ms, maze build parts at most 9.2 ms (`Local/feymaze-route4.log`). Package verified 50/50, 182 passes (`Local/verify-package-20261123-195342.log`), promoted as FeywildMaze3. New steps: 63 (three hoops on the way), 64 (the squeeze climbed and the bees knock), 65 (stills).
+  - The thorns, trellis, hoops, walkway and root gap are now all on the way, and all pass.
+  - Stills: `Life_MazeSmile`, `Life_MazeSatyr`, `Life_MazeFrown`, `Life_MazeLantern`, `Life_MazeFog`, `Life_MazeSqueeze`, with review renders of both faces in `SourceAssets/Props/Feywild/Satyr/`.
+- **Known flaws:**
+  - The scowl has small creases at the mouth's corners. From his height (the faun's head is 1.8 m up, looking down) smile and frown read mostly by the mouth's line, at a few metres.
+  - The satyr is one pose, repeated.
+  - Under the maze's blue lanterns and shade the marble reads dark blue-grey, not white.
+  - Only one squeeze is built (the way's runs leave room for one).
+  - The way is more than twice as long as before.
+  - The route walker needed straight points through each crawl hole (a player lines up by eye).
+  - Nothing has been played by hand.
+
 ## The wonder pass (planned 2026-11-22)
 
 The user's request: more immersive and visually stunning elements distinct to each district, and more movement for whimsy. To be built alongside stages 5 to 8, district by district, each piece judged in stills against the goal images. Not built yet.

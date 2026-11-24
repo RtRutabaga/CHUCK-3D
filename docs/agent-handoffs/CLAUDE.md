@@ -2,6 +2,70 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 23 — Feywild: the start's narrow cut, the maze laid from its way, marble satyrs, squeeze, decor (Claude)
+
+- **Asked:**
+  - Fix the gaps through the rock and the floating petals in the first narrow canyon after the start. This turned out to be the cut through the rise beside the arrival, not threshold 0.
+  - Put hazards and unusual things only on the way through the maze.
+  - Frowning statues in dead ends and smiling ones on the way, as real satyrs (some detailed marble). Downloading free resources was allowed.
+  - Dimmer Deepwood lamps scattered through, low fog in parts, more decor.
+  - Spots narrow enough to wall-jump to the top and be knocked down by the bees.
+  - Not much testing of the Cloud Staircase (it will become a cutscene).
+- **Source:** `main` at dcaca93a; this commit. The package was built from the working tree on dcaca93, so its receipt names dcaca93.
+- **Changed:**
+  - `FeywildSetting.cpp`:
+    - No damp sheen or path colour on steep faces.
+    - Nothing is planted on ground steeper than 45° or within 80 cm of it. The RNG order is kept.
+    - The land runs a metre under the Riverbank.
+  - `FeyMap.cpp/.h`:
+    - The Riverbank's land is 41 cm cells near the slice. `Put` has the same steepness check.
+    - The maze is laid route-first (runs on alternate rings, then inward; no loops).
+    - All parkour, three crawl gaps, the marks (smiling satyrs, turning statues, mites, cigarettes) and the squeeze are on the way. Shortcuts come out on it.
+    - Frowning satyrs in about 20 dead ends.
+    - Spread evenly: 285 lanterns (every fourth lit, 20 cd), plants, urns, benches, petals and 39 low fog patches.
+    - The maze's veils are switched with the Deepwood's (`VeilsOf`).
+  - `FeyLife.cpp`: statues, mites and cigarettes from `MazeMarks()`.
+  - `FeyMapTest.cpp`:
+    - Steps 55 and 60 to 63 adapted to the way.
+    - Step 64: squeeze climb and bee knock.
+    - Step 65: stills.
+    - The route walker comes close at gaps.
+  - New tools:
+    - `Tools/Fetch-FeySatyr.ps1`: SMK KAS460, KAS350 and KAS208 STLs (Public Domain Mark); Poly Haven marble_01 2K (CC0). The STLs are not in Git.
+    - `Tools/build_fey_satyr.py`: Blender 4.5.14 makes the laughing and scowling meshes (70k tris, 141.5 cm).
+    - `Tools/import_fey_satyr.py`: `M_FeyMarble`, both meshes, 4 LODs.
+  - Assets and shot lists:
+    - `Content/Art/Feywild/Satyr/`.
+    - `SourceAssets/Props/Feywild/Satyr/` (FBX, review renders, manifest).
+    - `Tools/shots/feywild-startcut.txt` (and canyon1/start lists from the wrong first look).
+  - `docs/regions/FEYWILD.md`: the third-round section.
+- **Tested:**
+  - `=life` from step 50 (`Local/feymaze-18.log`): 0 failures.
+    - Marks 17, gaps 3, shortcuts 3, squeezes 1.
+    - Squeeze: 849 cm reached in 17 wall jumps; 1 bee knock.
+  - Route (`Local/feymaze-route4.log`): 0 failures, 0 stuck.
+    - Maze way 460 m (was 195 m).
+    - Worst threshold frame 53.1 ms; maze build parts at most 9.2 ms.
+    - The satyr import overlapped an earlier route run, which was discarded.
+  - Start-cut stills (`Local/shots/feywild-startcut/`): no streaks, petals on the floor.
+  - Satyr stills looked at: both face their way in.
+- **Package:** `FeyMaze3Candidate` verified: `CHUCK_VERIFY_SUMMARY steps=50 failed=0 retried=0 partial=0`, `CHUCK_PACKAGE_VERIFIED passes=182 log=Local/verify-package-20261123-195342.log`.
+- **Not tested:**
+  - By hand.
+  - Other squeezes (only one fits).
+  - The hit-plant shortcuts walked.
+  - The fog's cost on a slow machine.
+- **Remaining flaws:**
+  - The scowl has small creases at the mouth corners. Smile and frown read only within a few metres (the head is 1.8 m up).
+  - The satyr is one pose.
+  - The marble reads dark blue-grey under the maze's light.
+  - The way is more than twice as long.
+  - The walker needs straight points through gaps.
+- **Contract compatibility:** unchanged. Chuck's rig, scale, moves and controls are as they were; the squeeze uses the existing chimney wall jump.
+- **Launcher:** promoted as FeywildMaze3 (`CHUCK_PROMOTED FeywildMaze3 previous=Windows-Previous-20261123-FeywildMaze3 kept=2`). The candidate folder was removed.
+
+Next part of the work can be done here (more satyr poses, brighter marble under the lanterns, or the tower once it is planned; the tower needs the user's plan first).
+
 ## November 23 — Feywild: parkour on the way through, walkway timber, modelled bees (Claude)
 
 - **Asked:** "proceed" (after the parkour entry below, whose next-owner line offered modelled bees, a parkour piece on the way through and the walkway's material).

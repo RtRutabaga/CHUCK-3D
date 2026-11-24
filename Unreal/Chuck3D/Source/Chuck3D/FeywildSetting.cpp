@@ -506,17 +506,20 @@ void AFeywildSetting::BuildLand()
     auto Mat = [](const TCHAR* Path) { return LoadObject<UMaterialInterface>(nullptr, Path); };
     // The land: a grid over the slice and well beyond it, so the bounds never show an edge.
     {
-        FFeySurf L; constexpr float X0 = -4200, X1 = 8600, Y0 = -5600, Y1 = 5600, Step = 44; const int32 Nx = FMath::CeilToInt((X1 - X0) / Step), Ny = FMath::CeilToInt((Y1 - Y0) / Step);
+        // (2026-11-23, the user: gaps through the rock of the narrow cut behind the arrival) It runs a metre on under the
+        // Riverbank district's land, 2 cm lower there, so where the two grids meet on the cut's walls nothing opens between them.
+        FFeySurf L; constexpr float X0 = -4300, X1 = 8600, Y0 = -5600, Y1 = 5600, Step = 44; const int32 Nx = FMath::CeilToInt((X1 - X0) / Step), Ny = FMath::CeilToInt((Y1 - Y0) / Step);
         L.V.Reserve((Nx + 1) * (Ny + 1));
         for (int32 I = 0; I <= Nx; ++I)
             for (int32 J = 0; J <= Ny; ++J)
             {
-                const float X = X0 + I * Step, Y = Y0 + J * Step, H = Ground(X, Y), E = 30.f;
+                const float X = X0 + I * Step, Y = Y0 + J * Step, H = Ground(X, Y) - (X < -4200.f ? 2.f : 0.f), E = 30.f;
                 const FVector Nn = FVector(Ground(X - E, Y) - Ground(X + E, Y), Ground(X, Y - E) - Ground(X, Y + E), 2 * E).GetSafeNormal();
                 const float Pk = PathK(X, Y), Pe = PondE(X, Y);
-                const float Damp = FMath::Max(Smooth(1.45f, 1.02f, Pe), Pk * .55f);
+                // (2026-11-23) Never damp on a steep face: the path's wet sheen ran up the narrow cut's walls in long blue streaks.
+                const float Damp = FMath::Max(Smooth(1.45f, 1.02f, Pe), Pk * .55f) * Smooth(.55f, .85f, Nn.Z);
                 const float Moss = FMath::Clamp(.8f - Pk * 1.3f + .5f * Noise(X, Y, 500, 21), 0.f, 1.f) * FMath::Lerp(.35f, 1.f, Nn.Z * Nn.Z);
-                L.Vert(FVector(X, Y, H), Nn, FVector2D(X, Y) / 300.f, FLinearColor(Pk, Moss, Damp, 1).ToFColor(false));
+                L.Vert(FVector(X, Y, H), Nn, FVector2D(X, Y) / 300.f, FLinearColor(Pk * Smooth(.55f, .85f, Nn.Z), Moss, Damp, 1).ToFColor(false));
             }
         for (int32 I = 0; I < Nx; ++I) for (int32 J = 0; J < Ny; ++J) { const int32 A = I * (Ny + 1) + J, B = A + Ny + 1; L.Quad(A, A + 1, B + 1, B); }
         Emit(TEXT("FeyLand"), L, Mat(TEXT("/Game/Art/Feywild/M_FeyGround.M_FeyGround")), true, true);
@@ -686,7 +689,14 @@ void AFeywildSetting::BuildPlanting()
     auto Path = [&Dir](const TCHAR* Name) { return Dir + Name + TEXT(".") + Name; };
     auto Place = [&](UHierarchicalInstancedStaticMeshComponent* H, float X, float Y, float Scale, float Yaw, float Sink = 0.f, float Tilt = 0.f)
     {
-        H->AddInstance(FTransform(FRotator(R.FRandRange(-Tilt, Tilt), Yaw, R.FRandRange(-Tilt, Tilt)), FVector(X, Y, Ground(X, Y) - Sink), FVector(Scale)));
+        const FRotator Rot(R.FRandRange(-Tilt, Tilt), Yaw, R.FRandRange(-Tilt, Tilt));
+        // (2026-11-23) Nothing on ground steeper than 45 degrees: grass on the cut's walls stood out of the rock as dark
+        // blades, petals hung off them (the mesh's grid and the true ground part most on a wall).
+        // (and none beside such ground: tall grass rooted at a wall's foot leant up into the rock)
+        const float E = 25.f;
+        for (const FVector2D& O : {FVector2D(0, 0), FVector2D(80, 0), FVector2D(-80, 0), FVector2D(0, 80), FVector2D(0, -80)})
+            if (FVector2D(Ground(X + O.X + E, Y + O.Y) - Ground(X + O.X - E, Y + O.Y), Ground(X + O.X, Y + O.Y + E) - Ground(X + O.X, Y + O.Y - E)).Size() / (2 * E) > 1.f) return;
+        H->AddInstance(FTransform(Rot, FVector(X, Y, Ground(X, Y) - Sink), FVector(Scale)));
         ++Planted;
     };
     // Where something may grow: on land, off the path by Clear cm, away from where he arrives.

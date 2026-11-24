@@ -1,0 +1,14 @@
+# The first canyon's east mouth (Riverbank side) from above and inside (2026-11-23: see-through gaps, a stray sheet, raised slab).
+at FeyRiverbankWest
+origin feywild
+wait 10
+fov 70
+shot m_above -23000 2200 2600   -24300 0 200
+shot m_above2 -23000 -2200 2600   -24300 0 200
+shot m_top -24200 0 4200   -24400 0 0
+shot m_up -24150 -100 120   -24600 400 900
+shot m_upr -24150 100 120   -24600 -400 900
+shot m_wl -24300 -300 120   -24200 300 300
+shot m_wr -24300 300 120   -24200 -300 300
+shot m_out -25000 0 1500   -23000 0 300
+shot m_far -26500 3000 3500   -24000 0 0

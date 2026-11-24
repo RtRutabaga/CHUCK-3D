@@ -278,7 +278,8 @@ namespace
     struct FHedge { FVector C, H; float Yaw; int32 Kind; int32 Sc = -1; };   // 0 hedge, 1 stone (arch, statue); Sc: a shortcut's (FeyLife builds it)
     constexpr float MazeR0 = 1800.f, MazePitch = 380.f, MazeRmax = 13000.f, HedgeHalf = 60.f, HedgeTall = 840.f, MazeGap = 300.f;
     struct FMazeData { TArray<FHedge> Hedges; TArray<FVector2D> Route; TArray<FVector2D> DeadEnds; int32 Cells = 0; float Gate = 0, HeartA = 0;
-                       TArray<FeyMap::FMazeShortcut> Shortcuts; TArray<FVector> Lanes; TArray<FeyMap::FMazeParkour> Parkour; TArray<FeyMap::FMazeGap> Gaps; };   // (2026-11-22) Lanes: straight runs (X, Y of its start; Z its angle) for orchids
+                       TArray<FeyMap::FMazeShortcut> Shortcuts; TArray<FVector> Lanes; TArray<FeyMap::FMazeParkour> Parkour; TArray<FeyMap::FMazeGap> Gaps;
+                       TArray<FeyMap::FMazeMark> Marks, Squeezes; TArray<FVector4> Decor; TArray<FVector4> Frowns; };   // (Frowns: dead-end statues X, Y, facing X, Y)   // (2026-11-23: Decor X, Y, the angle toward the corridor's middle, its kind)   // (2026-11-22) Lanes: straight runs (X, Y of its start; Z its angle) for orchids
     const FMazeData& MazeData()
     {
         static FMazeData S = []()
@@ -305,7 +306,40 @@ namespace
                 }
             TSet<uint64> Links; auto Key = [](int32 A, int32 B) { return (uint64(FMath::Min(A, B)) << 32) | uint32(FMath::Max(A, B)); };
             const int32 Gate = Id(Rings - 1, 0); TArray<bool> In; In.Init(false, Total); In[Gate] = true;
-            TArray<TPair<int32, int32>> Front; for (int32 B : Adj[Gate]) Front.Add({Gate, B});
+            // (2026-11-23, second round; the user: hazards only on the way he must take) The way through is laid out first, in
+            // straight runs along the rings between turns inward, so the parkour has room on it; the rest of the maze grows out
+            // from it, with no loops, so it stays the one way through.
+            TArray<int32> Laid; Laid.Add(Gate);
+            {
+                const int32 Lens[] = {3, 2, 4, 2, 3, 2, 4, 2, 3, 2, 4, 2, 3, 2};
+                int32 C = Gate, Run = 0; float Dir = 1.f;
+                for (int32 I = Rings - 1; ; )
+                {
+                    if (I < Rings - 1 && (Rings - 1 - I) % 2 == 1)   // a straight run along every other ring
+                    {
+                        const int32 Len = Lens[Run++ % UE_ARRAY_COUNT(Lens)];
+                        for (int32 K = 0; K < Len; ++K) { C = Id(I, C - Base[I] + int32(Dir)); Laid.Add(C); In[C] = true; }
+                        Dir = -Dir;
+                    }
+                    if (I == 0) break;
+                    // Inward: from here if this cell opens inward, else along to the nearest one that does (either way, not over
+                    // the way already laid); and of the cells inward, one that opens on inward again if there is one.
+                    auto Inward = [&](int32 X) { int32 Nb = 0; for (const int32 B : Adj[X]) Nb += Ring(B) == Ring(X) - 1; return Nb > 0 || Ring(X) == 0; };
+                    if (!Inward(C))
+                    {
+                        int32 BestK = 1 << 20, BestD = 1;
+                        for (const int32 Dd : {1, -1})
+                            for (int32 K = 1; K < N[I] && K < BestK; ++K) { const int32 X = Id(I, C - Base[I] + Dd * K); if (In[X]) break; if (Inward(X)) { BestK = K; BestD = Dd; break; } }
+                        check(BestK < (1 << 20));
+                        for (int32 K = 0; K < BestK; ++K) { C = Id(I, C - Base[I] + BestD); Laid.Add(C); In[C] = true; }
+                    }
+                    TArray<int32> Down, Good; for (const int32 B : Adj[C]) if (Ring(B) == I - 1) { Down.Add(B); if (Inward(B)) Good.Add(B); }
+                    const TArray<int32>& Pool = Good.Num() ? Good : Down;
+                    C = Pool[R.RandRange(0, Pool.Num() - 1)]; --I; Laid.Add(C); In[C] = true;
+                }
+            }
+            TArray<TPair<int32, int32>> Front;
+            for (int32 K = 0; K < Laid.Num(); ++K) { if (K > 0) Links.Add(Key(Laid[K - 1], Laid[K])); for (int32 B : Adj[Laid[K]]) if (!In[B]) Front.Add({Laid[K], B}); }
             while (Front.Num())
             {
                 const int32 K = R.RandRange(0, Front.Num() - 1); const TPair<int32, int32> E = Front[K]; Front.RemoveAtSwap(K);
@@ -313,13 +347,13 @@ namespace
                 In[E.Value] = true; Links.Add(Key(E.Key, E.Value));
                 for (int32 B : Adj[E.Value]) if (!In[B]) Front.Add({E.Value, B});
             }
-            for (int32 C = 0; C < Total; ++C) for (int32 B : Adj[C]) if (B > C && R.FRand() < .035f) Links.Add(Key(C, B));   // (loops)
-            const int32 Heart = Id(0, R.RandRange(0, N[0] - 1));
+            const int32 Heart = Laid.Last();
             // The shortest way from the gate to the heart.
             TArray<int32> From; From.Init(-1, Total); TArray<int32> Q; Q.Add(Gate); From[Gate] = Gate;
             for (int32 H = 0; H < Q.Num(); ++H) for (int32 B : Adj[Q[H]]) if (From[B] < 0 && Links.Contains(Key(Q[H], B))) { From[B] = Q[H]; Q.Add(B); }
             TArray<int32> Way; for (int32 C = Heart; ; C = From[C]) { Way.Insert(C, 0); if (C == Gate) break; }
             auto Mid = [&](int32 C) { const int32 I = Ring(C); return MazeAt(MazeR0 + (I + .5f) * MazePitch, (A0(C) + A1(C)) * .5f); };
+            const TSet<int32> WaySet(Way); TSet<int32> ParkCells;
             Out.Gate = (A0(Gate) + A1(Gate)) * .5f;
             Out.Route.Add(MazeAt(MazeRmax + 700.f, Out.Gate));
             for (int32 W = 0; W < Way.Num(); ++W)
@@ -341,151 +375,127 @@ namespace
             struct FCand { int32 C, B, Gain; };
             TArray<FCand> Cands;
             for (int32 C = 0; C < Total; ++C) for (int32 B : Adj[C]) if (B > C && !Links.Contains(Key(C, B)) && Dist[C] >= 0 && Dist[B] >= 0 && Ring(C) > 1 && Ring(B) > 1)
-            { const int32 G = FMath::Abs(Dist[C] - Dist[B]) - 1; if (G >= 14) Cands.Add({Dist[C] > Dist[B] ? C : B, Dist[C] > Dist[B] ? B : C, G}); }
+            { const int32 G = FMath::Abs(Dist[C] - Dist[B]) - 1; if (G >= 6) Cands.Add({Dist[C] > Dist[B] ? C : B, Dist[C] > Dist[B] ? B : C, G}); }
             Cands.Sort([](const FCand& X, const FCand& Y) { return X.Gain > Y.Gain; });
             TMap<uint64, int32> ScOf;
             for (const FCand& Cd : Cands)
             {
                 if (Out.Shortcuts.Num() >= 12) break;
+                if (!WaySet.Contains(Cd.B)) continue;   // (2026-11-23: through one he comes out on the way through)
                 const FVector2D M = (Mid(Cd.C) + Mid(Cd.B)) * .5f; bool bNear = false;
                 for (const FeyMap::FMazeShortcut& O : Out.Shortcuts) bNear |= FVector2D::Distance(O.Mid, M) < 2600.f;
                 if (bNear) continue;
                 FeyMap::FMazeShortcut Sc; Sc.Mid = M; Sc.Gain = Cd.Gain; Sc.Plant = FMath::Lerp(M, Mid(Cd.C), .45f); ScOf.Add(Key(Cd.C, Cd.B), Out.Shortcuts.Num()); Out.Shortcuts.Add(Sc);
             }
-            // Straight runs along the way through (orchids' lanes): three linked cells on one ring, on the way.
             TSet<int32> LaneCells;
-            for (int32 W = 2; W < Way.Num() && Out.Lanes.Num() < 3; W += 7)
-                if (Ring(Way[W]) == Ring(Way[W - 1]) && Ring(Way[W]) == Ring(Way[W - 2]) && Ring(Way[W]) > 6)
-                { const FVector2D A = Mid(Way[W - 2]), B = Mid(Way[W]); Out.Lanes.Add(FVector(A.X, A.Y, FMath::Atan2(B.Y - A.Y, B.X - A.X))); for (int32 K = W - 2; K <= W; ++K) LaneCells.Add(Way[K]); }
             // (2026-11-23, the plan: wall runs along trellised sections, brachiation under ivy arches, climbs to raised walkways,
-            // Chuck-sized gaps through the roots; thorn hazards) Runs of the way along one ring get a bed of thorns across them
-            // and a way over it: a trellis, ivy hoops, a walkway, or (short ones) a jump. Not by the orchids' lanes, the redcaps
-            // at the middle of the way, near the gate or the heart, nor in a cell beside a shortcut.
+            // Chuck-sized gaps through the roots; thorn hazards. Second round, the user: hazards and unusual things only on the
+            // way he must take, so that one way to solve the maze is to keep heading toward them.) Each run of the way along one
+            // ring, from the opening it comes in by to the one it leaves by, gets the way over thorns that fits between them, the
+            // kinds taken in turn (a walkway, ivy hoops, a trellis, three hoops, a short bed to jump). Not by the orchids' lanes or
+            // the redcaps at the middle of the way.
             {
-                TSet<int32> NearSc; for (const TPair<uint64, int32>& Sp : ScOf) { NearSc.Add(int32(Sp.Key >> 32)); NearSc.Add(int32(Sp.Key & 0xffffffffu)); }
                 const FVector2D Middle = Out.Route[FMath::Min((Out.Route.Num() + 2) / 2, Out.Route.Num() - 1)];
-                const float Spans[4] = {600.f, 640.f, 800.f, 240.f}, Beds[4][2] = {{-90.f, 90.f}, {-225.f, 225.f}, {-360.f, 220.f}, {-60.f, 60.f}};
-                const int32 Wanted[4] = {2, 2, 2, 3}; int32 Have[4] = {0, 0, 0, 0}, Next = 0, ShortHoops = 0; TArray<FVector2D> Placed;
+                // Each kind's reach along the run from its middle (thorns, frame, run-up, landing) and its bed; 4 is three hoops.
+                const float Ext[5][2] = {{-330.f, 300.f}, {-320.f, 340.f}, {-480.f, 340.f}, {-100.f, 100.f}, {-180.f, 220.f}};
+                const float Beds[5][2] = {{-90.f, 90.f}, {-225.f, 225.f}, {-360.f, 220.f}, {-60.f, 60.f}, {-90.f, 90.f}};
+                const float Pref[5] = {0.f, 0.f, 0.f, 1.6f, .6f};
+                constexpr float Margin = 160.f;   // (clear of each opening's middle: an opening is 300 wide)
+                int32 Have[5] = {0, 0, 0, 0, 0}, Runs = 0, TooShort = 0; TArray<FVector2D> Placed;
+                auto Opening = [&](int32 C, int32 B) { const float Lo = FMath::Max(A0(C), A0(B)), Hi = FMath::Min(A1(C), A1(B)); return (Lo + Hi) * .5f; };
                 for (int32 W0 = 1; W0 < Way.Num(); )
                 {
                     int32 W1 = W0; while (W1 + 1 < Way.Num() && Ring(Way[W1 + 1]) == Ring(Way[W0])) ++W1;
-                    const int32 I = Ring(Way[W0]), K = W1 - W0 + 1, Wa = W0; W0 = W1 + 1;
-                    if (K < 2 || I < 3 || I > Rings - 3) continue;
-                    bool bBad = false; for (int32 W = Wa; W <= W1; ++W) bBad |= LaneCells.Contains(Way[W]) || NearSc.Contains(Way[W]);
-                    if (bBad) continue;
-                    const float Rm = MazeR0 + (I + .5f) * MazePitch, Step = 2 * PI / N[I];
-                    const float Jd = ((Way[Wa] - Base[I] + 1) % N[I]) == Way[Wa + 1] - Base[I] ? 1.f : -1.f;
-                    const float Len = (K - 1) * Step * Rm, Ac = (A0(Way[Wa]) + A1(Way[Wa])) * .5f + Jd * (K - 1) * Step * .5f;
-                    const FVector2D Cp = MazeAt(Rm, Ac);
-                    if (FVector2D::Distance(Cp, Middle) < 2200.f) continue;
-                    bool bNear = false; for (const FVector2D& P : Placed) bNear |= FVector2D::Distance(P, Cp) < 2600.f;
-                    if (bNear) continue;
-                    int32 Kd = -1; float Side = 1.f;
-                    // (2026-11-23, second round) Two cells on one ring: three hoops over a 1.8 m bed, where the way comes in
-                    // before the first hoop and goes out after the last (so the way itself has brachiation over thorns).
-                    if (K == 2 && ShortHoops < 1 && Wa > 0 && W1 + 1 < Way.Num())
+                    const int32 Wa = W0, I = Ring(Way[Wa]); W0 = W1 + 1;
+                    if (I < 2 || I > Rings - 2 || W1 + 1 >= Way.Num()) continue;
+                    ++Runs;
+                    const float Rm = MazeR0 + (I + .5f) * MazePitch, Ain = Opening(Way[Wa], Way[Wa - 1]), Dl = FMath::FindDeltaAngleRadians(Ain, Opening(Way[W1], Way[W1 + 1]));
+                    const float Jd = Dl >= 0.f ? 1.f : -1.f, HalfS = FMath::Abs(Dl) * Rm * .5f, Ac0 = Ain + Dl * .5f;
+                    int32 Pick = -1; float Best = 1e9f, Shift = 0.f, Side = 1.f;
+                    for (int32 Kt = 0; Kt < 5; ++Kt)
                     {
-                        auto Sof = [&](int32 C, int32 B) { const float Lo = FMath::Max(A0(C), A0(B)), Hi = FMath::Min(A1(C), A1(B)); return FMath::FindDeltaAngleRadians(Ac, (Lo + Hi) * .5f) * Rm * Jd; };
-                        const bool bInRing = Ring(Way[Wa - 1]) == I, bOutRing = Ring(Way[W1 + 1]) == I;
-                        const float Sin = Sof(Way[Wa], Way[Wa - 1]), Sout = Sof(Way[W1], Way[W1 + 1]), Edge = FeyMap::HoopStep + 20.f;
-                        if (!bInRing && !bOutRing && Sin < -Edge && Sout > Edge)
+                        if (Ext[Kt][1] - Ext[Kt][0] > 2.f * (HalfS - Margin)) continue;
+                        const float Sh = -(Ext[Kt][0] + Ext[Kt][1]) * .5f;
+                        float Sd = 1.f;
+                        if (Kt == 0)   // the trellis's hedge unbroken beside it (no opening or shortcut there)
                         {
-                            FeyMap::FMazeParkour Pk; Pk.Kind = 1; Pk.NHoop = 3; Pk.R = Rm; Pk.Ac = Ac; Pk.Dir = Jd; Pk.Bed0 = -90.f; Pk.Bed1 = 90.f;
-                            Out.Parkour.Add(Pk); Placed.Add(Cp); ++ShortHoops;
-                            continue;
-                        }
-                    }
-                    for (int32 T = 0; T < 4 && Kd < 0; ++T)
-                    {
-                        const int32 Kt = (Next + T) % 4;
-                        if (Have[Kt] >= Wanted[Kt] || Len < Spans[Kt]) continue;
-                        if (Kt == 0)   // the trellis's hedge runs on unbroken beside it
-                        {
-                            Side = 0.f;
-                            for (const float Sd : {1.f, -1.f})
+                            Sd = 0.f;
+                            for (const float Sx : {1.f, -1.f})
                             {
-                                const int32 Io = Sd > 0.f ? I + 1 : I - 1; const float Rb = MazeR0 + (Sd > 0.f ? I + 1 : I) * MazePitch, Reach = (FeyMap::TrellisReach + 40.f) / Rm;
-                                bool bOpen = false;
-                                for (int32 W = Wa; W <= W1; ++W) for (const int32 B : Adj[Way[W]]) if (Ring(B) == Io && Links.Contains(Key(Way[W], B)))
-                                { const float Lo = FMath::Max(A0(Way[W]), A0(B)), Hi = FMath::Min(A1(Way[W]), A1(B)); bOpen |= FMath::Abs(FMath::FindDeltaAngleRadians(Ac, (Lo + Hi) * .5f)) < Reach + MazeGap * .5f / Rb; }
-                                if (!bOpen) { Side = Sd; break; }
+                                const int32 Io = Sx > 0.f ? I + 1 : I - 1; bool bOpen = false;
+                                for (int32 W = Wa; W <= W1; ++W) for (const int32 B : Adj[Way[W]]) if (Ring(B) == Io && (Links.Contains(Key(Way[W], B)) || ScOf.Contains(Key(Way[W], B))))
+                                { const float So = FMath::FindDeltaAngleRadians(Ac0, Opening(Way[W], B)) * Rm * Jd - Sh; bOpen |= FMath::Abs(So) < FeyMap::TrellisReach + 40.f + MazeGap * .5f; }
+                                if (!bOpen) { Sd = Sx; break; }
                             }
-                            if (Side == 0.f) continue;
+                            if (Sd == 0.f) continue;
                         }
-                        Kd = Kt;
+                        const float Score = Have[Kt] + Pref[Kt];
+                        if (Score < Best) { Best = Score; Pick = Kt; Shift = Sh; Side = Sd; }
                     }
-                    if (Kd < 0) continue;
-                    FeyMap::FMazeParkour Pk; Pk.Kind = Kd; Pk.R = Rm; Pk.Ac = Ac; Pk.Dir = Jd; Pk.Side = Kd == 0 ? Side : 1.f; Pk.Bed0 = Beds[Kd][0]; Pk.Bed1 = Beds[Kd][1];
-                    Out.Parkour.Add(Pk); Placed.Add(Cp); ++Have[Kd]; Next = (Kd + 1) % 4;
-                }
-                // The way through winds (few runs of three cells on one ring), so what is still wanted of the trellis, hoops and
-                // walkway goes on straight runs off it, longest first; where one end of the run is a dead end, cigarettes wait
-                // there, past the thorns (FeyLife).
-                struct FRun { TArray<int32> Cells; int32 I; };
-                TArray<FRun> Runs; const TSet<int32> OnWay(Way);
-                auto Exits = [&](int32 C) { int32 E = 0; for (const int32 B : Adj[C]) E += Links.Contains(Key(C, B)); return E; };
-                for (int32 I = 3; I <= Rings - 3; ++I)
-                {
-                    int32 J0 = -1; for (int32 J = 0; J < N[I] && J0 < 0; ++J) if (!Links.Contains(Key(Id(I, J - 1), Id(I, J)))) J0 = J;
-                    if (J0 < 0) continue;
-                    FRun Cur; Cur.I = I;
-                    for (int32 K = 0; K < N[I]; ++K)
-                    {
-                        const int32 C = Id(I, J0 + K); Cur.Cells.Add(C);
-                        if (!Links.Contains(Key(C, Id(I, J0 + K + 1)))) { if (Cur.Cells.Num() >= 3) Runs.Add(Cur); Cur.Cells.Reset(); }
-                    }
-                }
-                Runs.Sort([](const FRun& X, const FRun& Y) { return X.Cells.Num() * (X.I + 4) > Y.Cells.Num() * (Y.I + 4); });
-                int32 OffWay = 0;
-                for (const FRun& Rn : Runs)
-                {
-                    int32 Kd = -1; for (int32 Kt = 0; Kt < 3; ++Kt) if (Have[Kt] < Wanted[Kt] && (Kd < 0 || Have[Kt] < Have[Kd])) Kd = Kt;
-                    if (Kd < 0) break;
-                    bool bBad = false; for (const int32 C : Rn.Cells) bBad |= OnWay.Contains(C) || LaneCells.Contains(C) || NearSc.Contains(C);
-                    if (bBad) continue;
-                    const int32 I = Rn.I, K = Rn.Cells.Num(); const float Rm = MazeR0 + (I + .5f) * MazePitch, Step = 2 * PI / N[I];
-                    const float Len = (K - 1) * Step * Rm, Ac = (A0(Rn.Cells[0]) + A1(Rn.Cells[0])) * .5f + (K - 1) * Step * .5f;
-                    const FVector2D Cp = MazeAt(Rm, Ac);
-                    bool bNear = FVector2D::Distance(Cp, Middle) < 2200.f; for (const FVector2D& P : Placed) bNear |= FVector2D::Distance(P, Cp) < 2600.f;
+                    if (Pick < 0) { ++TooShort; continue; }
+                    const float Ac = Ac0 + Jd * Shift / Rm; const FVector2D Cp = MazeAt(Rm, Ac);
+                    if (FVector2D::Distance(Cp, Middle) < 900.f) continue;
+                    bool bNear = false; for (const FVector2D& P : Placed) bNear |= FVector2D::Distance(P, Cp) < 700.f;
                     if (bNear) continue;
-                    // which way: toward its dead end, if it has one
-                    const bool bEnd1 = Exits(Rn.Cells.Last()) == 1, bEnd0 = Exits(Rn.Cells[0]) == 1;
-                    const float Jd = bEnd1 || !bEnd0 ? 1.f : -1.f;
-                    // the kind still most wanted that fits (a trellis wants an unbroken hedge on one side)
-                    int32 Pick = -1; float Side = 1.f;
-                    for (int32 T = 0; T < 3 && Pick < 0; ++T)
-                    {
-                        const int32 Kt = (Kd + T) % 3;
-                        if (Have[Kt] >= Wanted[Kt] || Len < Spans[Kt]) continue;
-                        if (Kt == 0)
-                        {
-                            Side = 0.f;
-                            for (const float Sd : {1.f, -1.f})
-                            {
-                                const int32 Io = Sd > 0.f ? I + 1 : I - 1; const float Rb = MazeR0 + (Sd > 0.f ? I + 1 : I) * MazePitch, Reach = (FeyMap::TrellisReach + 40.f) / Rm;
-                                bool bOpen = false;
-                                for (const int32 C : Rn.Cells) for (const int32 B : Adj[C]) if (Ring(B) == Io && Links.Contains(Key(C, B)))
-                                { const float Lo = FMath::Max(A0(C), A0(B)), Hi = FMath::Min(A1(C), A1(B)); bOpen |= FMath::Abs(FMath::FindDeltaAngleRadians(Ac, (Lo + Hi) * .5f)) < Reach + MazeGap * .5f / Rb; }
-                                if (!bOpen) { Side = Sd; break; }
-                            }
-                            if (Side == 0.f) continue;
-                        }
-                        Pick = Kt;
-                    }
-                    if (Pick < 0) continue;
-                    FeyMap::FMazeParkour Pk; Pk.Kind = Pick; Pk.R = Rm; Pk.Ac = Ac; Pk.Dir = Jd; Pk.Side = Pick == 0 ? Side : 1.f; Pk.Bed0 = Beds[Pick][0]; Pk.Bed1 = Beds[Pick][1];
-                    Pk.bOffWay = true; Pk.bReward = bEnd0 || bEnd1;
-                    Out.Parkour.Add(Pk); Placed.Add(Cp); ++Have[Pick]; ++OffWay;
+                    FeyMap::FMazeParkour Pk; Pk.Kind = Pick == 4 ? 1 : Pick; Pk.NHoop = Pick == 4 ? 3 : FeyMap::Hoops; Pk.R = Rm; Pk.Ac = Ac; Pk.Dir = Jd; Pk.Side = Pick == 0 ? Side : 1.f;
+                    Pk.Bed0 = Beds[Pick][0]; Pk.Bed1 = Beds[Pick][1];
+                    Out.Parkour.Add(Pk); Placed.Add(Cp); ++Have[Pick];
+                    for (int32 W = Wa; W <= W1; ++W) ParkCells.Add(Way[W]);
                 }
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_PARKOUR_PLAN trellis=%d hoops=%d walkways=%d jumps=%d off_way=%d runs=%d way_hoops=%d"), Have[0], Have[1], Have[2], Have[3], OffWay, Runs.Num(), ShortHoops);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_PARKOUR_PLAN trellis=%d hoops=%d walkways=%d jumps=%d way_hoops=%d runs=%d too_short=%d"), Have[0], Have[1], Have[2], Have[3], Have[4], Runs, TooShort);
             }
+            // (2026-11-23) The orchids' lanes after the parkour, on straight runs of the way it left free.
+            // Straight runs along the way through (orchids' lanes): three linked cells on one ring, on the way.
+            for (int32 W = 2; W < Way.Num() && Out.Lanes.Num() < 3; ++W)
+                if (Ring(Way[W]) == Ring(Way[W - 1]) && Ring(Way[W]) == Ring(Way[W - 2]) && Ring(Way[W]) > 6 && !ParkCells.Contains(Way[W]) && !ParkCells.Contains(Way[W - 1]) && !ParkCells.Contains(Way[W - 2]))
+                { if (Out.Lanes.Num() && FVector2D::Distance(FVector2D(Out.Lanes.Last()), Mid(Way[W])) < 3000.f) continue; const FVector2D A = Mid(Way[W - 2]), B = Mid(Way[W]); Out.Lanes.Add(FVector(A.X, A.Y, FMath::Atan2(B.Y - A.Y, B.X - A.X))); for (int32 K = W - 2; K <= W; ++K) LaneCells.Add(Way[K]); }
             // (2026-11-23) Root gaps: holes at the foot of a hedge, Chuck-sized (the redcaps cannot follow), between two cells that
             // are not linked, saving a few cells; never by the parkour, a shortcut or another gap.
             TMap<uint64, int32> GapOf;
+            // (2026-11-23, second round) Three of the way's own steps inward are root gaps: he must crawl through them (and the
+            // redcaps cannot follow).
+            {
+                TArray<int32> Steps;
+                for (int32 W = 4; W + 4 < Way.Num(); ++W)
+                    if (Ring(Way[W]) != Ring(Way[W - 1]) && Ring(Way[W]) > 2 && Ring(Way[W - 1]) > 2)
+                    {
+                        const int32 C = Way[W - 1], B = Way[W]; const float Lo = FMath::Max(A0(C), A0(B)), Hi = FMath::Min(A1(C), A1(B));
+                        const FVector2D G = MazeAt(MazeR0 + FMath::Max(Ring(C), Ring(B)) * MazePitch, (Lo + Hi) * .5f); bool bNear = false;
+                        for (const FeyMap::FMazeParkour& Pk : Out.Parkour) for (float Sb = -520.f; Sb <= 380.f; Sb += 60.f) bNear |= FVector2D::Distance(MazeAt(Pk.R, Pk.Ac + Pk.Dir * Sb / Pk.R), G) < 230.f;
+                        if (!bNear) Steps.Add(W);
+                    }
+                const FVector2D Patrol = Mid(Way[Way.Num() / 2]);   // (where the redcaps keep: none in a gap's mouth)
+                for (const float Fr : {.2f, .7f, .85f})
+                {
+                    if (!Steps.Num()) break;
+                    const int32 S0 = FMath::Clamp(int32(Fr * Steps.Num()), 0, Steps.Num() - 1); int32 Si = -1;
+                    for (int32 Dd = 0; Dd < Steps.Num() && Si < 0; ++Dd)
+                        for (const int32 Sg : {1, -1})
+                        {
+                            const int32 K = S0 + Sg * Dd; if (Si >= 0 || !Steps.IsValidIndex(K)) continue;
+                            if (!GapOf.Contains(Key(Way[Steps[K] - 1], Way[Steps[K]])) && FVector2D::Distance(Mid(Way[Steps[K]]), Patrol) > 2000.f) Si = K;
+                        }
+                    if (Si < 0) continue;
+                    const int32 W = Steps[Si], C = Way[W - 1], B = Way[W];
+                    const int32 Hr = FMath::Max(Ring(C), Ring(B)); const float Lo = FMath::Max(A0(C), A0(B)), Hi = FMath::Min(A1(C), A1(B));
+                    const FVector2D G = MazeAt(MazeR0 + Hr * MazePitch, (Lo + Hi) * .5f);
+                    GapOf.Add(Key(C, B), Out.Gaps.Num()); Out.Gaps.Add({G, FMath::RadiansToDegrees((Lo + Hi) * .5f) + 90.f});
+                    // The way through lines up with the hole: a point straight before it and one straight after (from a cell's
+                    // middle it met the hole aslant, too narrow for that).
+                    for (int32 K = 1; K + 1 < Out.Route.Num(); ++K)
+                        if (FVector2D::Distance(Out.Route[K], G) < 1.f)
+                        {
+                            const FVector2D Rd = (G - Table[Maze].Hub).GetSafeNormal(), Ino = FVector2D::DotProduct(Out.Route[K - 1] - G, Rd) > 0.f ? -Rd : Rd;
+                            Out.Route[K] = G + Ino * 220.f; Out.Route.Insert(G - Ino * 150.f, K);   // (the hole's own point dropped: a walker counted it reached a metre short)
+                            break;
+                        }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_GAP way=1 at=%s"), *G.ToString());
+                }
+            }
             {
                 struct FG { int32 C, B, Gain; };
                 TArray<FG> Gs;
-                for (int32 C = 0; C < Total; ++C) for (const int32 B : Adj[C]) if (B > C && !Links.Contains(Key(C, B)) && !ScOf.Contains(Key(C, B)) && Dist[C] >= 0 && Dist[B] >= 0 && Ring(C) > 2 && Ring(B) > 2)
+                for (int32 C = 0; C < Total; ++C) for (const int32 B : Adj[C]) if (B > C && !Links.Contains(Key(C, B)) && !ScOf.Contains(Key(C, B)) && WaySet.Contains(C) && WaySet.Contains(B) && Ring(C) > 2 && Ring(B) > 2)   // (2026-11-23: both on the way through)
                 { const int32 G = FMath::Abs(Dist[C] - Dist[B]) - 1; if (G >= 4 && G < 14) Gs.Add({C, B, G}); }
                 Gs.Sort([](const FG& X, const FG& Y) { return X.Gain > Y.Gain; });
                 for (const FG& G : Gs)
@@ -551,7 +561,7 @@ namespace
                     {
                         const int32 C = Id(I - 1, K); const float Lo = FMath::Max(A0(C), A0(O)), Hi = FMath::Min(A1(C), A1(O));
                         if (Hi <= Lo) continue;
-                        if (Links.Contains(Key(C, O))) Open(Rb, Lo, Hi);
+                        if (Links.Contains(Key(C, O)) && !GapOf.Contains(Key(C, O))) Open(Rb, Lo, Hi);
                         else if (GapOf.Contains(Key(C, O))) { const float Md = (Lo + Hi) * .5f, Ha = FeyMap::GapHalf / Rb; Arc(Rb, Lo, Md - Ha); Arc(Rb, Md + Ha, Hi); Lintel(MazeAt(Rb, Md), FMath::RadiansToDegrees(Md) + 90.f, FeyMap::GapHalf + 6.f); }
                         else { const int32* Sc = ScOf.Find(Key(C, O)); Arc(Rb, Lo, Hi, Sc ? *Sc : -1); }
                     }
@@ -580,6 +590,99 @@ namespace
                 Out.Hedges.Add({FVector(C.X, C.Y, 990.f), FVector(70.f, 270.f, 60.f), D, 1});
             }
             for (int32 C = 0; C < Total; ++C) { int32 Exits = 0; for (int32 B : Adj[C]) Exits += Links.Contains(Key(C, B)); if (Exits == 1 && C != Gate && C != Heart) Out.DeadEnds.Add(Mid(C)); }
+            // (2026-11-23, the user: frowning statues in dead ends, smiling ones on the way) About twenty dead ends, spread over
+            // the maze, each with a frowning stone head set back from its one way in and facing it.
+            {
+                TArray<int32> Ends; for (int32 C = 0; C < Total; ++C) { int32 Exits = 0; for (int32 B : Adj[C]) Exits += Links.Contains(Key(C, B)); if (Exits == 1 && C != Gate && C != Heart && Ring(C) > 0) Ends.Add(C); }
+                for (int32 K = 0, Step = FMath::Max(1, Ends.Num() / 20); K < Ends.Num() && Out.Frowns.Num() < 20; K += Step)
+                {
+                    const int32 C = Ends[K]; int32 B = -1; for (const int32 O : Adj[C]) if (Links.Contains(Key(C, O))) B = O;
+                    const int32 I = Ring(C), Ib = Ring(B); FVector2D Wy;
+                    if (Ib == I) Wy = MazeAt(MazeR0 + (I + .5f) * MazePitch, FMath::Abs(FMath::FindDeltaAngleRadians(A1(C), A0(B))) < .01f ? A1(C) : A0(C));
+                    else { const float Lo = FMath::Max(A0(C), A0(B)), Hi = FMath::Min(A1(C), A1(B)); Wy = MazeAt(MazeR0 + FMath::Max(I, Ib) * MazePitch, (Lo + Hi) * .5f); }
+                    const FVector2D M = Mid(C), Back = (M - Wy).GetSafeNormal(), P = M + Back * (Ib == I ? 120.f : 40.f), Face = (Wy - P).GetSafeNormal();
+                    Out.Frowns.Add(FVector4(P.X, P.Y, Face.X, Face.Y));
+                }
+            }
+            // (2026-11-23, second round) Along the way only: stone figures, the statues that turn, thorn mites and cigarettes,
+            // each against a hedge with no opening on its side, clear of the parkour, the lanes and each other.
+            auto SideClear = [&](int32 C, int32 Io, float A, float Rb, float Clear)
+            {
+                if (Io < 0) return C != Heart;
+                if (Io >= Rings) return C != Gate;
+                for (const int32 B : Adj[C]) if (Ring(B) == Io && (Links.Contains(Key(C, B)) || ScOf.Contains(Key(C, B)) || GapOf.Contains(Key(C, B))))
+                { const float Lo = FMath::Max(A0(C), A0(B)), Hi = FMath::Min(A1(C), A1(B)); if (FMath::Abs(FMath::FindDeltaAngleRadians(A, (Lo + Hi) * .5f)) * Rb < MazeGap * .5f + Clear) return false; }
+                return true;
+            };
+            {
+                const int32 Seq[] = {0, 1, 3, 0, 2, 1, 0, 3, 1, 0, 2, 1, 3, 0, 1, 0, 3, 0};
+                int32 Next = 0; TArray<FVector2D> Done;
+                for (int32 W = 3; W + 3 < Way.Num() && Next < UE_ARRAY_COUNT(Seq); ++W)
+                {
+                    const int32 C = Way[W], I = Ring(C);
+                    if (LaneCells.Contains(C)) continue;
+                    const float Rm = MazeR0 + (I + .5f) * MazePitch; float A = 0.f, Sd = 0.f;
+                    for (const float U : {.5f, .28f, .72f}) for (const float Sx : {1.f, -1.f})
+                        if (Sd == 0.f && SideClear(C, I + (Sx > 0.f ? 1 : -1), A0(C) + (A1(C) - A0(C)) * U, MazeR0 + (I + (Sx > 0.f ? 1 : 0)) * MazePitch, 90.f)) { Sd = Sx; A = A0(C) + (A1(C) - A0(C)) * U; }
+                    if (Sd == 0.f) continue;
+                    const FVector2D P = MazeAt(Rm + Sd * 82.f, A);
+                    bool bNear = false; for (const FVector2D& Qd : Done) bNear |= FVector2D::Distance(Qd, P) < 900.f;
+                    for (const FeyMap::FMazeParkour& Pk : Out.Parkour) for (float Sb = -560.f; Sb <= 420.f; Sb += 70.f) bNear |= FVector2D::Distance(MazeAt(Pk.R, Pk.Ac + Pk.Dir * Sb / Pk.R), P) < 200.f;
+                    if (bNear) continue;
+                    FeyMap::FMazeMark Mk; Mk.P = P; Mk.In = (MazeAt(Rm, A) - P).GetSafeNormal(); Mk.Kind = Seq[Next++];
+                    Out.Marks.Add(Mk); Done.Add(P);
+                }
+            }
+            // (2026-11-23, the user: spots narrow enough to wall jump to the top, only to be bee-d back down) Four squeezes on the
+            // way: both hedges bulge in to leave a slot a metre wide (the temple chimney's), where no opening is near.
+            {
+                TArray<FVector2D> Taken; for (const FeyMap::FMazeMark& Mk : Out.Marks) Taken.Add(Mk.P);
+                for (const FeyMap::FMazeParkour& Pk : Out.Parkour) Taken.Add(MazeAt(Pk.R, Pk.Ac));
+                for (const float Fr : {.2f, .4f, .6f, .8f})
+                    for (int32 W = FMath::Max(3, int32(Fr * Way.Num())); W + 3 < Way.Num(); ++W)
+                    {
+                        const int32 C = Way[W], I = Ring(C);
+                        if (ParkCells.Contains(C) || LaneCells.Contains(C) || I < 2) continue;
+                        const float Rm = MazeR0 + (I + .5f) * MazePitch, A = (A0(C) + A1(C)) * .5f, Clear = FeyMap::SqueezeLen * .5f + 40.f;
+                        if (!SideClear(C, I + 1, A, MazeR0 + (I + 1) * MazePitch, Clear) || !SideClear(C, I - 1, A, MazeR0 + I * MazePitch, Clear)) continue;
+                        const FVector2D P = MazeAt(Rm, A); bool bNear = false; for (const FVector2D& Qt : Taken) bNear |= FVector2D::Distance(Qt, P) < 700.f;
+                        if (bNear) continue;
+                        const float Th = (130.f - FeyMap::SqueezeGap * .5f) * .5f + 4.f;   // (each bulge, from a little inside its hedge's face)
+                        for (const float Sd : {-1.f, 1.f}) { const FVector2D Qb = MazeAt(Rm + Sd * (FeyMap::SqueezeGap * .5f + Th), A); Out.Hedges.Add({FVector(Qb.X, Qb.Y, HedgeTall * .5f), FVector(FeyMap::SqueezeLen * .5f, Th, HedgeTall * .5f), FMath::RadiansToDegrees(A) + 90.f, 0, -1}); }
+                        FeyMap::FMazeMark Sq; Sq.P = P; Sq.In = (MazeAt(Rm + 10.f, A) - P).GetSafeNormal(); Out.Squeezes.Add(Sq); Taken.Add(P);
+                        break;
+                    }
+            }
+            // (2026-11-23, the user: blue lamps as in the Deepwood, not as bright; very low fog in parts; more decor) Spread evenly
+            // over the whole maze, so none of it marks the way: lanterns (0), plants at the hedges' feet (1), stone urns (2),
+            // benches (3), patches of low fog (4), fallen petals (5).
+            {
+                FRandomStream Rd(5150);
+                TArray<FVector2D> Busy;
+                for (const FeyMap::FMazeParkour& Pk : Out.Parkour) for (float Sb = -520.f; Sb <= 380.f; Sb += 90.f) Busy.Add(MazeAt(Pk.R, Pk.Ac + Pk.Dir * Sb / Pk.R));
+                for (const FeyMap::FMazeMark& Mk : Out.Marks) Busy.Add(Mk.P);
+                for (const FeyMap::FMazeGap& G : Out.Gaps) Busy.Add(G.C);
+                for (const FeyMap::FMazeMark& Sq : Out.Squeezes) { Busy.Add(Sq.P); const FVector2D Tn(-Sq.In.Y, Sq.In.X); Busy.Add(Sq.P + Tn * 130.f); Busy.Add(Sq.P - Tn * 130.f); }
+                auto Near = [&](const FVector2D& P, float Rr) { for (const FVector2D& B : Busy) if (FVector2D::DistSquared(B, P) < Rr * Rr) return true; return false; };
+                for (int32 C = 0; C < Total; ++C)
+                {
+                    const int32 I = Ring(C); const float Rm = MazeR0 + (I + .5f) * MazePitch, Span = A1(C) - A0(C);
+                    for (int32 K = 0; K < 3; ++K)
+                    {
+                        const float U = Rd.FRandRange(.22f, .78f), A = A0(C) + Span * U, Sd = Rd.FRand() < .5f ? 1.f : -1.f, Roll = Rd.FRand();
+                        if (!SideClear(C, I + (Sd > 0.f ? 1 : -1), A, MazeR0 + (I + (Sd > 0.f ? 1 : 0)) * MazePitch, 60.f)) continue;
+                        const FVector2D P = MazeAt(Rm + Sd * 112.f, A), Inw = (MazeAt(Rm, A) - P).GetSafeNormal();
+                        if (Near(P, 200.f)) continue;
+                        const int32 Kind = K == 0 && Roll < .13f ? 0 : K == 1 && Roll < .06f ? 2 : K == 2 && Roll < .035f ? 3 : Roll < .6f ? 1 : -1;
+                        if (Kind < 0) continue;
+                        Out.Decor.Add(FVector4(P.X, P.Y, FMath::Atan2(Inw.Y, Inw.X), Kind));
+                    }
+                    if (Rd.FRand() < .35f) { const FVector2D P = MazeAt(Rm + Rd.FRandRange(-60.f, 60.f), A0(C) + Span * Rd.FRandRange(.25f, .75f)); if (!Near(P, 150.f)) Out.Decor.Add(FVector4(P.X, P.Y, Rd.FRand() * 2.f * PI, 5)); }
+                    if (Rd.FRand() < .012f && I > 1) { const FVector2D P = MazeAt(Rm, A0(C) + Span * .5f); Out.Decor.Add(FVector4(P.X, P.Y, 0.f, 4)); }
+                }
+                int32 Count[6] = {0, 0, 0, 0, 0, 0}; for (const FVector4& Dc : Out.Decor) ++Count[FMath::Clamp(int32(Dc.W), 0, 5)];
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_MARKS squeezes=%d marks=%d gaps=%d shortcuts=%d decor lanterns=%d plants=%d urns=%d benches=%d fog=%d petals=%d"), Out.Squeezes.Num(), Out.Marks.Num(), Out.Gaps.Num(), Out.Shortcuts.Num(), Count[0], Count[1], Count[2], Count[3], Count[4], Count[5]);
+            }
             for (FHedge& Hd : Out.Hedges) if (Hd.Sc >= 0) Out.Shortcuts[Hd.Sc].Hedges.Add(FVector4(Hd.C.X, Hd.C.Y, Hd.H.X, Hd.Yaw));
             Out.Cells = Total;
             return Out;
@@ -761,15 +864,18 @@ namespace
         {TEXT("/Game/Art/Feywild/SM_FeyLilyPad.SM_FeyLilyPad"), 16000, 24000, false, false, false},
         // (2026-11-21) The maze's hedges' leaves: a shell of sprigs over each section, near only (the box's own leaves beyond).
         {TEXT("/Game/Art/Feywild/SM_FeyHedgeLeaves.SM_FeyHedgeLeaves"), 3800, 5600, false, false, false},
+        // (2026-11-23) The maze's marble satyrs: SMK's public-domain scan of the Medici Faun (Tools/import_fey_satyr.py).
+        {TEXT("/Game/Art/Feywild/Satyr/SM_FeySatyr.SM_FeySatyr"), 9000, 14000, true, false, false},
+        {TEXT("/Game/Art/Feywild/Satyr/SM_FeySatyrFrown.SM_FeySatyrFrown"), 9000, 14000, true, false, false},   // (the same, scowling)
     };
     enum EKit { KOak0, KOak1, KCol0, KCol1, KAmber, KBlue, KViolet, KFern0, KBroad = 11, KCrimson, KFox, KCel0, KCel1, KGrass0, KGrass1, KPetals, KRock0, KPad = 25, KLily, KBell,
-                KDeep0, KDeep1, KDCol0, KDCol1, KMoss, KPadBig, KHedge, KitCount };
+                KDeep0, KDeep1, KDCol0, KDCol1, KMoss, KPadBig, KHedge, KSatyr, KSatyrFrown, KitCount };
     static_assert(UE_ARRAY_COUNT(KitDefs) == KitCount, "a definition for every kit");
     const TCHAR* MatPaths[] = {TEXT("/Game/Art/Feywild/M_FeyGround.M_FeyGround"), TEXT("/Game/Art/Feywild/M_FeyWater.M_FeyWater"), TEXT("/Game/Art/Feywild/M_FeyRiver.M_FeyRiver"),
                                TEXT("/Game/Art/Feywild/M_FeyBlock.M_FeyBlock"), TEXT("/Game/Art/Feywild/M_FeyRoot.M_FeyRoot"), TEXT("/Game/Art/Feywild/M_FeyStone.M_FeyStone"),
                                TEXT("/Game/Art/Feywild/M_FeyHedge.M_FeyHedge"), TEXT("/Game/Art/Feywild/M_FeySign.M_FeySign"),
-                               TEXT("/Game/Art/Feywild/M_FeyPlant.M_FeyPlant"), TEXT("/Game/Art/Feywild/M_FeyPlank.M_FeyPlank")};
-    enum EMat { MGround, MWater, MRiver, MBlock, MRoot, MStone, MHedge, MSign, MPlant, MPlank, MatCount };
+                               TEXT("/Game/Art/Feywild/M_FeyPlant.M_FeyPlant"), TEXT("/Game/Art/Feywild/M_FeyPlank.M_FeyPlank"), TEXT("/Game/Art/Feywild/Satyr/M_FeyMarble.M_FeyMarble")};
+    enum EMat { MGround, MWater, MRiver, MBlock, MRoot, MStone, MHedge, MSign, MPlant, MPlank, MMarble, MatCount };
     // Stone's vertex colour: R a seed, B 1 for glowing runes.
     const FColor Runes(80, 0, 255, 255), Plain(140, 0, 0, 255);
     const FColor Stone(198, 192, 178), HedgeGreen(34, 64, 24), Cloud(236, 240, 248), RoofBlue(38, 62, 150), Grey(146, 150, 146);
@@ -1071,6 +1177,10 @@ const TArray<FVector2D>& FeyMap::MazeDeadEnds() { return MazeData().DeadEnds; }
 const TArray<FVector>& FeyMap::MazeLanes() { return MazeData().Lanes; }
 const TArray<FeyMap::FMazeParkour>& FeyMap::MazeParkour() { return MazeData().Parkour; }
 const TArray<FeyMap::FMazeGap>& FeyMap::MazeGaps() { return MazeData().Gaps; }
+const TArray<FeyMap::FMazeMark>& FeyMap::MazeMarks() { return MazeData().Marks; }
+const TArray<FeyMap::FMazeMark>& FeyMap::MazeSqueezes() { return MazeData().Squeezes; }
+const TArray<FVector4>& FeyMap::MazeFrowns() { return MazeData().Frowns; }
+const TArray<FVector4>& FeyMap::MazeDecor() { return MazeData().Decor; }
 FVector2D FeyMap::MazeParkourAt(const FMazeParkour& P, float S, float Across) { return MazeAt(P.R + Across, P.Ac + P.Dir * S / P.R); }
 namespace
 {
@@ -1172,7 +1282,7 @@ namespace
         const double T0 = FPlatformTime::Seconds();
         const FDistrict& Ds = Table[D];
         // ------------------------------ the land, in tiles
-        constexpr float Tile = 3200.f; constexpr int32 Cells = 26;
+        constexpr float Tile = 3200.f; constexpr int32 CellsBase = 26;
         const int32 Tx = FMath::CeilToInt((Ds.X1 - Ds.X0) / Tile), Ty = FMath::CeilToInt((Ds.Y1 - Ds.Y0) / Tile);
         const float Gloom = D == Deepwood ? .62f : 1.f;
         for (int32 I = 0; I < Tx; ++I)
@@ -1180,6 +1290,9 @@ namespace
             {
                 FMapSurf& L = Plan.Surfs.AddDefaulted_GetRef(); L.Mat = MGround;
                 const float X0 = Ds.X0 + I * Tile, Y0 = Ds.Y0 + J * Tile, X1 = FMath::Min(X0 + Tile, Ds.X1), Y1 = FMath::Min(Y0 + Tile, Ds.Y1);
+                // (2026-11-23) The narrow cut behind the arrival runs on into the riverbank: its 6 m walls need cells as fine as the
+                // slice's (41 cm, not 123), or they smear and the slice's grid does not meet them.
+                const int32 Cells = D == Riverbank && X1 > -8100.f ? CellsBase * 3 : CellsBase;
                 for (int32 A = 0; A <= Cells; ++A)
                     for (int32 B = 0; B <= Cells; ++B)
                     {
@@ -1187,7 +1300,7 @@ namespace
                         float Pk, Wet; const float H = Land(D, X, Y, &Pk, &Wet);
                         const FVector Nn = FVector(Land(D, X - E, Y) - Land(D, X + E, Y), Land(D, X, Y - E) - Land(D, X, Y + E), 2 * E).GetSafeNormal();
                         const float Moss = FMath::Clamp(.75f - Pk * 1.3f + .5f * Noise(X, Y, 500, 21) + (D == Deepwood ? .25f : 0.f), 0.f, 1.f) * FMath::Lerp(.35f, 1.f, Nn.Z * Nn.Z);
-                        L.Vert(FVector(X, Y, H), Nn, FVector2D(X, Y) / 300.f, FLinearColor(Pk, Moss, FMath::Max(Wet, Pk * .4f), Gloom).ToFColor(false));
+                        L.Vert(FVector(X, Y, H), Nn, FVector2D(X, Y) / 300.f, FLinearColor(Pk * Smooth(.55f, .85f, Nn.Z), Moss, FMath::Max(Wet, Pk * .4f) * Smooth(.55f, .85f, Nn.Z), Gloom).ToFColor(false));   // (2026-11-23: no wet sheen or path on steep faces)
                     }
                 for (int32 A = 0; A < Cells; ++A) for (int32 B = 0; B < Cells; ++B) { const int32 Q = A * (Cells + 1) + B, R = Q + Cells + 1; L.Quad(Q, Q + 1, R + 1, R); }
             }
@@ -1231,7 +1344,7 @@ namespace
         }
         // ------------------------------ dressing: stone (arches, statues), the maze's hedges, signs, the cloud stair's foot
         {
-            Plan.Surfs.Reserve(Plan.Surfs.Num() + 120);   // (references into it are held below: the maze alone adds 49, and 2026-11-23 three, and two a thorn bed)
+            Plan.Surfs.Reserve(Plan.Surfs.Num() + 160);   // (references into it are held below: the maze alone adds 49, and 2026-11-23 three, and two a thorn bed)
             FMapSurf& St = Plan.Surfs.AddDefaulted_GetRef(); St.Mat = MStone;
             FMapSurf& Sg = Plan.Surfs.AddDefaulted_GetRef(); Sg.Mat = MSign;
             FMapSurf& Cl = Plan.Surfs.AddDefaulted_GetRef(); Cl.Mat = MBlock; Cl.bHidden = true; Cl.bShadow = false;
@@ -1263,13 +1376,93 @@ namespace
                     for (int32 K = 0; K < N; ++K)
                         Plan.Inst[KHedge].Add(FTransform(FRotator(0, Hd.Yaw + (K % 2 ? 180.f : 0.f), 0), C + Along * ((K + .5f) * Len - Hd.H.X), FVector(Len / 300.f, Hd.H.Y / 60.f, Hd.H.Z / 420.f)));
                 }
-                // Mossy statues standing in some of the dead ends.
-                for (int32 I = 0; I < Mz.DeadEnds.Num(); I += FMath::Max(1, Mz.DeadEnds.Num() / 14))
+                // (2026-11-23, the user: two kinds of statue, frowning in the dead ends and smiling along the way, real satyrs and
+                // not cartoon heads) Marble satyrs on plinths: SMK's public-domain scan of the Medici Faun, laughing as carved, along
+                // the way; the same faun re-carved to a scowl (Tools/build_fey_satyr.py) in the dead ends.
+                FMapSurf& Mb = Plan.Surfs.AddDefaulted_GetRef(); Mb.Mat = MMarble; Mb.bSolid = false;   // (each plinth and satyr a box of collision: cooking the lot as one mesh stalled a frame)
+                // (2026-11-23, the user: some of them detailed marble satyrs) The statues on the way are marble satyrs
+                // dancing on a plinth instead, and two flank the heart's arch. (The scan faces +Y in the engine.)
+                auto Satyr = [&](const FVector2D& P, const FVector2D& Dir, bool bSmile)
                 {
-                    const FVector2D P = Mz.DeadEnds[I]; const float Z = Land(D, P.X, P.Y), Yaw = float(I * 37 % 360);
-                    St.Box(FVector(P.X, P.Y, Z + 40.f), FVector(60.f, 60.f, 40.f), Yaw, Plain);
-                    St.Box(FVector(P.X, P.Y, Z + 175.f), FVector(28.f, 38.f, 95.f), Yaw + 20.f, Plain);
-                    St.Box(FVector(P.X, P.Y, Z + 295.f), FVector(22.f, 22.f, 25.f), Yaw + 35.f, Plain);
+                    const FVector C(P.X, P.Y, Land(D, P.X, P.Y));
+                    const FVector2D Plinth[] = {{.5f, 46.f}, {44.f, 46.f}, {48.f, 40.f}, {48.f, 6.f}, {52.f, 0.f}, {52.f, -10.f}};
+                    Mb.Lathe(C, Plinth, 14, FColor::White);
+                    const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(-Dir.X, Dir.Y));   // (it faces +Y once imported: the importer mirrors Blender's Y)
+                    Plan.Inst[bSmile ? KSatyr : KSatyrFrown].Add(FTransform(FRotator(0, Yaw, 0), C + FVector(0, 0, 46.f), FVector(1.f)));
+                    Plan.Walls.Add({C + FVector(0, 0, 23.f), FVector(48.f, 48.f, 33.f), 0.f});
+                    Plan.Walls.Add({C + FVector(0, 0, 46.f + 72.f), FVector(40.f, 28.f, 72.f), Yaw});
+                };
+                // (2026-11-23) Each squeeze's two faces: flat collision a little proud of the leaves, the hedges' full height, so
+                // his wall runs and kicks catch the same way all the way up.
+                for (const FeyMap::FMazeMark& Sq : Mz.Squeezes)
+                {
+                    const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Sq.In.Y, Sq.In.X)) + 90.f, Z = Land(D, Sq.P.X, Sq.P.Y);
+                    for (const float Sx : {-1.f, 1.f}) { const FVector2D Q = Sq.P + Sq.In * (Sx * (FeyMap::SqueezeGap * .5f - 6.f)); Plan.Walls.Add({FVector(Q.X, Q.Y, Z + HedgeTall * .5f), FVector(FeyMap::SqueezeLen * .5f, 4.f, HedgeTall * .5f), Yaw}); }
+                }
+                for (const FeyMap::FMazeMark& Mk : Mz.Marks) if (Mk.Kind == 0) Satyr(Mk.P + Mk.In * 10.f, Mk.In, true);
+                for (const FVector4& Fr : Mz.Frowns) Satyr(FVector2D(Fr.X, Fr.Y), FVector2D(Fr.Z, Fr.W), false);
+                {
+                    const float A = Mz.HeartA; const FVector2D Out(FMath::Cos(A), FMath::Sin(A)), Across(-Out.Y, Out.X);
+                    for (const float Sx : {-1.f, 1.f}) Satyr(MazeAt(MazeR0 - 260.f, A) + Across * (Sx * 330.f), Out, true);
+                }
+                // (2026-11-23, the user: blue lamps from the Deepwood inside the maze, not as bright; very low fog in parts; more
+                // decor) Spread evenly over the whole maze (MazeData's Decor), so none of it marks the way.
+                {
+                    // (none of it solid: it stands at the hedges' feet, and cooking collision for it all stalled the maze's build by
+                    // over 100 ms)
+                    FMapSurf& Posts = Plan.Surfs.AddDefaulted_GetRef(); Posts.Mat = MRoot; Posts.bSolid = false;
+                    FMapSurf& Lamps = Plan.Surfs.AddDefaulted_GetRef(); Lamps.Mat = MPlant; Lamps.bSolid = false; Lamps.bShadow = false;
+                    FMapSurf& Deco = Plan.Surfs.AddDefaulted_GetRef(); Deco.Mat = MStone; Deco.bSolid = false;   // urns, benches
+                    const FColor Wood = FLinearColor(.4f, .75f, 0, 1).ToFColor(false), Iron(30, 30, 36, 0), Glass(70, 150, 255, 150);
+                    const int32 Plants[] = {KFern0, KFern0 + 1, KFern0 + 2, KFern0 + 3, KBlue, KViolet, KFox, KCel0, KCel1, KBroad, KCrimson, KBlue};
+                    const float PlantS[][2] = {{.8f, 1.4f}, {.8f, 1.4f}, {.8f, 1.4f}, {.8f, 1.4f}, {.6f, 1.6f}, {.6f, 1.5f}, {.8f, 1.3f}, {1.4f, 2.4f}, {1.4f, 2.4f}, {.7f, 1.3f}, {.7f, 1.3f}, {.5f, 1.1f}};
+                    FRandomStream Rd(6262); int32 Lanterns = 0, Lit = 0;
+                    for (const FVector4& Dc : Mz.Decor)
+                    {
+                        const FVector2D P(Dc.X, Dc.Y), In(FMath::Cos(Dc.Z), FMath::Sin(Dc.Z)), Tn(-In.Y, In.X); const float Z = Land(D, P.X, P.Y); const int32 Kind = int32(Dc.W);
+                        const FVector Fi(In.X, In.Y, 0.f), Ft(Tn.X, Tn.Y, 0.f);
+                        if (Kind == 0)   // a crooked post at the hedge's foot, its arm out over the corridor, a lantern of blue glass
+                        {
+                            const FVector B(P.X, P.Y, Z - 20.f); const float Lean = Rd.FRandRange(-1.f, 1.f), Hgt = Rd.FRandRange(215.f, 245.f);
+                            const FVector Pts[] = {B, B + FVector(0, 0, Hgt * .38f) + Ft * 8.f * Lean - Fi * 3.f, B + FVector(0, 0, Hgt * .75f) - Ft * 6.f * Lean - Fi * 4.f,
+                                                   B + FVector(0, 0, Hgt) + Fi * 6.f, B + FVector(0, 0, Hgt + 20.f) + Fi * 34.f, B + FVector(0, 0, Hgt + 12.f) + Fi * 62.f, B + FVector(0, 0, Hgt - 4.f) + Fi * 72.f};
+                            Posts.Pipe(Pts, 7.5f, 3.f, 8, 5, Wood, float(Lanterns) * 2.7f);
+                            const FVector Hook = B + FVector(0, 0, Hgt + 8.f) + Fi * 64.f, Ce = Hook - FVector(0, 0, 13.f);
+                            const FVector Chain[] = {Hook + FVector(0, 0, 4.f), Ce};
+                            Lamps.Pipe(Chain, 1.3f, 1.3f, 4, 1, Iron, 0.f);
+                            const FVector2D Cap[] = {{.5f, 0.f}, {3.f, -1.f}, {9.f, -6.f}, {13.5f, -10.f}, {14.f, -12.f}, {10.5f, -13.f}};
+                            const FVector2D Pane[] = {{10.5f, -13.f}, {11.5f, -16.f}, {11.5f, -36.f}, {9.5f, -40.f}};
+                            const FVector2D Foot[] = {{9.5f, -40.f}, {12.f, -41.5f}, {11.f, -44.f}, {5.f, -48.f}, {.5f, -56.f}};
+                            Lamps.Lathe(Ce, Cap, 6, Iron); Lamps.Lathe(Ce, Pane, 6, Glass); Lamps.Lathe(Ce, Foot, 6, Iron);
+                            for (int32 K = 0; K < 6; ++K) { const float A = 2.f * PI * K / 6.f; Lamps.Box(Ce + FVector(11.8f * FMath::Cos(A), 11.8f * FMath::Sin(A), -26.f), FVector(1.1f, 1.1f, 12.5f), FMath::RadiansToDegrees(A), Iron); }
+                            if (Lanterns++ % 4 == 0 && Lit < 64) { Plan.Lights.Add(FVector4(Ce.X, Ce.Y, Ce.Z - 26.f, 20.f)); Plan.LightCols.Add(FLinearColor(.1f, .3f, 1.f, 950.f)); ++Lit; }
+                        }
+                        else if (Kind == 1)   // plants at the hedge's foot: ferns, glowing caps, foxgloves, celandine, broad leaves
+                        {
+                            for (int32 N = Rd.RandRange(2, 4), K = 0; K < N; ++K)
+                            {
+                                const int32 Pk = Rd.RandRange(0, UE_ARRAY_COUNT(Plants) - 1); const FVector2D Q = P + Tn * Rd.FRandRange(-55.f, 55.f) + In * Rd.FRandRange(-4.f, 22.f);
+                                Plan.Inst[Plants[Pk]].Add(FTransform(FRotator(Rd.FRandRange(-5.f, 5.f), Rd.FRandRange(0.f, 360.f), Rd.FRandRange(-5.f, 5.f)), FVector(Q.X, Q.Y, Land(D, Q.X, Q.Y) - 2.f), FVector(Rd.FRandRange(PlantS[Pk][0], PlantS[Pk][1]))));
+                            }
+                        }
+                        else if (Kind == 2)   // a stone urn, flowers in it
+                        {
+                            const FVector C(P.X, P.Y, Z); const FVector2D Urn[] = {{.5f, 0.f}, {16.f, 0.f}, {17.f, 6.f}, {11.f, 12.f}, {10.f, 22.f}, {20.f, 34.f}, {26.f, 50.f}, {25.f, 62.f}, {29.f, 66.f}, {29.f, 70.f}, {22.f, 70.f}, {21.f, 64.f}};
+                            Deco.Lathe(C, Urn, 14, Plain);
+                            for (int32 K = 0; K < 3; ++K) Plan.Inst[K == 0 ? KFox : KCel0 + (K & 1)].Add(FTransform(FRotator(0, Rd.FRandRange(0.f, 360.f), 0), C + FVector(Rd.FRandRange(-8.f, 8.f), Rd.FRandRange(-8.f, 8.f), 62.f), FVector(K == 0 ? .7f : 1.3f)));
+                        }
+                        else if (Kind == 3)   // a stone bench along the hedge
+                        {
+                            const FVector C(P.X, P.Y, Z), Back = -Fi * 8.f; const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Tn.Y, Tn.X));
+                            for (const float Sx : {-1.f, 1.f}) Deco.Box(C + Back + Ft * (Sx * 46.f) + FVector(0, 0, 17.f), FVector(8.f, 18.f, 17.f), Yaw, Plain);
+                            Deco.Box(C + Back + FVector(0, 0, 38.f), FVector(64.f, 21.f, 5.f), Yaw, Plain);
+                        }
+                        else if (Kind == 4)   // a patch of low fog: a few veils lying close over the floor
+                            for (int32 K = 0; K < 6; ++K) { const float X = P.X + Rd.FRandRange(-260.f, 260.f), Y = P.Y + Rd.FRandRange(-260.f, 260.f); Plan.Veils.Add(FVector4(X, Y, Land(D, X, Y) + Rd.FRandRange(18.f, 40.f), Rd.FRandRange(240.f, 380.f))); }
+                        else   // petals fallen on the floor
+                            Plan.Inst[KPetals].Add(FTransform(FRotator(0, FMath::RadiansToDegrees(Dc.Z), 0), FVector(P.X, P.Y, Z + 1.f), FVector(Rd.FRandRange(.8f, 1.5f))));
+                    }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_DECOR lanterns=%d lit=%d items=%d veils=%d"), Lanterns, Lit, Mz.Decor.Num(), Plan.Veils.Num());
                 }
                 // (2026-11-23) The parkour over the thorns, the thorns, and the root gaps (FeyMap::MazeParkour, MazeGaps).
                 {
@@ -1547,7 +1740,12 @@ namespace
         TArray<FVector> Oaks;   // (X, Y, scale)
         auto Put = [&](int32 K, float X, float Y, float S, float Yaw, float Sink, float Tilt)
         {
-            Plan.Inst[K].Add(FTransform(FRotator(R.FRandRange(-Tilt, Tilt), Yaw, R.FRandRange(-Tilt, Tilt)), FVector(X, Y, Land(D, X, Y) - Sink), FVector(S)));
+            const FRotator Rot(R.FRandRange(-Tilt, Tilt), Yaw, R.FRandRange(-Tilt, Tilt));
+            // (2026-11-23) Nothing on ground steeper than 45 degrees (petals and grass hung on the narrow cut's walls).
+            const float E = 25.f;   // (and none beside such ground: tall grass at a wall's foot leant up into the rock)
+            for (const FVector2D& O : {FVector2D(0, 0), FVector2D(80, 0), FVector2D(-80, 0), FVector2D(0, 80), FVector2D(0, -80)})
+                if (FVector2D(Land(D, X + O.X + E, Y + O.Y) - Land(D, X + O.X - E, Y + O.Y), Land(D, X + O.X, Y + O.Y + E) - Land(D, X + O.X, Y + O.Y - E)).Size() / (2 * E) > 1.f) return;
+            Plan.Inst[K].Add(FTransform(Rot, FVector(X, Y, Land(D, X, Y) - Sink), FVector(S)));
         };
         auto Edge = [&](float X, float Y) { return D == Riverbank ? FMath::Min(X - Ds.X0, FMath::Min(Y - Ds.Y0, Ds.Y1 - Y)) : FMath::Min(FMath::Min(X - Ds.X0, Ds.X1 - X), FMath::Min(Y - Ds.Y0, Ds.Y1 - Y)); };
         auto Free = [&](float X, float Y, float Clear)
@@ -2503,8 +2701,8 @@ void AFeyMap::Tick(float Dt)
     if (AFeywildSetting* S = AFeywildSetting::Get(GetWorld()))
     {
         S->SetGloom(Gloom);
-        const bool bWant = IsReady(Deepwood);
-        if (bWant != bVeils) { bVeils = bWant; S->SetExtraVeils(bWant ? Districts[Deepwood]->Veils : TArray<FVector4>()); }
+        const int32 Want = IsReady(Deepwood) ? Deepwood : IsReady(Maze) ? Maze : -1;   // (2026-11-23: the maze's low fog too)
+        if (Want != VeilsOf) { VeilsOf = Want; S->SetExtraVeils(Want >= 0 ? Districts[Want]->Veils : TArray<FVector4>()); }
     }
     // The deep water: in over his depth, he is back on the last ground he stood on, with a splash.
     if (D == LilyMere && InDeepWater(L.X, L.Y) && L.Z < -26.f + Chuck->GetSimpleCollisionHalfHeight())

@@ -123,13 +123,16 @@ namespace
                 FFeyFlower F; F.Pos = FVector(Fp.X, Fp.Y, LandZ(Maze, Fp.X, Fp.Y)); F.Yaw = 40.f; F.Vines = 0; P.Flowers.Add(F);
                 for (int32 K = 0; K < MazeShortcuts().Num(); ++K)
                 { const FVector2D Q = MazeShortcuts()[K].Plant; FFeyFlower Fs; Fs.Pos = FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y)); Fs.Yaw = K * 61.f; Fs.Sc = K; Fs.bHidden = true; P.Flowers.Add(Fs); }
-                const TArray<FVector2D>& De = MazeDeadEnds(); const TArray<FVector2D>& Rt = MazeRoute();
-                for (const int32 K : {De.Num() / 3, 2 * De.Num() / 3}) if (De.IsValidIndex(K)) for (int32 M = 0; M < 2; ++M) P.Mites.Add(FVector(De[K].X + M * 60.f, De[K].Y - M * 40.f, M * 140.f));
+                const TArray<FVector2D>& Rt = MazeRoute();
+                // (2026-11-23, second round) The mites, the turning statues and cigarettes on the way through only (MazeMarks).
+                for (const FMazeMark& Mk : MazeMarks())
+                {
+                    const FVector2D Tn(-Mk.In.Y, Mk.In.X);
+                    if (Mk.Kind == 1) P.Statues.Add(Mk.P);
+                    else if (Mk.Kind == 2) for (int32 M = 0; M < 2; ++M) { const FVector2D Q = Mk.P + Mk.In * 40.f + Tn * (M ? 60.f : -60.f); P.Mites.Add(FVector(Q.X, Q.Y, M * 140.f)); }
+                    else if (Mk.Kind == 3) for (const FVector2D& C : {FVector2D(-12.f, 0.f), FVector2D(10.f, 9.f), FVector2D(2.f, -13.f)}) { const FVector2D Q = Mk.P + Mk.In * (14.f + C.Y) + Tn * C.X; P.Cigs.Add(FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y))); }
+                }
                 P.Patrol = Rt[Rt.Num() / 2];
-                // (2026-11-23) Cigarettes in the dead end past each parkour off the way through.
-                for (const FMazeParkour& Pk : MazeParkour()) if (Pk.bReward)
-                    for (const FVector2D& C : {FVector2D(-12.f, 0.f), FVector2D(10.f, 9.f), FVector2D(2.f, -13.f)})
-                    { const FVector2D Q = MazeParkourAt(Pk, Pk.Bed1 + 150.f + C.X, -70.f + C.Y); P.Cigs.Add(FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y))); }
                 for (int32 K = 0; K < 2; ++K) { const FVector2D Q = Rt[Rt.Num() / 2 + K * 2]; P.Redcaps.Add(FVector(Q.X, Q.Y, K * 180.f)); }
                 for (int32 K = 0; K < MazeLanes().Num(); ++K)
                 {
@@ -142,7 +145,6 @@ namespace
                     const float A = Ha + (K ? -.35f : .35f); const FVector2D Q = Hub + FVector2D(FMath::Cos(A), FMath::Sin(A)) * (R0 + Pitch * 1.5f); FFeyMoth M;
                     M.Home = FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y) + 72.f); M.Axis = FVector(-FMath::Sin(A), FMath::Cos(A), 0.f); M.Range = 260.f; M.Bob = 24.f; M.Rate = 1.5f + .2f * K; M.Phase = 2.1f * K; P.Moths.Add(M);
                 }
-                for (int32 K = 3; K < De.Num() && P.Statues.Num() < 5; K += FMath::Max(1, De.Num() / 5)) P.Statues.Add(De[K]);
             }
             {   // The Moonmoth Fen: moths across the way out to it.
                 FPlace& P = Out[LilyMere]; const TArray<FVector2D>& Sp = SpurOf(LilyMere); const FVector2D S0 = Sp[0], S1 = Sp.Last(), Ds = (S1 - S0).GetSafeNormal();

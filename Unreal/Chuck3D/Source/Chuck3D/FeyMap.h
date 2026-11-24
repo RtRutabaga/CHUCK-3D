@@ -90,6 +90,19 @@ namespace FeyMap
     struct FMazeGap { FVector2D C = FVector2D::ZeroVector; float Yaw = 0; };
     const TArray<FMazeParkour>& MazeParkour();
     const TArray<FMazeGap>& MazeGaps();
+    /** (2026-11-23, second round) The unusual things along the way through, and only there (the user: one way to solve the
+     *  maze is to keep heading toward them): 0 a stone figure, 1 a statue that turns while unseen, 2 thorn mites, 3 cigarettes.
+     *  Each stands against a hedge with no opening on its side; In points to the corridor's middle. */
+    struct FMazeMark { FVector2D P = FVector2D::ZeroVector, In = FVector2D::ZeroVector; int32 Kind = 0; };
+    const TArray<FMazeMark>& MazeMarks();
+    /** (2026-11-23, the user: spots narrow enough to wall jump to the top, only to be knocked down by the bees) Squeezes on the
+     *  way: both hedges bulge in, leaving a slot SqueezeGap wide and SqueezeLen long, the hedges' full height (P its middle,
+     *  In across it). */
+    const TArray<FMazeMark>& MazeSqueezes();
+    /** (for stills) The dead ends' frowning statues (X, Y, facing X, Y) and the decor (X, Y, angle in, kind: 0 lantern, 4 low fog). */
+    const TArray<FVector4>& MazeFrowns();
+    const TArray<FVector4>& MazeDecor();
+    constexpr float SqueezeGap = 90.f, SqueezeLen = 360.f;   // (its flat faces 2 cm inside the leaves: 80 cm between)
     /** A point S along the way of parkour P, Across cm out from the middle of the corridor (toward the outer hedge). */
     FVector2D MazeParkourAt(const FMazeParkour& P, float S, float Across = 0.f);
     /** Down among the thorns (his feet, local)? */
@@ -192,7 +205,7 @@ private:
     float WorstReady = 0, Clock = 0, ReportAt = 0, Mist = 0, Gloom = 0;
     FVector LastSafe = FVector::ZeroVector;   // the last ground he stood on outside the deep water (world)
     int32 Drowned = 0;
-    bool bVeils = false;
+    int32 VeilsOf = -1;   // (whose mist is up: the Deepwood's or, 2026-11-23, the maze's low fog)
 public:
     int32 GetDrowned() const { return Drowned; }
 private:
