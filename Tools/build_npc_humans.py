@@ -42,8 +42,9 @@ OUT = ROOT / 'SourceAssets/NPCs/Humans'
 TEX = OUT / 'Textures'
 CLOTH = ROOT / 'SourceAssets/Surfaces/Cloth'
 ARMOR = ROOT / 'SourceAssets/Surfaces/Armor'   # generated mail (Tools/build_dwarf_textures.py); an outfit item names it with `folder`
+HEROES = ROOT / 'SourceAssets/Surfaces/Heroes'   # the temple heroes' surfaces (velvet, suede, leather, metals); also by `folder`
 # Real-world size of one repeat of each fabric (Poly Haven's dimensions; the mail's own).
-TILE_CM = {r['asset']: r['size_cm'] for d in (CLOTH, ARMOR) if (d / 'manifest.json').exists()
+TILE_CM = {r['asset']: r['size_cm'] for d in (HEROES, CLOTH, ARMOR) if (d / 'manifest.json').exists()
            for r in json.loads((d / 'manifest.json').read_text(encoding='utf-8'))['assets']}
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False, primary_bone_axis='Y',
            secondary_bone_axis='X', use_armature_deform_only=True, mesh_smooth_type='FACE', bake_anim=False,
@@ -174,6 +175,17 @@ class Body:
             if c.y < 0:   # the open V front
                 m = min(m, max(abs(c.x) - (.012 + max(0., c.z - v_bottom) * .26), v_bottom - c.z))
             return min(m, c.z - (self.waist_z - .11))
+        if piece == 'vest':
+            # A sleeveless vest or waistcoat (the Crossroads trio, 2026-11-24): deep armholes, open down the front and
+            # wider at the chest (`open`, `lapel`), from a collar at the neck's base to `bottom` below the waist (negative:
+            # cropped above it).
+            collar = self.neck.z + opts.get('collar', .005) - c.z
+            if b in self.TORSO or b == self.NECK: m = collar
+            elif b in self.ARMS: m = min(collar, abs(self.shoulder.x) - opts.get('armhole', .035) - abs(c.x))
+            else: return OUT
+            if c.y < 0:
+                m = min(m, abs(c.x) - (opts.get('open', .03) + max(0., c.z - (self.waist_z + opts.get('lapel_from', .1))) * opts.get('lapel', .35)))
+            return min(m, c.z - (self.waist_z - opts.get('bottom', .06)))
         if piece == 'belt':
             if b not in self.TORSO and b not in self.LEGS: return OUT
             return .026 - abs(c.z - (self.waist_z - .02 + opts.get('z', 0.)))
@@ -325,6 +337,7 @@ PIECES = {
     'trousers': dict(offset=.007, thickness=.004, hides=True),
     'boots':    dict(offset=.011, thickness=.005, hides=True),
     'jerkin':   dict(offset=.015, thickness=.005, hides=False),
+    'vest':     dict(offset=.014, thickness=.005, hides=False),
     'belt':     dict(offset=.027, thickness=.006, hides=False),
     'sash':     dict(offset=.02, thickness=.005, hides=False),
     'cap':      dict(offset=.012, thickness=.006, hides=True),

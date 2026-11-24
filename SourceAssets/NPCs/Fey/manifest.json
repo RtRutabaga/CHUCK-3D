@@ -335,18 +335,52 @@
   "FeySatyr": {
    "fbx": "FeySatyr/SK_FeySatyr.fbx",
    "height_cm": 172,
-   "tris": 76854,
+   "tris": 93650,
    "slots": {
-    "Belt": {
+    "Vest": {
      "type": "fabric",
-     "fabric": "brown_leather",
+     "fabric": "velour_velvet",
      "tint": [
-      0.06,
-      0.038,
-      0.024
+      0.05,
+      0.2,
+      0.11
      ],
-     "tile_cm": 40.0,
-     "gain": 26.931
+     "tile_cm": 27.9,
+     "gain": 8.846,
+     "folder": "SourceAssets/Surfaces/Heroes"
+    },
+    "VestTrim": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.62,
+      0.45,
+      0.16
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
+    "Scarf": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.32,
+      0.035,
+      0.03
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Sash": {
+     "type": "fabric",
+     "fabric": "wool_boucle",
+     "tint": [
+      0.62,
+      0.28,
+      0.03
+     ],
+     "tile_cm": 35.2,
+     "gain": 4.937
     },
     "Scalp": {
      "type": "stubble",
@@ -420,9 +454,9 @@
      "set": "scuba_suede",
      "folder": "SourceAssets/Surfaces/Heroes",
      "tint": [
-      0.06,
-      0.035,
-      0.02
+      0.17,
+      0.095,
+      0.045
      ],
      "rough": 1.0,
      "metal": 0.0,
@@ -447,9 +481,9 @@
      "type": "hair",
      "texture": "Textures/beard_locks.png",
      "tint": [
-      0.09,
-      0.055,
-      0.03
+      0.2,
+      0.12,
+      0.06
      ]
     },
     "Hero_horn": {
@@ -465,19 +499,57 @@
      "metal": 0.0,
      "tile_cm": 50.0
     },
-    "Hero_leather": {
+    "Hero_leaf": {
      "type": "pbr",
-     "set": "fabric_leather_02",
-     "folder": "SourceAssets/Surfaces/Heroes",
+     "set": null,
+     "folder": null,
      "tint": [
-      0.09,
-      0.055,
-      0.032
+      0.05,
+      0.15,
+      0.035
      ],
-     "rough": 1.0,
+     "rough": 0.55,
      "metal": 0.0,
-     "tile_cm": 50.0,
-     "gain": 9.762
+     "tile_cm": 50.0
+    },
+    "Hero_petal": {
+     "type": "pbr",
+     "set": null,
+     "folder": null,
+     "tint": [
+      0.82,
+      0.5,
+      0.62
+     ],
+     "rough": 0.6,
+     "metal": 0.0,
+     "tile_cm": 50.0
+    },
+    "Hero_bloom": {
+     "type": "pbr",
+     "set": null,
+     "folder": null,
+     "tint": [
+      0.85,
+      0.62,
+      0.1
+     ],
+     "rough": 0.6,
+     "metal": 0.0,
+     "tile_cm": 50.0
+    },
+    "Hero_reed": {
+     "type": "pbr",
+     "set": null,
+     "folder": null,
+     "tint": [
+      0.46,
+      0.36,
+      0.17
+     ],
+     "rough": 0.55,
+     "metal": 0.0,
+     "tile_cm": 50.0
     }
    },
    "mouth_cm": [
@@ -659,8 +731,31 @@
   "FeyCentaur": {
    "fbx": "FeyCentaur/SK_FeyCentaur.fbx",
    "height_cm": 186,
-   "tris": 90260,
+   "tris": 117968,
    "slots": {
+    "Vest": {
+     "type": "fabric",
+     "fabric": "fabric_leather_02",
+     "tint": [
+      0.22,
+      0.12,
+      0.06
+     ],
+     "tile_cm": 50.0,
+     "gain": 9.762,
+     "folder": "SourceAssets/Surfaces/Heroes"
+    },
+    "VestTrim": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.55,
+      0.38,
+      0.15
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
     "Vambrace": {
      "type": "fabric",
      "fabric": "brown_leather",
@@ -777,11 +872,11 @@
      "set": "scuba_suede",
      "folder": "SourceAssets/Surfaces/Heroes",
      "tint": [
-      0.34,
-      0.17,
-      0.075
+      0.4,
+      0.15,
+      0.05
      ],
-     "rough": 1.0,
+     "rough": 0.75,
      "metal": 0.0,
      "tile_cm": 28.2,
      "gain": 10.699
@@ -818,9 +913,9 @@
      "type": "hair",
      "texture": "Textures/beard_locks.png",
      "tint": [
-      0.05,
-      0.032,
-      0.02
+      0.03,
+      0.02,
+      0.014
      ]
     },
     "Hero_blanket": {
@@ -980,7 +1075,7 @@
      }
     }
    },
-   "lift_cm": 45.7,
+   "lift_cm": 45.3,
    "bones": [
     "Root",
     "h_front",

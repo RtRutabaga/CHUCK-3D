@@ -12,15 +12,18 @@ kit's strand hair and beards, its clothes (the gnome's shirt, jerkin, breeches a
 leather bracers), and what this script adds, in each one's own final frame (centimetres, +X forward, +Y his left, the
 human's feet at z 0), with the temple heroes' surfaces and helpers (Tools/build_temple_heroes.py, imported):
 
-  * FeyCentaur: the horse's body from his hips back (signed distance fields, Tools/sdf_kit.py: chest, barrel, croup,
-    four legs with knees, hocks, fetlocks and hooves, feathering at the fetlocks, the tail's dock), on bones of its own
+  * FeyCentaur: the horse's body from his hips back (signed distance fields, Tools/sdf_kit.py; rebuilt 2026-11-24 as a
+    horse is built: a trunk lofted over a riding horse's top line, under line and widths, the muscles over it, a horse's
+    joints and slanted hooves, dark points below the knees and hocks, feathering at the fetlocks), on bones of its own
     under the kit's Root (h_front, h_rear; h_fl_/h_fr_/h_hl_/h_hr_ upper, lower, cannon, pastern; h_tail1-4), the human's
     pelvis re-parented to h_front. A coat of suede tinted bay, hooves dark; the tail and the fetlocks' feathering as hair
     cards (the beards' lock texture). Over his back a purple velvet blanket with a gilt border, a girth strap, saddlebags.
     His human legs go. The horse stands lower than the human's floor: its hooves are at z = -LIFT (the game raises him).
   * FeySatyr: goat's legs: the kit's leg bones moved to a goat's (the hock high and back, a long cannon down to a hoof),
     the human legs gone, a furred SDF leg on them under shaggy fur cards; ram's horns curling back from his brow (rigid
-    on the head); a leather strap across his chest from the belt.
+    on the head); a wreath of ivy and small flowers round his head; panpipes tucked into his sash (his green velvet
+    waistcoat, red neckerchief and saffron sash are the kit's, trio.json).
+  * FeyCentaur also wears the kit's dark leather vest with a rolled bronze edge (trio.json).
   * FeyGnome: a tall, soft, pointed green felt hat with a band, its tip flopping back (made in the kit's hook, so the
     strand hair lies under it); a pouch on his belt.
 
@@ -67,13 +70,17 @@ def _expr_path(name):
 kit.TargetService.target_full_path = staticmethod(_expr_path)
 
 HZ.PBR.update({
-    'coat':      dict(set='scuba_suede', folder=HZ.SURF_REL, tint=(.34, .17, .075), rough=1.0, metal=0., tile_cm=None),
+    'coat':      dict(set='scuba_suede', folder=HZ.SURF_REL, tint=(.4, .15, .05), rough=.75, metal=0., tile_cm=None),   # (a bay's coat, a little sheen)
     'coat_dark': dict(set='scuba_suede', folder=HZ.SURF_REL, tint=(.06, .035, .02), rough=1.0, metal=0., tile_cm=None),
     'hoof':      dict(set='fabric_leather_02', folder=HZ.SURF_REL, tint=(.028, .024, .02), rough=.6, metal=0., tile_cm=None),
     'horn':      dict(set=None, tint=(.38, .3, .2), rough=.5, metal=0., tile_cm=None),
     'blanket':   dict(set='velour_velvet', folder=HZ.SURF_REL, tint=(.13, .022, .16), rough=1.0, metal=0., tile_cm=None),
     'felt':      dict(set='poly_wool_herringbone', folder=HZ.SURF_REL, tint=(.05, .12, .03), rough=1.0, metal=0., tile_cm=None),
     'bronze':    dict(set='metal054a', folder=HZ.SURF_REL, tint=(.72, .48, .2), rough=.9, metal=1.0, tile_cm=40.),
+    'leaf':      dict(set=None, tint=(.05, .15, .035), rough=.55, metal=0., tile_cm=None),
+    'petal':     dict(set=None, tint=(.82, .5, .62), rough=.6, metal=0., tile_cm=None),
+    'bloom':     dict(set=None, tint=(.85, .62, .1), rough=.6, metal=0., tile_cm=None),
+    'reed':      dict(set=None, tint=(.46, .36, .17), rough=.55, metal=0., tile_cm=None),
 })
 
 
@@ -95,15 +102,19 @@ class Body:
         return np.stack([op.eval(P, lo, hi) for _, _, op in self.parts])
     def weights(self, P, s=3.):
         D = self.dists(P); dmin = D.min(0)
+        own = np.array([b is not None for b, _, _ in self.parts])
+        D = np.where(own[:, None], D, 1e4); dmin = D.min(0)
         E = np.exp(-np.clip(D - dmin, 0, 40) / s) * (D - dmin < 18)
         W = {}
-        for (bone, _, _), e in zip(self.parts, E): W[bone] = W.get(bone, 0) + e
+        for (bone, _, _), e in zip(self.parts, E):
+            if bone: W[bone] = W.get(bone, 0) + e
         names = list(W); M = np.stack([W[n] for n in names]); order = np.argsort(-M, 0); keep = np.zeros_like(M, bool)
         for k in range(min(4, len(names))): keep[order[k], np.arange(M.shape[1])] = True
         M = np.where(keep, M, 0); M /= np.maximum(M.sum(0), 1e-9)
         return {n: M[i] for i, n in enumerate(names)}
     def tags(self, P):
-        D = self.dists(P); idx = np.argmin(D, 0)
+        D = self.dists(P); own = np.array([b is not None for b, _, _ in self.parts])
+        idx = np.argmin(np.where(own[:, None], D, 1e4), 0)
         return [self.parts[i][1] for i in idx]
 
 
@@ -236,89 +247,204 @@ def delete_legs(rig, meshes, keep_above):
 
 
 # ------------------------------------------------------------------ the centaur's horse half
+def hermite(xs, ys):
+    """A smooth curve through (xs ascending, ys): cubic Hermite with finite-difference tangents (numpy in, numpy out)."""
+    xs, ys = np.asarray(xs, float), np.asarray(ys, float); m = np.gradient(ys, xs)
+    def f(x):
+        x = np.clip(x, xs[0], xs[-1]); i = np.clip(np.searchsorted(xs, x) - 1, 0, len(xs) - 2)
+        h = xs[i + 1] - xs[i]; t = (x - xs[i]) / h; t2, t3 = t * t, t * t * t
+        return (2 * t3 - 3 * t2 + 1) * ys[i] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * ys[i + 1] + (t3 - t2) * h * m[i + 1]
+    return f
+
+
+# The trunk's lines, from a light riding horse of 1.5 m at the withers (cm: x along him, the human's hips at 0; heights
+# above the horse's floor; half widths): the top line (the human's hips, withers, a slight dip of the back, loin, croup,
+# the tail's root, the buttock), the under line (breast, sternum between the forelegs, girth, belly, the flank rising to
+# the stifle, under the buttock) and the width (chest, the ribs' spring, hips, quarters).
+TRUNK = [  # x,   top,  under, half width
+    (24., 127., 106., 7.),
+    (20., 138., 99., 15.),
+    (12., 145., 91., 20.5),
+    (0., 148., 86., 23.5),
+    (-20., 148., 82., 26.5),
+    (-40., 145., 80., 29.5),
+    (-60., 142., 79., 30.5),
+    (-80., 142., 80.5, 30.5),
+    (-100., 144., 85., 29.5),
+    (-115., 146., 92., 28.5),
+    (-130., 147., 100., 27.5),
+    (-145., 145., 104., 25.5),
+    (-160., 141., 107., 22.5),
+    (-170., 137., 111., 17.5),
+    (-176., 131., 118., 8.),
+]
+
+
+# Each hind thigh lofted down its own height (cm above the floor): its front and back edges, its outer and inner sides
+# (his left; mirrored). The broad, flat-sided wedge of a horse's thigh from the croup down past the stifle (its front edge)
+# to the gaskin and the hock.
+THIGH = [  # h,  front x, back x, outer y, inner y
+    (56., -153., -166., 16., 10.5),
+    (63., -148., -167., 17., 10.),
+    (72., -138., -166., 19.5, 9.),
+    (82., -126., -168., 23.5, 8.),
+    (94., -116., -172., 27., 6.5),
+    (108., -116., -177., 27.5, 4.5),
+    (122., -121., -178., 26., 3.),
+    (134., -128., -174., 22., 2.),
+    (141., -134., -166., 15., 2.),
+]
+
+
+def vloft(table, zf, side, p=2.6):
+    """A field for a shape lofted up the height (rows of `table`), its section a rounded box (superellipse, power p)."""
+    hs = [r[0] for r in table]; xf, xb, yo, yi = (hermite(hs, [r[k] for r in table]) for k in (1, 2, 3, 4))
+    h_lo, h_hi = hs[0], hs[-1]
+    def f(P):
+        x, y, h = P[:, 0], P[:, 1] * side, P[:, 2] - zf
+        a, b, o, i = xf(h), xb(h), yo(h), yi(h)
+        rx, ry = np.maximum((a - b) * .5, .5), np.maximum((o - i) * .5, .5)
+        q = (np.abs((x - (a + b) * .5) / rx) ** p + np.abs((y - (o + i) * .5) / ry) ** p) ** (1. / p)
+        d = (q - 1.) * np.minimum(rx, ry)
+        d = np.where(h > h_hi, np.maximum(d, h - h_hi), d)
+        return np.where(h < h_lo, np.maximum(d, h_lo - h), d)
+    return f
+
+
 def centaur(rig, meshes, slots, rng):
+    """A horse's body from the human's hips back, built as a horse is: a lofted trunk on its true lines, with the
+    muscles over it (shoulder and its point, triceps, the two breast muscles parted by their groove, forearm, haunch,
+    point of hip, stifle, gaskin, hamstring), the joints a horse has (elbow, flat-fronted knee, the hock's point, round
+    fetlock with its ergot) and slanted hooves; dark points (bay) below the knees and hocks."""
     F = Final(rig); P0 = F.j('pelvis')
-    # The horse is drawn below in design units (a withers of 118 at x 0 by the human's hips) and stretched to a horse's
-    # size: heights x SZ from its own floor, lengths x SX (at the end, every vertex and bone behind the hips).
-    SZ, SX = 1.27, 1.16
-    zf = P0.z + 4. - 118. * SZ                                     # the horse's floor (below the human's)
+    zf = P0.z + 4. - 150.                                          # the horse's floor (below the human's)
     global LIFT; LIFT = -zf
-    def Z(h): return zf + h * SZ
-    # bones (cm, final frame)
-    new_bone(rig, 'h_front', 'Root', V(-58, 0, Z(108)), V(6, 0, Z(118)))
-    new_bone(rig, 'h_rear', 'h_front', V(-58, 0, Z(108)), V(-132, 0, Z(112)))
+    def Z(h): return zf + h
+    def H(x, y, h): return V(x, y, Z(h))
+    # the joints (cm, his left side; mirrored)
+    FORE = dict(shoulder=(15., 17., 108.), elbow=(-6., 16., 86.), knee=(-1., 15., 50.), fet=(1., 15., 18.), toe=(8., 15., .5))
+    HIND = dict(hip=(-140., 20., 120.), stifle=(-118., 25.5, 96.), hock=(-158., 13.5, 56.), fet=(-156., 13., 18.), toe=(-149., 13., .5))
+    def J(d, k, s): x, y, h = d[k]; return H(x, y * s, h)
+    new_bone(rig, 'h_front', 'Root', H(-60, 0, 128), H(6, 0, 144))
+    new_bone(rig, 'h_rear', 'h_front', H(-60, 0, 128), H(-150, 0, 132))
     HZ.kit.activate(rig); bpy.ops.object.mode_set(mode='EDIT')
     rig.data.edit_bones['pelvis'].parent = rig.data.edit_bones['h_front']; rig.data.edit_bones['pelvis'].use_connect = False
     for s in ('l', 'r'):
         for b in ('thigh', 'calf', 'foot', 'ball'): rig.data.edit_bones[f'{b}_{s}'].use_deform = False
     bpy.ops.object.mode_set(mode='OBJECT')
     legs = {}
-    for side, y in (('l', 14.), ('r', -14.)):
-        fl = [V(-4, y, Z(112)), V(-3, y * 1.05, Z(78)), V(1, y * .95, Z(42)), V(2, y * .95, Z(17)), V(7, y * .95, Z(0))]
-        hl = [V(-122, y * 1.1, Z(108)), V(-104, y * 1.2, Z(72)), V(-131, y * 1.05, Z(44)), V(-127, y, Z(17)), V(-122, y, Z(0))]
+    for side, s in (('l', 1.), ('r', -1.)):
+        fl = [J(FORE, k, s) for k in ('shoulder', 'elbow', 'knee', 'fet', 'toe')]
+        hl = [J(HIND, k, s) for k in ('hip', 'stifle', 'hock', 'fet', 'toe')]
         legs[f'f{side}'] = fl; legs[f'h{side}'] = hl
         for kind, pts, parent in (('f', fl, 'h_front'), ('h', hl, 'h_rear')):
             names = [f'h_{kind}{side}_upper', f'h_{kind}{side}_lower', f'h_{kind}{side}_cannon', f'h_{kind}{side}_pastern']
             par = parent
             for i, nm in enumerate(names):
                 new_bone(rig, nm, par, pts[i], pts[i + 1], V(1, 0, 0)); par = nm
-    tail = [V(-138, 0, Z(124)), V(-152, 0, Z(118)), V(-160, 0, Z(100)), V(-165, 0, Z(78)), V(-167, 0, Z(55))]
+    tail = [H(-171, 0, 134), H(-183, 0, 128), H(-190, 0, 112), H(-194, 0, 92), H(-196, 0, 70)]
     par = 'h_rear'
     for i in range(4): new_bone(rig, f'h_tail{i + 1}', par, tail[i], tail[i + 1], V(0, 0, 1)); par = f'h_tail{i + 1}'
-    # the body
+
+    # --- the trunk: a loft over the lines above, its section an egg (narrower over the back than at the ribs' spring)
+    xs = [r[0] for r in TRUNK][::-1]
+    top_f, und_f, wid_f = (hermite(xs, [r[k] for r in TRUNK][::-1]) for k in (1, 2, 3))
+    x_lo, x_hi = xs[0], xs[-1]
+    def trunk(P):
+        x, y, z = P[:, 0], P[:, 1], P[:, 2] - zf
+        t, b, w = top_f(x), und_f(x), wid_f(x)
+        c, hh = (t + b) * .5, np.maximum((t - b) * .5, .5)
+        v = (z - c) / hh
+        we = np.maximum(w * (1. - .13 * np.clip(v, -1, 1) - .05 * np.clip(v, -1, 1) ** 2), .5)
+        q = np.sqrt((y / we) ** 2 + v ** 2)
+        d = (q - 1.) * np.minimum(we, hh)
+        d = np.where(x > x_hi, np.maximum(d, x - x_hi), d)
+        return np.where(x < x_lo, np.maximum(d, x_lo - x), d)
     B = Body()
-    B.ell('h_front', (-6, 0, Z(98)), (29, 25, 31), k=6)                   # chest
-    B.ell('h_front', (-30, 0, Z(95)), (34, 30, 31), k=7)                   # barrel, front
-    B.ell('h_rear', (-80, 0, Z(95)), (44, 31, 31), k=7)                    # barrel, back
-    B.ell('h_rear', (-118, 0, Z(104)), (30, 27, 26), k=7)                  # croup
-    B.ell('h_rear', (-124, 0, Z(118)), (22, 22, 12), k=6)                  # the rump's top
-    B.ell('h_front', (-50, 0, Z(80)), (44, 22, 14), k=8)                   # belly
-    B.ell('h_front', (-2, 0, Z(119)), (16, 17, 13), k=6)                   # the human's hips into the withers
-    for side, y in (('l', 1.), ('r', -1.)):
-        B.ell('h_front', (-8, 15 * y, Z(96)), (18, 10, 24), k=5)           # shoulder muscle
-        B.ell(f'h_f{side}_upper', (-4, 14 * y, Z(84)), (11, 9, 16), k=5)   # forearm's top
-        B.ell('h_rear', (-110, 18 * y, Z(94)), (24, 11, 24), k=6)          # haunch
+    box = lambda x0, x1: ((x0, -40., zf + 70.), (x1, 40., zf + 160.))
+    for bone, (x0, x1) in (('h_front', (-95., 30.)), ('h_rear', (-185., -55.))):
+        lo, hi = box(x0, x1)
+        def part(P, x0=x0, x1=x1):   # (the same trunk, each half owned by its bone; they overlap from -95 to -55;
+            # outside its half a part fades, so the weights blend over ~10 cm: the surface is the overlap's, unchanged)
+            return trunk(P) + .6 * np.maximum(0., np.maximum(x0 - P[:, 0], P[:, 0] - x1))
+        B.add(bone, 'coat', K.Func('add', 0., lo, hi, part))
+    # The human's lower belly and back into the horse's front: an ellipsoid round the cut skin (so its edge is inside).
+    skin = [o for o in meshes if o.data.materials and o.data.materials[0].name == 'Skin']
+    cut = P0.z - 4.
+    ring = [(o.matrix_world @ v.co) * 100. for o in skin for v in o.data.vertices]
+    ring = [p for p in ring if cut - 1. < p.z < cut + 16. and abs(p.y) < 24.]
+    belt = [(o.matrix_world @ v.co) * 100. for o in meshes if o.name.startswith('belt') for v in o.data.vertices]
+    top = min((p.z for p in belt if abs(p.y) < 24.), default=cut + 6.) + 1.5   # (up to just under his belt)
+    ring = [p for p in ring if p.z < top]
+    if ring:
+        rx0, rx1 = min(p.x for p in ring), max(p.x for p in ring); ry = max(abs(p.y) for p in ring)
+        zc, rz = (cut - 10. + top) * .5, (top - cut + 10.) * .5
+        B.ell('h_front', ((rx0 + rx1) * .5 - 1., 0, zc), ((rx1 - rx0) * .5 + 1.8, ry + 1.8, rz), k=6)
+        print('CHUCK_TRIO_JOIN', f'x={rx0:.0f}..{rx1:.0f} y={ry:.0f} cut={cut:.0f} top={top:.0f}')
+    for side, s in (('l', 1.), ('r', -1.)):
         f, h = legs[f'f{side}'], legs[f'h{side}']
-        B.tube(f'h_f{side}_lower', [f[1] + V(0, 0, 6), f[2]], [11.5, 6.4], k=3)
-        B.ball(f'h_f{side}_lower', f[2], 6.2, k=2)                          # knee
-        B.tube(f'h_f{side}_cannon', [f[2], f[3]], [5.4, 5.], k=2)
-        B.ball(f'h_f{side}_cannon', f[3], 5.6, k=1.5)                       # fetlock
-        B.tube(f'h_h{side}_upper', [h[0], h[1] + V(4, 0, 4)], [18, 11], k=5)  # stifle
-        B.ell(f'h_h{side}_lower', (h[1] + h[2]) * .5 + V(-2, 0, 4), (10, 8.5, 19), k=4, axis=None)   # gaskin
-        B.tube(f'h_h{side}_lower', [h[1], h[2]], [9.5, 6.], k=3)
-        B.ball(f'h_h{side}_lower', h[2] + V(-2, 0, 0), 5.6, k=2)             # hock
-        B.tube(f'h_h{side}_cannon', [h[2], h[3]], [5.4, 5.], k=2)
-        B.ball(f'h_h{side}_cannon', h[3], 5.6, k=1.5)
+        sh, el, kn, fe, to = f
+        hp, st, ho, hf, ht = h
+        def ax(a, b): return np.array(b - a, float)
+        # the forehand: shoulder blade and its muscle, its point, the triceps over the elbow, the breast muscle; the
+        # forearm growing out of them, muscled in front at the top; a flat-fronted knee (subtle: horses are smooth)
+        B.ell('h_front', H(-2, 18. * s, 126), (7., 12.5, 24), k=6., axis=ax(H(-20, 0, 147), H(16, 0, 110)))
+        B.ball('h_front', H(15, 14.5 * s, 107), 7., k=6.)
+        B.ell('h_front', H(-4, 18. * s, 96), (13., 9., 15.), k=6.)
+        B.ell('h_front', H(12, 8.5 * s, 102), (9.5, 8.5, 12.5), k=7.)
+        B.ball(f'h_f{side}_upper', el + V(-5, 0, 2), 5.5, k=4.)                                                  # elbow
+        B.tube(f'h_f{side}_lower', [el + V(2, 0, 10), el + V(1, 0, -6), kn + V(0, 0, 4)], [8., 7.2, 4.8], k=5.)
+        B.ell(f'h_f{side}_lower', H(2, 15.5 * s, 75), (6.2, 5.6, 12.5), k=4.)                                    # forearm's extensor
+        B.ell(f'h_f{side}_lower', kn + V(.5, 0, 0), (5.4, 4.9, 6.8), k=2.5)                                      # the knee
+        B.tube(f'h_f{side}_cannon', [kn + V(.5, 0, -4), fe + V(.5, 0, 4)], [3.4, 3.2], tag='points', k=1.6)       # cannon bone
+        B.tube(f'h_f{side}_cannon', [kn + V(-3.0, 0, -6), fe + V(-3.3, 0, 3)], [2.3, 2.5], tag='points', k=1.8)   # the tendons behind
+        B.ball(f'h_f{side}_cannon', fe, 4.6, tag='points', k=2.)                                                  # fetlock
+        B.ball(f'h_f{side}_cannon', fe + V(-4.3, 0, -1.5), 2.6, tag='points', k=1.8)                              # ergot
+        # the hindquarter: each thigh lofted (THIGH), owned in overlapping bands by the croup, the thigh bone and the
+        # gaskin's; a soft point of hip
+        th = vloft(THIGH, zf, s)
+        for bone, (h0, h1) in (('h_rear', (100., 200.)), (f'h_h{side}_upper', (80., 112.)), (f'h_h{side}_lower', (0., 92.))):
+            def band(P, h0=h0, h1=h1, th=th):   # (fading outside its band, as the trunk's halves)
+                hh = P[:, 2] - zf; return th(P) + .6 * np.maximum(0., np.maximum(h0 - hh, hh - h1))
+            B.add(bone, 'coat', K.Func('add', 3. if bone == 'h_rear' else 0., (-190., -35., zf + 50.), (-105., 35., zf + 150.), band))
+        B.ell(f'h_h{side}_lower', ho + V(.5, 0, -2), (6.0, 5.0, 7.5), k=2.5)                                      # hock
+        B.ball(f'h_h{side}_lower', ho + V(-5, 0, 3), 2.8, k=2.5)                                                  # its point
+        B.tube(f'h_h{side}_cannon', [ho + V(1, 0, -5), hf + V(.5, 0, 4)], [3.6, 3.3], tag='points', k=1.6)
+        B.tube(f'h_h{side}_cannon', [ho + V(-3.2, 0, -7), hf + V(-3.4, 0, 3)], [2.4, 2.5], tag='points', k=1.8)
+        B.ball(f'h_h{side}_cannon', hf, 4.7, tag='points', k=2.)
+        B.ball(f'h_h{side}_cannon', hf + V(-4.3, 0, -1.5), 2.6, tag='points', k=1.8)
         for leg, kind in ((f, 'f'), (h, 'h')):
-            B.tube(f'h_{kind}{side}_pastern', [leg[3], leg[4] + V(0, 0, 8)], [4.4, 4.6], k=1.5)
-            B.tube(f'h_{kind}{side}_pastern', [leg[4] + V(0, 0, 8.5), leg[4] + V(1, 0, .3)], [5.4, 7.4], tag='hoof', k=.8)   # hoof
-            for i in range(5):   # feathering at the fetlock: a darker coat (the cards over it are the hair)
-                a = 2 * math.pi * i / 5; B.ball(f'h_{kind}{side}_cannon', leg[3] + V(2 * math.cos(a) - 1, 2 * math.sin(a), -4), 4.2, tag='feather', k=1.2)
-    B.tube('h_tail1', [tail[0], tail[1] + V(-2, 0, -2)], [8, 4.5], k=3)      # the tail's dock
-    base = sdf_object('Horse', B, 1.4, .45)
+            fet, toe = leg[3], leg[4]
+            coronet = toe + V(-2.5, 0, 8.)
+            B.tube(f'h_{kind}{side}_pastern', [fet + V(0, 0, -1), coronet + V(0, 0, 1.5)], [4.3, 4.2], tag='points', k=1.4)
+            B.tube(f'h_{kind}{side}_pastern', [coronet + V(-.5, 0, .5), toe + V(.5, 0, 2.)], [5.0, 6.6], tag='hoof', k=.5)   # hoof
+    # the soles flat on the floor
+    B.add(None, 'hoof', K.Func('sub', 0., (-220., -45., zf - 30.), (60., 45., zf + .5), lambda P: P[:, 2] - zf))
+    # the groove between the breast muscles
+    B.add('h_front', 'coat', K.Ellipsoids('sub', 2.5, [(np.array(H(24, 0, 103), float), np.array((5., 1.8, 11.)), None)]))
+    B.tube('h_tail1', [tail[0] + V(3, 0, 1), tail[1] + V(-1, 0, -1)], [5.2, 4.], k=4)                       # the tail's dock
+    base = sdf_object('Horse', B, 1.15, .45)
     P = np.array([v.co[:] for v in base.data.vertices])
-    tags = B.tags(P); Wt = B.weights(P)
-    parts = split_by_tag(base, tags, {'Hero_coat': {'coat'}, 'Hero_hoof': {'hoof'}, 'Hero_coat_dark': {'feather'}})
+    tags = B.tags(P)
+    parts = split_by_tag(base, tags, {'Hero_coat': {'coat'}, 'Hero_hoof': {'hoof'}, 'Hero_coat_dark': {'points'}})
     for kind in ('coat', 'hoof', 'coat_dark'): HZ.pbr_slot(slots, kind)
     made = []
     for ob in parts:
-        Q = np.array([v.co[:] for v in ob.data.vertices]); Wq = B.weights(Q)
-        made.append(put_mesh(ob, rig, Wq))
-    # Hair: the tail (long, from the dock down), the feathering over the hooves; the mane's line where the human meets
-    # the horse (a short brush at the waist, under the belt).
+        Q = np.array([v.co[:] for v in ob.data.vertices]); made.append(put_mesh(ob, rig, B.weights(Q)))
+    # Hair: the tail (long, from the dock down), the feathering over the hooves.
     hair = []
     tail_roots = []
-    for i in range(1100):
+    for i in range(1300):
         t = rng.uniform(0, 1); a = rng.uniform(0, 2 * math.pi); c = tail[0].lerp(tail[1], t)
-        n = V(0, math.cos(a), math.sin(a)); tail_roots.append((c + n * 4, n, (tail[2] - tail[0] + V(-6, 0, -40)).normalized()))
-    tob = cards('Tail', tail_roots, rng, 'HorseHair', 88, 2.6, .9, .12); hair.append(('tail', tob))
+        n = V(0, math.cos(a), math.sin(a)); tail_roots.append((c + n * 4, n, (tail[2] - tail[0] + V(-8, 0, -40)).normalized()))
+    tob = cards('Tail', tail_roots, rng, 'HorseHair', 92, 2.6, .9, .12); hair.append(('tail', tob))
     feather = []
     for leg in legs.values():
-        for i in range(36):
-            a = rng.uniform(0, 2 * math.pi); n = V(math.cos(a), math.sin(a), 0)
-            feather.append((leg[3] + n * 5.2 + V(0, 0, rng.uniform(-5, 6)), n, V(0, 0, -1)))
-    fob = cards('Feather', feather, rng, 'HorseHair', 16, 2.4, .2, .25); hair.append(('feather', fob))
-    slots['HorseHair'] = {'type': 'hair', 'texture': 'Textures/beard_locks.png', 'tint': [.05, .032, .02]}
+        for i in range(44):
+            a = rng.uniform(-math.pi * .9, math.pi * .9) + math.pi; n = V(math.cos(a), math.sin(a), 0)   # (mostly behind the fetlock)
+            feather.append((leg[3] + n * 4.8 + V(0, 0, rng.uniform(-4, 9)), n, V(0, 0, -1)))
+    fob = cards('Feather', feather, rng, 'HorseHair', 15, 2.4, .25, .25); hair.append(('feather', fob))
+    slots['HorseHair'] = {'type': 'hair', 'texture': 'Textures/beard_locks.png', 'tint': [.03, .02, .014]}
     for kind, ob in hair:
         Q = np.array([v.co[:] for v in ob.data.vertices])
         if kind == 'tail':
@@ -327,30 +453,29 @@ def centaur(rig, meshes, slots, rng):
                 a, b = np.array(tail[i]), np.array(tail[i + 1]); d = b - a
                 t = np.clip(((Q - a) @ d) / (d @ d), 0, 1); dist = np.linalg.norm(Q - (a + t[:, None] * d), axis=1)
                 Wq[f'h_tail{i + 1}'] = np.exp(-dist / 12.)
-            # past the dock the hair hangs from the last bones
             S = sum(Wq.values()); Wq = {k: v / np.maximum(S, 1e-9) for k, v in Wq.items()}
             made.append(put_mesh(ob, rig, Wq))
         else:
             made.append(put_mesh(ob, rig, B.weights(Q)))
-    # The blanket over his back: a cloth draped on the coat from behind the withers to the croup's front, falling to
-    # mid-flank, with a gilt border; a girth strap; saddlebags behind it.
+    # The blanket over his back: a cloth draped on the coat from behind the withers to the loin, falling to mid-flank,
+    # with a gilt border; a girth strap behind the elbows; saddlebags at the croup's front.
     from mathutils.bvhtree import BVHTree
     coat_ob = next(o for o in made if o.data.materials and o.data.materials[0].name == 'Hero_coat')
     bm = bmesh.new(); bm.from_mesh(coat_ob.data); bm.transform(Matrix.Scale(100., 4)); tree = BVHTree.FromBMesh(bm); bm.free()
-    def drape(x0, x1, half, drop, lift, nu=30, nv=22):
+    def drape(x0, x1, drop, lift, nu=34, nv=24):
         rows = []
         for i in range(nu + 1):
             x = x0 + (x1 - x0) * i / nu; row = []
             for j in range(nv + 1):
-                s = -1 + 2 * j / nv; a = s * math.radians(100)
-                c0 = V(x, 0, Z(96)); d = V(0, math.sin(a), math.cos(a))   # (from outside, inward to the body's middle)
+                s = -1 + 2 * j / nv; a = s * math.radians(104)
+                c0 = H(x, 0, 112); d = V(0, math.sin(a), math.cos(a))   # (from outside, inward to the body's middle)
                 o = c0 + d * 120.; hit = tree.ray_cast(o, -d, 200.)
                 p = hit[0] if hit[0] is not None else c0 + d * 30
                 hang = max(0., abs(s) - .55) / .45
                 row.append(p + V(0, 0, lift) + V(0, math.copysign(1, s), 0) * (1.2 + hang * 3.) + V(0, 0, -drop * hang * hang))
             rows.append(row)
         return rows
-    rows = drape(-28, -98, 1., 14., 1.6)
+    rows = drape(-30, -112, 12., 1.6)
     bm = bmesh.new(); vs = [[bm.verts.new(p) for p in row] for row in rows]
     for i in range(len(vs) - 1):
         for j in range(len(vs[0]) - 1): bm.faces.new((vs[i][j], vs[i][j + 1], vs[i + 1][j + 1], vs[i + 1][j]))
@@ -362,7 +487,6 @@ def centaur(rig, meshes, slots, rng):
     border.append([rows[i][0] + V(0, -.9, 0) for i in range(len(rows))]); border.append([rows[i][-1] + V(0, .9, 0) for i in range(len(rows))])
     bm = bmesh.new()
     for line in border:
-        prev = None
         for i in range(len(line) - 1):
             a, b = line[i], line[i + 1]; d = (b - a).normalized(); n1 = d.cross(V(0, 0, 1)).normalized() if abs(d.z) < .9 else V(1, 0, 0); n2 = d.cross(n1)
             ring_a = [bm.verts.new(a + (n1 * math.cos(t) + n2 * math.sin(t)) * 1.1) for t in [k * math.pi / 3 for k in range(6)]]
@@ -370,12 +494,11 @@ def centaur(rig, meshes, slots, rng):
             for k in range(6): bm.faces.new((ring_a[k], ring_a[(k + 1) % 6], ring_b[(k + 1) % 6], ring_b[k]))
     me = bpy.data.meshes.new('BlanketTrim'); bm.to_mesh(me); bm.free(); trim = bpy.data.objects.new('BlanketTrim', me); bpy.context.collection.objects.link(trim)
     set_material(trim, HZ.pbr_slot(slots, 'gilt').name)
-    girth = []
     bm = bmesh.new(); prev = None
     for k in range(41):
         a = 2 * math.pi * k / 40; d = V(0, math.sin(a), math.cos(a))
-        hit = tree.ray_cast(V(-34, 0, Z(96)) + d * 60, -d, 100.)
-        p = (hit[0] if hit[0] is not None else V(-34, 0, Z(96)) + d * 30) + d * .8
+        hit = tree.ray_cast(H(-24, 0, 112) + d * 60, -d, 100.)
+        p = (hit[0] if hit[0] is not None else H(-24, 0, 112) + d * 30) + d * .8
         cur = [bm.verts.new(p + V(4, 0, 0)), bm.verts.new(p + V(-4, 0, 0))]
         if prev: bm.faces.new((prev[0], prev[1], cur[1], cur[0]))
         prev = cur
@@ -387,26 +510,20 @@ def centaur(rig, meshes, slots, rng):
         bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.)
         for v in bm.verts: v.co = V(v.co.x * 30, v.co.y * 11, v.co.z * 26)
         bmesh.ops.bevel(bm, geom=list(bm.edges), offset=3., segments=3, affect='EDGES')
-        hit = tree.ray_cast(V(-104, 70 * y, Z(96)), V(0, -y, 0), 200.)
-        c = (hit[0] if hit[0] is not None else V(-104, 30 * y, Z(96))) + V(0, 7 * y, -4)
+        hit = tree.ray_cast(H(-118, 70 * y, 124), V(0, -y, 0), 200.)
+        c = (hit[0] if hit[0] is not None else H(-118, 30 * y, 124)) + V(0, 6.5 * y, -6)
         bmesh.ops.translate(bm, verts=bm.verts, vec=c)
         me = bpy.data.meshes.new('Bag'); bm.to_mesh(me); bm.free(); ob = bpy.data.objects.new('Bag', me); bpy.context.collection.objects.link(ob)
         set_material(ob, HZ.pbr_slot(slots, 'leather').name); bags.append(ob)
     for ob in [blanket, trim, girth] + bags:
         Q = np.array([v.co[:] for v in ob.data.vertices])
         made.append(put_mesh(ob, rig, {k: v for k, v in B.weights(Q).items() if k in ('h_front', 'h_rear')} or None))
-    # Lengths to a horse's: x scaled about the human's hips (every vertex made, every horse bone).
-    for ob in made:
-        for v in ob.data.vertices: v.co.x *= SX
-        ob.data.update()
-    HZ.kit.activate(rig); bpy.ops.object.mode_set(mode='EDIT')
-    for eb in rig.data.edit_bones:
-        if eb.name.startswith('h_'): eb.head.x *= SX; eb.tail.x *= SX
-    bpy.ops.object.mode_set(mode='OBJECT')
+    hoofs = [o for o in made if o.data.materials and o.data.materials[0].name == 'Hero_hoof']
+    LIFT = -min(v.co.z for o in hoofs for v in o.data.vertices) * 100. - .5
+    print('CHUCK_TRIO_LIFT', round(LIFT, 1), 'floor', round(-zf, 1))
     for ob in made:
         if not ob.vertex_groups:   # (a fallback: everything on the back moves with the body)
             g = ob.vertex_groups.new(name='h_rear'); g.add(list(range(len(ob.data.vertices))), 1., 'REPLACE')
-    # A wide leather band round his waist where man becomes horse, and a strap across his chest with a bronze boss.
     return made
 
 
@@ -444,8 +561,9 @@ def satyr(rig, meshes, slots, rng):
     base = sdf_object('GoatLegs', B, 1.0, .5)
     P = np.array([v.co[:] for v in base.data.vertices])
     tags = B.tags(P)
+    dark = HZ.PBR['coat_dark']; HZ.PBR['coat_dark'] = dict(dark, tint=(.17, .095, .045))   # (his legs a warm goat brown)
     for kind in ('coat_dark', 'hoof'): HZ.pbr_slot(slots, kind)
-    HZ.PBR['coat_dark'] = dict(HZ.PBR['coat_dark'], tint=(.07, .042, .024))
+    HZ.PBR['coat_dark'] = dark
     parts = split_by_tag(base, tags, {'Hero_coat_dark': {'coat'}, 'Hero_hoof': {'hoof'}})
     made = []
     for ob in parts:
@@ -465,26 +583,26 @@ def satyr(rig, meshes, slots, rng):
         a = rng.uniform(0, 2 * math.pi); n = V(math.cos(a), math.sin(a) * 1.1, -.2).normalized()
         roots.append((pv + V(-2, 0, -6) + V(n.x * 14, n.y * 16, n.z * 12 + rng.uniform(-4, 6)), n, V(0, 0, -1)))
     fur = cards('Fur', roots, rng, 'GoatFur', 13, 3.0, .35, .3)
-    slots['GoatFur'] = {'type': 'hair', 'texture': 'Textures/beard_locks.png', 'tint': [.09, .055, .03]}
+    slots['GoatFur'] = {'type': 'hair', 'texture': 'Textures/beard_locks.png', 'tint': [.2, .12, .06]}
     Q = np.array([v.co[:] for v in fur.data.vertices]); made.append(put_mesh(fur, rig, B.weights(Q)))
-    # Ram's horns: from above the temples, curling back and down round the ears, ridged.
+    # Ram's horns (2026-11-24, as the reference's: low, not rising over his head, where the gnome sits): from above the
+    # temples up a little and back, then down behind the ears and forward round under them, spiralling outward, ridged.
     head_h, head_t = F.j('head'), F.j('head', True)
-    top = head_t; fwd = V(1, 0, 0)
     bm = bmesh.new()
     for y in (1., -1.):
+        root = head_h.lerp(head_t, .8) + V(3.4, 4.6 * y, 0)
+        centre = root + V(-4.2, 0, -5.)
+        a0 = math.atan2(5., 4.2)
         pts = []
-        c0 = head_h.lerp(head_t, .86) + V(3.2, 4.2 * y, 0)
-        for i in range(34):
-            t = i / 33; a = t * math.radians(330)
-            r = 6.5 * (1 - .45 * t)
-            p = c0 + V(-r * math.sin(a) - 3 * t, y * (1.8 + 4.2 * t), r * (1 - math.cos(a)) * .9 + 2.5 * math.sin(math.pi * t) - 7 * t * t)
-            pts.append(p)
+        for i in range(40):
+            t = i / 39; a = a0 + t * math.radians(310); r = 6.5 * (1 - .42 * t)
+            pts.append(V(centre.x + r * math.cos(a), root.y + y * (1.2 + 5.2 * t), centre.z + r * math.sin(a)))
         prev = None
         for i, p in enumerate(pts):
-            t = i / 33; d = (pts[min(i + 1, 33)] - pts[max(i - 1, 0)]).normalized(); n1 = d.cross(V(0, 1, 0)).normalized(); n2 = d.cross(n1)
-            rad = 2.7 * (1 - .82 * t) + .25
-            ridge = 1 + .09 * math.sin(i * 2.3)
-            ring = [bm.verts.new(p + (n1 * math.cos(k * math.pi / 5) + n2 * math.sin(k * math.pi / 5)) * rad * ridge * (1.15 if k in (0, 1, 9) else 1.)) for k in range(10)]
+            t = i / 39; d = (pts[min(i + 1, 39)] - pts[max(i - 1, 0)]).normalized(); n1 = d.cross(V(0, 1, 0)).normalized(); n2 = d.cross(n1)
+            rad = 2.5 * (1 - .78 * t) + .3
+            ridge = 1 + .09 * math.sin(i * 2.6)
+            ring = [bm.verts.new(p + (n1 * math.cos(k * math.pi / 5) + n2 * math.sin(k * math.pi / 5)) * rad * ridge * (1.12 if k in (0, 1, 9) else 1.)) for k in range(10)]
             if prev:
                 for k in range(10): bm.faces.new((prev[k], prev[(k + 1) % 10], ring[(k + 1) % 10], ring[k]))
             prev = ring
@@ -492,30 +610,101 @@ def satyr(rig, meshes, slots, rng):
     me = bpy.data.meshes.new('Horns'); bm.to_mesh(me); bm.free(); horns = bpy.data.objects.new('Horns', me); bpy.context.collection.objects.link(horns)
     for p in horns.data.polygons: p.use_smooth = True
     set_material(horns, HZ.pbr_slot(slots, 'horn').name); made.append(put_mesh(horns, rig, rigid={'head': 1.}))
-    # A leather strap across his chest, from his right hip over his left shoulder, with a bronze boss.
-    sh, hp = F.j('clavicle_l', True), F.j('thigh_r')
-    path = [hp + V(10, -4, 6), (hp + sh) * .5 + V(15, 0, 4), sh + V(6, 0, 6), sh + V(-6, 0, 7), (hp + sh) * .5 + V(-13, 0, 2), hp + V(-10, -4, 6)]
+    # (His chest strap went 2026-11-24: he wears a waistcoat now, trio.json.) The skin, for what sits on it:
     from mathutils.bvhtree import BVHTree
     body = next(o for o in meshes if o.data.materials and o.data.materials[0].name == 'Skin')
     bb = bmesh.new(); bb.from_mesh(body.data); bb.transform(Matrix.Scale(100., 4)); btree = BVHTree.FromBMesh(bb); bb.free()
-    dense = []
-    for i in range(len(path) - 1):
-        for k in range(6): dense.append(path[i].lerp(path[i + 1], k / 6))
-    dense.append(path[-1])
-    path = []
-    for p in dense:   # onto the skin, a little proud of it
-        loc, nrm, _, _ = btree.find_nearest(p)
-        path.append(loc + nrm * .7 if loc is not None else p)
-    bm = bmesh.new(); prev = None
-    for i, p in enumerate(path):
-        d = (path[min(i + 1, len(path) - 1)] - path[max(i - 1, 0)]).normalized(); loc, nrm, _, _ = btree.find_nearest(p); w = d.cross(nrm if nrm is not None else V(1, 0, 0)).normalized() * 2.4
-        cur = [bm.verts.new(p - w), bm.verts.new(p + w)]
-        if prev: bm.faces.new((prev[0], prev[1], cur[1], cur[0]))
-        prev = cur
-    me = bpy.data.meshes.new('Strap'); bm.to_mesh(me); bm.free(); strap = bpy.data.objects.new('Strap', me); bpy.context.collection.objects.link(strap)
-    HZ.kit.activate(strap); m = strap.modifiers.new('Sol', 'SOLIDIFY'); m.thickness = .5; bpy.ops.object.modifier_apply(modifier=m.name)
-    set_material(strap, HZ.pbr_slot(slots, 'leather').name); made.append(put_mesh(strap, rig, rigid={'spine_03': .6, 'spine_02': .4}))
+    made += satyr_wreath(F, body, slots, rng)
+    made += satyr_pipes(F, rig, slots, btree)
     return made
+
+
+def leaf_mesh(bm, at, n, along, size, curl=.25):
+    """An ivy leaf: a pointed, lobed blade (a fan of triangles) at `at` (cm), facing n, its tip along `along`."""
+    side = along.cross(n).normalized(); along = n.cross(side).normalized()
+    c = bm.verts.new(at); ring = []
+    for k in range(11):
+        a = math.pi * k / 10   # round from one side to the other, through the tip
+        r = size * (.55 + .45 * math.sin(a) ** 3 + .18 * math.sin(3 * a) ** 2)
+        p = at + side * math.cos(a) * r * .8 + along * (math.sin(a) * r + size * .15) + n * curl * size * math.sin(a) * .5
+        ring.append(bm.verts.new(p))
+    for k in range(10): bm.faces.new((c, ring[k], ring[k + 1]))
+
+
+def satyr_wreath(F, body, slots, rng):
+    """A wreath of ivy round his head at the brow, over the horns' roots, with small flowers in it (rigid on the head)."""
+    me = body.data; Mw = body.matrix_world
+    head_h, head_t = F.j('head'), F.j('head', True)
+    eyes = [o for o in body.parent.children if o.data.materials and o.data.materials[0].name == 'Eye'] if body.parent else []
+    ez = [(o.matrix_world @ v.co).z * 100. for o in eyes for v in o.data.vertices]
+    z0 = (sum(ez) / len(ez) if ez else (head_h.z + (head_t.z - head_h.z) * .58)) + 6.   # (round the brow, over the horns' roots)
+    names = {g.index: g.name for g in body.vertex_groups}
+    pts = []
+    for v in me.vertices:
+        p = (Mw @ v.co) * 100.
+        if abs(p.z - z0) < 1.2 and any(names.get(g.group) == 'head' and g.weight > .5 for g in v.groups): pts.append(p)
+    cx = sum(p.x for p in pts) / len(pts); cy = sum(p.y for p in pts) / len(pts)
+    bins = [0.] * 36
+    for p in pts:
+        a = math.atan2(p.y - cy, p.x - cx); k = int((a + math.pi) / (2 * math.pi) * 36) % 36
+        bins[k] = max(bins[k], math.hypot(p.x - cx, p.y - cy))
+    for k in range(36):
+        if not bins[k]: bins[k] = max(bins)
+    lb, pb, bb = bmesh.new(), bmesh.new(), bmesh.new()
+    for i in range(150):
+        a = rng.uniform(-math.pi, math.pi); k = int((a + math.pi) / (2 * math.pi) * 36) % 36
+        r = bins[k] + 1.6 + rng.uniform(0, 1.2)
+        tilt = .3 * math.cos(a)   # (lower at the brow, higher behind)
+        at = V(cx + math.cos(a) * r, cy + math.sin(a) * r, z0 - 2. + rng.uniform(-1.2, 1.4) - tilt * 6.)
+        out = V(math.cos(a), math.sin(a), rng.uniform(.0, .5)).normalized()
+        tang = V(-math.sin(a), math.cos(a), 0) * rng.choice((-1, 1)) + V(0, 0, rng.uniform(-.4, .5))
+        leaf_mesh(lb, at, out, tang.normalized(), rng.uniform(1.4, 2.3))
+    for i in range(14):
+        a = 2 * math.pi * (i + rng.uniform(-.3, .3)) / 14; k = int((a % (2 * math.pi)) / (2 * math.pi) * 36) % 36
+        k = int(((a + math.pi) % (2 * math.pi)) / (2 * math.pi) * 36) % 36
+        aa = -math.pi + (k + .5) * 2 * math.pi / 36
+        r = bins[k] + 3.2
+        at = V(cx + math.cos(aa) * r, cy + math.sin(aa) * r, z0 - 1.5 - .3 * math.cos(aa) * 6.)
+        out = V(math.cos(aa), math.sin(aa), .35).normalized(); side = out.cross(V(0, 0, 1)).normalized(); up = side.cross(out)
+        centre = bb.verts.new(at + out * .5)
+        for j in range(5):   # five petals
+            b = 2 * math.pi * j / 5
+            d = side * math.cos(b) + up * math.sin(b); e = side * math.cos(b + .5) + up * math.sin(b + .5); f = side * math.cos(b - .5) + up * math.sin(b - .5)
+            c0 = pb.verts.new(at); pb.faces.new((c0, pb.verts.new(at + f * .9 + d * .4), pb.verts.new(at + d * 1.6 + out * .2), pb.verts.new(at + e * .9 + d * .4)))
+        ring = [bb.verts.new(at + out * .3 + (side * math.cos(2 * math.pi * j / 6) + up * math.sin(2 * math.pi * j / 6)) * .45) for j in range(6)]
+        for j in range(6): bb.faces.new((centre, ring[j], ring[(j + 1) % 6]))
+    out = []
+    for nm, bmx, kind in (('Wreath', lb, 'leaf'), ('Petals', pb, 'petal'), ('Blooms', bb, 'bloom')):
+        mesh = bpy.data.meshes.new(nm); bmx.to_mesh(mesh); bmx.free(); ob = bpy.data.objects.new(nm, mesh); bpy.context.collection.objects.link(ob)
+        HZ.kit.activate(ob); m = ob.modifiers.new('Sol', 'SOLIDIFY'); m.thickness = .12; m.offset = 0.; bpy.ops.object.modifier_apply(modifier=m.name)
+        for p in ob.data.polygons: p.use_smooth = True
+        set_material(ob, HZ.pbr_slot(slots, kind).name); out.append(put_mesh(ob, F.rig, rigid={'head': 1.}))
+    print('CHUCK_TRIO_WREATH', f'z={z0:.0f}', f'r={min(bins):.1f}..{max(bins):.1f}')
+    return out
+
+
+def satyr_pipes(F, rig, slots, btree):
+    """Panpipes: seven reeds of falling length bound side by side, tucked upright into his sash at the front of his belly,
+    on his left, leaning out a little (rigid, pelvis and spine)."""
+    pv = F.j('pelvis'); waist = F.j('spine_01').z
+    y = pv.y + 8.5; z = waist - 1.
+    hit = btree.ray_cast(V(pv.x + 60., y, z), V(-1, 0, 0), 100.)
+    front = (hit[0].x if hit[0] is not None else pv.x + 12.) + 2.4
+    base = V(front, y, z - 4.)
+    bm = bmesh.new()
+    for i in range(7):
+        L = 16. - i * 1.6
+        bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=.6, radius2=.6, depth=L,
+                              matrix=Matrix.Translation(V(0, i * 1.25, L * .5)))
+    for z_ in (2.5, 6.):   # the binding
+        bmesh.ops.create_cube(bm, size=1., matrix=Matrix.Translation(V(0, 3.75, z_)) @ Matrix.Diagonal((1.7, 9.8, .9, 1.)))
+    me = bpy.data.meshes.new('Pipes'); bm.to_mesh(me); bm.free(); ob = bpy.data.objects.new('Pipes', me); bpy.context.collection.objects.link(ob)
+    R = Matrix.Rotation(math.radians(-18), 3, 'X') @ Matrix.Rotation(math.radians(10), 3, 'Y')   # (leaning out to his left, a little forward)
+    for v in ob.data.vertices: v.co = base + R @ v.co
+    for p in ob.data.polygons: p.use_smooth = True
+    set_material(ob, HZ.pbr_slot(slots, 'reed').name)
+    print('CHUCK_TRIO_PIPES', tuple(round(c) for c in base))
+    return [put_mesh(ob, rig, rigid={'pelvis': .5, 'spine_01': .5})]
 
 
 # ------------------------------------------------------------------ the gnome's hat (in the kit's hook: its frame)
@@ -626,9 +815,11 @@ def review(name, rig, meshes, slots):
     s.render.engine = 'BLENDER_WORKBENCH'; s.display.shading.color_type = 'MATERIAL'; s.display.shading.light = 'STUDIO'; s.display.shading.show_cavity = True
     lo = min((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices); hi = max((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
     mid = (lo + hi) / 2; h = hi - lo
-    for tag, d, aim_z, lens in (('front', V(1, -.3, .05), mid, 40), ('side', V(0, -1, .05), mid, 40), ('three', V(-.7, -.7, .25), mid, 40), ('head', V(1, -.35, 0), hi - h * .08, 120)):
+    views = [('front', V(1, -.3, .05), mid, 40), ('side', V(0, -1, .05), mid, 40), ('three', V(-.7, -.7, .25), mid, 40), ('head', V(1, -.35, 0), hi - h * .08, 120)]
+    if name == 'FeyCentaur': views += [('hside', V(0, -1, .08), lo + .8, 70), ('hback', V(-.75, -.6, .2), lo + .8, 70), ('hfront', V(.8, -.5, .12), lo + .8, 70)]
+    for tag, d, aim_z, lens in views:
         cam = bpy.data.objects.new('Cam', bpy.data.cameras.new('Cam')); s.collection.objects.link(cam)
-        target = V(-.4 if name == 'FeyCentaur' else 0., 0, aim_z)
+        target = V((-.78 if tag[0] == 'h' and tag != 'head' else -.4) if name == 'FeyCentaur' else 0., 0, aim_z)
         cam.location = target + d.normalized() * h * 2.6; cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler(); cam.data.lens = lens; s.camera = cam
         s.render.resolution_x, s.render.resolution_y = 900, 1000
         s.render.filepath = os.path.join(REVIEW, f'{name}_{tag}.png'); bpy.ops.render.render(write_still=True)

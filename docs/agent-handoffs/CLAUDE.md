@@ -2,6 +2,34 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 24 (second) — Feywild: the Crossroads trio, second round (Claude)
+
+- **Asked:** the gnome's legs over the satyr's shoulders in a normal piggyback; the satyr's legs round the horse's body
+  without cutting into it; a proper horse's body rather than drawn shapes; whimsical satyr clothes; a vest on the centaur.
+- **Source:** `main` at 1cf0df4a; this commit. The package was built from the working tree on 1cf0df4, so its receipt
+  names 1cf0df4.
+- **Changed:** see `docs/regions/FEYWILD.md`, "The Crossroads trio, second round (2026-11-24)".
+  - `Tools/build_fey_trio.py` (horse re-sculpted as lofted trunk and hind thighs with muscles, bay with black points; ram's
+    curls; satyr wreath and panpipes), `Tools/build_fey_trio_anims.py` (riders' legs solved by a clearance search on the
+    body under them; `CHUCK_TRIO_CLEAR` report), `Tools/build_npc_humans.py` (new `vest` piece; hero fabrics usable),
+    `SourceAssets/NPCs/Fey/trio.json` (vests, neckerchief, sash), `FeyTrio.h` (Lift 45.3).
+  - Regenerated: the trio's SK/AS/GR sources and their `/Game/Characters/FeyTrio` assets.
+- **Contract:** Chuck unchanged. The trio's skeletons are rebuilt (the centaur's horse bones changed); manifest `lift_cm`
+  45.3 matches `FeyTrio.h`. The human kit gains a `vest` outfit piece; existing outfits are unaffected.
+- **Validation (actual):**
+  - Blender: satyr knee within 1.6 cm of its solved point, gnome 0.1 cm. `CHUCK_TRIO_CLEAR`: satyr into horse 441 verts
+    deeper than 2 cm, deepest 5.0 cm (the pressed thigh at the seat); gnome into satyr about 600 verts, deepest 7–8 cm.
+  - In-game stills: `Local/shots/feywild-trio*` (`Tools/shots/feywild-trio.txt`, `feywild-trio-walk.txt`).
+  - Package FeyTrioCandidate: Verify-Package 50/50 steps, 182 passes, no retries
+    (`Local/verify-package-20261124-103124.log`). Promoted as **FeywildTrio2**; the candidate folder is removed. Not
+    played by hand.
+- **Known flaws:**
+  - The penetration above. The satyr's fur legs read dark in the evening light; the bay's points end in a hard line.
+  - No free full-body horse with a usable licence was found, so the horse is still code-sculpted.
+  - The trio has no lines yet; dialogue will need a stop/talk state on top of the shared loop.
+
+Next part of the work can be done here (the trio's dialogue once the user supplies it, or any further trio polish).
+
 ## November 24 — Feywild: aiming orchids, wonder pass, hag's cottage, Crossroads trio (Claude)
 
 - **Asked:**

@@ -28,7 +28,7 @@ public:
     virtual void Tick(float DeltaSeconds) override;
     /** The trio standing at World (on the ground), the start of its loop heading Yaw. */
     static AFeyTrio* Spawn(UWorld* World, const FVector& Ground, float Yaw);
-    static constexpr float Lift = 45.7f;      // cm: the centaur's hooves below the human's floor (manifest lift_cm)
+    static constexpr float Lift = 45.3f;      // cm: the centaur's hooves below the human's floor (manifest lift_cm; 2026-11-24 horse)
     static constexpr float Loop = 60.f;       // the clip's length (s)
     /** Tests: where the centaur's body is now (world), and how many parts loaded. */
     FVector GetBodyAt() const;

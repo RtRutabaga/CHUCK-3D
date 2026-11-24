@@ -17,8 +17,15 @@ looking about. Every motion is periodic in the loop, so it runs on without a sea
     middle of its stance and swings forward in an arc to the next. Two-bone IK reaches each fetlock (the knee or the hock
     a hinge), the pastern points at the hoof; the body bobs and rolls with the steps; the tail sways.
   * The satyr's Root follows the centaur's h_front bone (his pelvis on the saddle behind the man's hips), his hands reach
-    the centaur's shoulders and his hooves its flanks by IK; the gnome's Root follows the satyr's chest (his pelvis on the
-    satyr's neck), his boots hang over the satyr's chest, his left hand holds the satyr's left horn, his right arm points.
+    the centaur's shoulders by IK. His legs go round the barrel as a rider's do (2026-11-24): knee, hock, fetlock and hoof
+    each placed by searching the directions that clear the horse's coat (the thigh pressing in no more than 2 cm), the
+    thigh over the blanket's curve, the shank close down the flank; IK and tracking put the bones there.
+  * The gnome rides the satyr's shoulders piggyback: his seat on the shoulders behind the neck (measured on the satyr's
+    seated body), his thighs forward over the shoulders, knees in front of the collarbones, shins down the satyr's chest
+    (placed the same way, clear of the satyr's body); his left hand holds the satyr's left horn, his right arm points.
+    Targets on the satyr's bones are parented with the satyr seated (before, they were parented with him standing at the
+    origin and so rose twice: the gnome perched high).
+  * After baking, CHUCK_TRIO_CLEAR reports how far the posed legs cut into the horse and the satyr.
 Everything is baked to keys on every frame (30 fps) and exported per rig with its meshes.
 """
 from pathlib import Path
@@ -173,44 +180,175 @@ for leg in LEGS:
 
 
 # ------------------------------------------------------------------ the riders
-def back_top(objs, x, y):
-    from mathutils.bvhtree import BVHTree
-    import bmesh
-    best = None
+from mathutils.bvhtree import BVHTree
+
+
+def mat(o):
+    """An object's first material's name, without Blender's .001 (the three share slot names)."""
+    return o.data.materials[0].name.split('.')[0] if o.data.materials else ''
+
+
+ARM_BONES = ('upperarm', 'lowerarm', 'hand', 'thumb', 'index', 'middle', 'ring', 'pinky')
+
+
+def tree_of(objs, M=Matrix.Identity(4), skip_arms=False):
+    """One BVH (world, metres) over objects' undeformed meshes (their rest), moved by M; without the arms (faces with a
+    corner mostly on an arm bone) if skip_arms: they are posed elsewhere."""
+    verts, polys = [], []
     for o in objs:
-        bm = bmesh.new(); bm.from_mesh(o.data); bm.transform(o.matrix_world); tree = BVHTree.FromBMesh(bm); bm.free()
-        hit = tree.ray_cast(V(x, y, 4.), V(0, 0, -1), 10.)
-        if hit[0] is not None: best = max(best if best is not None else -9., hit[0].z)
-    return best
+        W = M @ o.matrix_world; base = len(verts)
+        verts += [W @ v.co for v in o.data.vertices]
+        arm = set()
+        if skip_arms:
+            names = {g.index: g.name for g in o.vertex_groups}
+            arm = {v.index for v in o.data.vertices if sum(g.weight for g in v.groups if names.get(g.group, '').startswith(ARM_BONES)) > .5}
+        polys += [[base + i for i in p.vertices] for p in o.data.polygons if not arm or not any(i in arm for i in p.vertices)]
+    return BVHTree.FromPolygons(verts, polys)
 
 
-cover = [o for o in RIG['FeyCentaur'][1] if o.data.materials and o.data.materials[0].name in ('Hero_blanket', 'Hero_coat')]
-SEAT_X = -.42
-top = back_top(cover, SEAT_X, 0.)
+def signed(tree, p, flip=1.):
+    """Distance from p to the surface, negative inside (by the nearest face's normal)."""
+    loc, n, _, d = tree.find_nearest(p)
+    if loc is None: return 9.
+    return d * (1. if (p - loc).dot(n) >= 0 else -1.) * flip
+
+
+def clear(tree, a, b, ra, rb, t0=0., n=10, flip=1.):
+    """The least clearance along a limb segment a..b of radius ra..rb (from t0 along it): negative where it cuts in."""
+    return min(signed(tree, a.lerp(b, t0 + (1 - t0) * i / n), flip) - (ra + (rb - ra) * (t0 + (1 - t0) * i / n)) for i in range(n + 1))
+
+
+def reach(tree, at, length, ra, rb, score, sgn, t0=.2, allow=0., flip=1., phis=range(-20, 101, 5), thetas=range(-180, 181, 10)):
+    """The best direction for a limb from `at` of `length`: among those clearing the body (by `allow`), the lowest
+    `score(dir, clearance)`; if none clears, the one cutting in least. phi down from level, theta round from forward
+    toward his outside (sgn: +1 his left)."""
+    best, fall = None, None
+    for ph in phis:
+        for th in thetas:
+            a, b = math.radians(ph), math.radians(th)
+            d = V(math.cos(a) * math.cos(b), sgn * math.cos(a) * math.sin(b), -math.sin(a))
+            c = clear(tree, at, at + d * length, ra, rb, t0, flip=flip)
+            if c >= -allow:
+                k = score(d, c)
+                if best is None or k < best[0]: best = (k, d, c)
+            if fall is None or c > fall[1]: fall = (d, c)
+    return (best[1], best[2]) if best else fall
+
+
+def bone_len(rig, b): return (rest(rig, b, True) - rest(rig, b)).length
+
+
+cover = [o for o in RIG['FeyCentaur'][1] if mat(o) in ('Hero_blanket', 'Hero_coat')]
+coat = [o for o in RIG['FeyCentaur'][1] if mat(o) == 'Hero_coat']
+HORSE = tree_of(coat)
+H_FLIP = -1. if signed(HORSE, rest(C, 'h_front').lerp(rest(C, 'h_rear', True), .5)) > 0 else 1.   # (the barrel's middle is inside)
+
+
+def back_top(x, y):
+    hit = tree_of(cover).ray_cast(V(x, y, 4.), V(0, 0, -1), 10.)
+    return hit[0].z if hit[0] is not None else None
+
+
+SEAT_X = -.45
+top = back_top(SEAT_X, 0.)
 S_PELVIS = rest(S, 'pelvis')
-SEAT = V(SEAT_X, 0., top + .075)                        # where the satyr's pelvis sits
+SEAT = V(SEAT_X, 0., top + .10)                         # where the satyr's pelvis sits
 S_OFF = Matrix.Translation(SEAT - S_PELVIS)              # his rest moved onto the saddle
 C_FRONT_REST = C.matrix_world @ C.data.bones['h_front'].matrix_local
 print('CHUCK_TRIO_SEAT', tuple(round(x, 3) for x in SEAT), 'back', round(top, 3))
-# the gnome's pelvis on the satyr's neck, a little back, in the satyr's seated rest
-G_PELVIS = rest(G, 'pelvis')
-NECK = S_OFF @ rest(S, 'neck_01')
-G_SEAT = NECK + V(-.13, 0., .035)
-G_OFF = Matrix.Translation(G_SEAT - G_PELVIS)
 S_CHEST_REST = S_OFF @ (S.matrix_world @ S.data.bones['spine_03'].matrix_local)
+s_root = S.pose.bones['Root']; s_root_rest = S.data.bones['Root'].matrix_local.copy()
+g_root = G.pose.bones['Root']; g_root_rest = G.data.bones['Root'].matrix_local.copy()
+s_root.matrix = S_OFF @ s_root_rest                      # (seated while the targets are placed and parented)
+bpy.context.view_layer.update()
 
-# Targets carried by the bones they rest on (placed in the riders' seated rest).
+# The satyr's legs round the barrel: each thigh over the blanket's curve (cutting in no more than a rider's thigh
+# presses), the shank hanging close down the flank, the goat's cannon and hoof below it, clear of the coat.
+S_LEGS = {}
 for side, sgn in (('l', 1.), ('r', -1.)):
+    hip = S_OFF @ rest(S, f'thigh_{side}')
+    L1, L2, L3, L4 = (bone_len(S, f'{b}_{side}') for b in ('thigh', 'calf', 'foot', 'ball'))
+    d1, c1 = reach(HORSE, hip, L1, .105, .08, lambda d, c: d.z * 1.2 - d.x * .35 + abs(d.y) * .15, sgn, t0=.3, allow=.02, flip=H_FLIP)
+    knee = hip + d1 * L1
+    d2, c2 = reach(HORSE, knee, L2, .075, .05, lambda d, c: d.z - d.x * .2 + 2.5 * max(0., c - .02), sgn, t0=.1, allow=.008, flip=H_FLIP)
+    hock = knee + d2 * L2
+    d3, c3 = reach(HORSE, hock, L3, .04, .035, lambda d, c: d.z - d.x * .3 + 2.5 * max(0., c - .02), sgn, t0=.1, allow=.0, flip=H_FLIP)
+    fet = hock + d3 * L3
+    d4, c4 = reach(HORSE, fet, L4, .035, .045, lambda d, c: d.z * .6 - d.x * .6 + 1.5 * max(0., c - .02), sgn, t0=.1, allow=.0, flip=H_FLIP)
+    toe = fet + d4 * L4
+    S_LEGS[side] = (hip, knee, hock, fet, toe)
+    print('CHUCK_TRIO_SATYR_LEG', side, 'clear_cm', [round(c * 100, 1) for c in (c1, c2, c3, c4)], 'knee', tuple(round(x, 2) for x in knee), 'hoof', tuple(round(x, 2) for x in toe))
+    t_hock = empty(f's_hock_{side}', hock); on_bone(t_hock, C, 'h_front')
+    t_knee = empty(f's_knee_{side}', knee + (knee - (hip + hock) * .5).normalized() * .5); on_bone(t_knee, C, 'h_front')
+    S_LEGS[side] += (ik(S, f'calf_{side}', t_hock, t_knee),)
+    t_fet = empty(f's_fet_{side}', fet); on_bone(t_fet, C, 'h_front')
+    t_toe = empty(f's_toe_{side}', toe); on_bone(t_toe, C, 'h_front')
+    for b, t in (('foot', t_fet), ('ball', t_toe)):
+        c = S.pose.bones[f'{b}_{side}'].constraints.new('DAMPED_TRACK'); c.target = t; c.track_axis = 'TRACK_Y'
+    # his hands on the centaur's shoulders
     hand = empty(f's_hand_{side}', rest(C, f'clavicle_{side}', True) + V(-.06, -.035 * sgn, .075)); on_bone(hand, C, f'clavicle_{side}')
     elbow = empty(f's_elbow_{side}', SEAT + V(-.05, .55 * sgn, .25)); on_bone(elbow, C, 'h_front')
     ik(S, f'lowerarm_{side}', hand, elbow)
-    hoof = empty(f's_hoof_{side}', V(SEAT_X + .18, .3 * sgn, top - .66)); on_bone(hoof, C, 'h_front')
-    knee = empty(f's_knee_{side}', V(SEAT_X + .9, .52 * sgn, top - .05)); on_bone(knee, C, 'h_front')
-    ik(S, f'calf_{side}', hoof, knee)
-    boot = empty(f'g_boot_{side}', S_OFF @ rest(S, 'spine_03') + V(.19, .12 * sgn, -.04)); on_bone(boot, S, 'spine_03')
-    gknee = empty(f'g_knee_{side}', S_OFF @ rest(S, 'spine_03') + V(.5, .2 * sgn, .25)); on_bone(gknee, S, 'spine_03')
-    ik(G, f'calf_{side}', boot, gknee)
-horn = empty('g_horn', S_OFF @ rest(S, 'head', True) + V(-.035, .075, -.015)); on_bone(horn, S, 'head')
+
+
+def fit_pole(rig, chain_bone, mid_bone, want):
+    """The IK's pole angle that puts the middle joint where it was solved for (the rig's own bone rolls decide it)."""
+    con = rig.pose.bones[chain_bone].constraints[-1] if rig.pose.bones[chain_bone].constraints[-1].type == 'IK' else next(c for c in rig.pose.bones[chain_bone].constraints if c.type == 'IK')
+    best = None
+    for a in range(-180, 180, 15):
+        con.pole_angle = math.radians(a); bpy.context.view_layer.update()
+        e = ((rig.matrix_world @ rig.pose.bones[mid_bone].head) - want).length
+        if best is None or e < best[1]: best = (a, e)
+    con.pole_angle = math.radians(best[0]); bpy.context.view_layer.update()
+    return best
+
+
+for side in 'lr':
+    a, e = fit_pole(S, f'calf_{side}', f'calf_{side}', S_LEGS[side][1])
+    print('CHUCK_TRIO_SATYR_POLE', side, a, 'knee_err_cm', round(e * 100, 1))
+
+# The gnome on the satyr's shoulders, piggyback: his seat on the shoulders behind the neck, his thighs forward over
+# them, knees in front of the collarbones, his shins hanging down the satyr's chest; his left hand on the left horn.
+SATYR_BODY = [o for o in RIG['FeySatyr'][1] if o.data.materials and mat(o) not in ('GoatFur', 'Hero_horn', 'Hero_leaf', 'Hero_petal', 'Hero_bloom', 'Hero_reed', 'Lash', 'Brow', 'Eye', 'Hero_coat_dark', 'Hero_hoof')]
+SAT = tree_of([o for o in SATYR_BODY if mat(o) == 'Skin'], S_OFF, skip_arms=True)   # (the skin alone: a garment's inner face reads as inside)
+S_FLIP = -1. if signed(SAT, S_OFF @ rest(S, 'spine_02')) > 0 else 1.
+NECK = S_OFF @ rest(S, 'neck_01')
+tops = []
+for y in (.075, -.075):
+    hit = SAT.ray_cast(V(NECK.x - .02, y, NECK.z + .6), V(0, 0, -1), 1.)
+    if hit[0] is not None: tops.append(hit[0].z)
+sh_top = sum(tops) / len(tops) if tops else NECK.z
+hit = SAT.ray_cast(V(NECK.x - .6, 0., sh_top + .04), V(1, 0, 0), 1.)
+neck_back = hit[0].x if hit[0] is not None else NECK.x - .06
+G_PELVIS = rest(G, 'pelvis')
+gskin = [o for o in RIG['FeyGnome'][1] if mat(o) in ('Trousers', 'Skin')]
+crotch = min(((o.matrix_world @ v.co).z for o in gskin for v in o.data.vertices if abs((o.matrix_world @ v.co).y) < .025 and (o.matrix_world @ v.co).z < G_PELVIS.z), default=G_PELVIS.z - .06)
+G_SEAT = V(neck_back - .03, 0., sh_top + (G_PELVIS.z - crotch) + .01)   # (his crotch against the back of the neck)
+G_OFF = Matrix.Translation(G_SEAT - G_PELVIS)
+print('CHUCK_TRIO_GNOME_SEAT', tuple(round(x, 3) for x in G_SEAT), 'shoulders', round(sh_top, 3), 'neck_back', round(neck_back, 3), 'seat_depth', round(G_PELVIS.z - crotch, 3))
+g_root.matrix = G_OFF @ g_root_rest
+bpy.context.view_layer.update()
+G_LEGS = {}
+clav = {s: S_OFF @ rest(S, f'clavicle_{s}', True) for s in 'lr'}
+for side, sgn in (('l', 1.), ('r', -1.)):
+    hip = G_OFF @ rest(G, f'thigh_{side}')
+    L1, L2, L3 = (bone_len(G, f'{b}_{side}') for b in ('thigh', 'calf', 'foot'))
+    over = lambda d, c: d.z * .5 - d.x * 1.0 + 3. * max(0., c - .015) + 2. * abs(d.y - sgn * .25)   # (forward over the shoulder, lying on it)
+    d1, c1 = reach(SAT, hip, L1, .07, .06, over, sgn, t0=.25, allow=.005, flip=S_FLIP, phis=range(-10, 61, 5))
+    knee = hip + d1 * L1
+    d2, c2 = reach(SAT, knee, L2, .055, .05, lambda d, c: d.z - d.x * .15 + 3. * max(0., c - .01), sgn, t0=.1, allow=.015, flip=S_FLIP)
+    ankle = knee + d2 * L2
+    G_LEGS[side] = (hip, knee, ankle)
+    print('CHUCK_TRIO_GNOME_LEG', side, 'clear_cm', round(c1 * 100, 1), round(c2 * 100, 1), 'knee', tuple(round(x, 2) for x in knee), 'ankle', tuple(round(x, 2) for x in ankle))
+    t_ank = empty(f'g_ankle_{side}', ankle); on_bone(t_ank, S, 'spine_03')
+    t_knee = empty(f'g_knee_{side}', knee + (knee - (hip + ankle) * .5).normalized() * .4); on_bone(t_knee, S, 'spine_03')
+    ik(G, f'calf_{side}', t_ank, t_knee)
+    t_toe = empty(f'g_toe_{side}', ankle + V(.6, 0, -.55).normalized() * L3); on_bone(t_toe, S, 'spine_03')
+    c = G.pose.bones[f'foot_{side}'].constraints.new('DAMPED_TRACK'); c.target = t_toe; c.track_axis = 'TRACK_Y'
+for side in 'lr':
+    a, e = fit_pole(G, f'calf_{side}', f'calf_{side}', G_LEGS[side][1])
+    print('CHUCK_TRIO_GNOME_POLE', side, a, 'knee_err_cm', round(e * 100, 1))
+horn = empty('g_horn', S_OFF @ rest(S, 'head').lerp(S_OFF @ rest(S, 'head', True), .8) + V(-.01, .085, .005)); on_bone(horn, S, 'head')   # (the left horn's crown)
 helbow = empty('g_elbow_l', G_OFF @ rest(G, 'upperarm_l') + V(-.05, .25, -.1)); on_bone(helbow, S, 'spine_03')
 ik(G, 'lowerarm_l', horn, helbow)
 point = empty('g_point'); pelbow = empty('g_elbow_r')
@@ -299,6 +437,27 @@ for rig in (C, S, G): bake(rig)
 print('CHUCK_TRIO_BAKED')
 
 
+def posed_tree(objs):
+    dg = bpy.context.evaluated_depsgraph_get(); verts, polys = [], []
+    for o in objs:
+        e = o.evaluated_get(dg); me = e.to_mesh(); W = o.matrix_world; base = len(verts)
+        verts += [W @ v.co for v in me.vertices]; polys += [[base + i for i in p.vertices] for p in me.polygons]; e.to_mesh_clear()
+    return BVHTree.FromPolygons(verts, polys), verts
+
+
+# How far the riders' legs cut into what they sit on, posed, at a few moments (standing, walking, standing).
+for t in (4., 14., 26., 38.):
+    scene.frame_set(int(t * FPS))
+    horse, _ = posed_tree(coat)
+    _, legs = posed_tree([o for o in RIG['FeySatyr'][1] if mat(o) == 'Hero_coat_dark'])
+    sd = [signed(horse, p, H_FLIP) for p in legs]
+    sat, _ = posed_tree([o for o in SATYR_BODY if mat(o) == 'Skin'])
+    _, gl = posed_tree([o for o in RIG['FeyGnome'][1] if mat(o) in ('Trousers', 'Boots')])
+    gd = [signed(sat, p, S_FLIP) for p in gl]
+    print('CHUCK_TRIO_CLEAR', f't={t:.0f}', 'satyr_in_horse', sum(d < -.02 for d in sd), f'deepest_cm={min(sd) * 100:.1f}',
+          'gnome_in_satyr', sum(d < -.02 for d in gd), f'deepest_cm={min(gd) * 100:.1f}', f'of={len(sd)},{len(gl)}')
+
+
 def export(name):
     rig, meshes = RIG[name]
     others = [r for n, (r, _) in RIG.items() if n != name]
@@ -329,11 +488,11 @@ if REVIEW:
                            else (.08, .06, .05, 1) if n in ('HorseHair', 'GoatFur') else (.6, .55, .45, 1) if 'horn' in n else (.3, .25, .2, 1))
     cam = bpy.data.objects.new('Cam', bpy.data.cameras.new('Cam')); s.collection.objects.link(cam); s.camera = cam; cam.data.lens = 35
     s.render.resolution_x, s.render.resolution_y = 1000, 800
-    for tag, t, d in (('stand', 4., V(1.2, -1, .35)), ('walk', 14., V(.9, -1.2, .3)), ('walk_side', 15.2, V(0, -1, .15)), ('stand2', 26., V(-1, -1, .4)), ('closeup', 5., V(1, -.4, .2))):
+    for tag, t, d in (('stand', 4., V(1.2, -1, .35)), ('walk', 14., V(.9, -1.2, .3)), ('walk_side', 15.2, V(0, -1, .15)), ('stand2', 26., V(-1, -1, .4)), ('closeup', 5., V(1, -.4, .2)), ('closeup_side', 5., V(0, -1, .1)), ('closeup_back', 5., V(-1, -.5, .3))):
         f = int(t * FPS); s.frame_set(f)
         sp, _ = walked(t); p, h = path_at(sp)
-        target = p + Matrix.Rotation(h, 3, 'Z') @ V(-.4, 0, 1.4 if tag != 'closeup' else 2.2)
-        dist = 5.5 if tag != 'closeup' else 2.4
+        target = p + Matrix.Rotation(h, 3, 'Z') @ V(-.4, 0, 1.4 if not tag.startswith('closeup') else 2.0)
+        dist = 5.5 if not tag.startswith('closeup') else 2.4
         cam.location = target + (Matrix.Rotation(h, 3, 'Z') @ d).normalized() * dist
         cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler()
         s.render.filepath = os.path.join(REVIEW, f'trio_{tag}.png'); bpy.ops.render.render(write_still=True)

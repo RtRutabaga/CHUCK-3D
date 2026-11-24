@@ -451,6 +451,53 @@ from the user. Free resources could be downloaded.
   - The great bell flowers have no collision.
   - The islands' and the jellyfish's look from the far districts has not been judged.
 
+## The Crossroads trio, second round (2026-11-24)
+
+The user: the gnome's legs over the satyr's shoulders in a normal piggyback; the satyr's legs round the horse's body
+without cutting into it; a proper horse's body, not drawn shapes; clothes fitting a whimsical satyr; a vest on the
+centaur. No free full-body horse with a usable licence was found (OpenGameArt refuses automated fetches; Sketchfab's are
+CC-BY behind an account; SMK's scans are a rider and heads), so the horse was sculpted again in code.
+
+- **The horse** (`centaur()` in `Tools/build_fey_trio.py`), built as a horse is:
+  - The trunk is a loft over a 1.5 m riding horse's lines: top line (withers, a slight dip of the back, loin, croup,
+    tail root), under line (breast, sternum, girth, belly rising to the stifle) and widths (`TRUNK`), its section an egg.
+  - Each hind thigh is lofted down its height (`THIGH`): the broad, flat-sided wedge from the croup past the stifle to
+    the gaskin and hock.
+  - Over them: shoulder blade, point of shoulder, triceps, the two breast muscles parted by a groove, and a forearm
+    muscled in front. The joints are a horse's: elbow, flat-fronted knee, the hock and its point, fetlock and ergot.
+    Slanted hooves stand flat on the floor.
+  - Colour: a bay coat with a little sheen and black points below the knees and hocks; the tail and feathering are
+    black.
+  - Weights blend over about 10 cm between bands, so the swinging hind thigh does not crease.
+  - The man's belly runs into the horse up to his belt. The lift is now 45.3 cm (`FeyTrio.h`).
+- **Clothes:**
+  - A sleeveless `vest` piece added to the kit (`Tools/build_npc_humans.py`), and the heroes' surfaces (velvet, suede,
+    leather) usable as outfit fabrics.
+  - The centaur wears a brown leather vest with a rolled bronze edge.
+  - The satyr wears a cropped emerald velvet waistcoat with a gilt edge, a red neckerchief and a saffron sash, with a
+    wreath of ivy and small flowers round his brow and panpipes tucked into the sash. His chest strap went.
+  - His horns are now low ram's curls round his ears, as in the image. The tall ones speared the gnome.
+- **Riding** (`Tools/build_fey_trio_anims.py`):
+  - **The satyr:**
+    - Each leg joint is found by searching directions that clear the horse's coat: the thigh over the blanket's curve
+      (pressing in no more than a rider's thigh does), the shank close down the flank, then cannon and hoof. IK and
+      tracking put the bones there (knee within 1.6 cm).
+    - He sits 2 cm higher.
+  - **The gnome's piggyback:**
+    - He sits on the satyr's shoulders with his crotch against the back of the neck, measured on the satyr's seated
+      skin.
+    - His thighs go forward over the shoulders and his shins hang down the satyr's chest. His left hand is on the left
+      horn; his right arm points.
+  - **A bug fixed:** the gnome's targets were parented to the satyr's bones while the satyr still stood at the origin,
+    so they rose a second time when he was seated. That is why the gnome perched high.
+- **Checked:** see `docs/agent-handoffs/CLAUDE.md` (November 24, second entry).
+- **Known flaws:**
+  - The posed clearance check (`CHUCK_TRIO_CLEAR`) still finds the satyr's thigh up to 5 cm into the horse's coat at
+    the seat (a pressed thigh). The gnome's legs go up to 8 cm into the satyr's skin where the satyr's posed arms and
+    shoulders rise.
+  - The satyr's fur legs read dark in the evening light.
+  - The bay's points end in a hard line at the knees and hocks.
+
 ## The wonder pass (planned 2026-11-22)
 
 The user's request: more immersive and visually stunning elements distinct to each district, and more movement for whimsy. Built 2026-11-23 (above, except the crows), each piece judged in stills.
