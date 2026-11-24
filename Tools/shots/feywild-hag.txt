@@ -1,0 +1,13 @@
+# The hag's cottage in the Deepwood (2026-11-23). Tools/Take-Shots.ps1 Tools/shots/feywild-hag.txt
+at FeyDeepwood
+origin feywild
+wait 12
+fov 65
+chuck trail -65815 -23637 98   -65768 -22097 168
+shot front -65444 -23024 148   -65684 -22221 158
+shot door -65427 -22495 108   -65667 -22282 118
+shot chimney -64742 -22008 248   -65561 -21957 308
+shot cauldron -65769 -22846 98   -65704 -22585 48
+shot back -66963 -21576 238   -65768 -22097 188
+chuck pass -64684 -22452 98   -65712 -22180 168
+shot smoke -64400 -23200 400   -65511 -21909 750

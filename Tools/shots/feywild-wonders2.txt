@@ -1,0 +1,42 @@
+# The wonder pass, each landmark (generated from Local/wonders-at.txt). Tools/Take-Shots.ps1 Tools/shots/feywild-wonders2.txt -Extra '-ChuckFeyJellyAt=0'
+at FeyCrossroads
+origin feywild
+wait 10
+fov 60
+chuck crossroads_toad1 -71882 -8784 565   -73181 -9534 470
+shot crossroads_toad2 -62767 10320 408   -62584 8831 313
+shot crossroads_purpleoak3 -61920 -1122 349   -58844 -2004 539
+shot crossroads_purpleoak4 -78615 -7480 405   -76601 -4993 595
+shot crossroads_purpleoak5 -76756 1323 1258   -78258 4148 1448
+chuck highmeadow_wisteria6 -106116 15166 2416   -110300 14800 2806
+shot highmeadow_bell7 -97648 3152 263   -98173 1535 283
+shot highmeadow_bell8 -87097 2462 329   -85814 1347 349
+shot highmeadow_arch9 -94667 -5488 272   -93499 -4918 242
+shot highmeadow_archbroken10 -88379 8703 234   -88447 10001 174
+shot highmeadow_arch11 -104914 2355 1453   -106136 2800 1423
+shot highmeadow_archbroken12 -93804 -4903 286   -94691 -5854 226
+chuck lilymere_purpleoak13 -62849 26813 269   -61547 23890 459
+shot lilymere_purpleoak14 -74239 29313 276   -71039 29369 466
+shot lilymere_purpleoak15 -63660 34706 267   -62461 37673 457
+shot lilymere_archbroken16 -56354 18603 280   -57273 19522 220
+shot lilymere_arch17 -67247 18795 274   -68452 18308 244
+chuck deepwood_blue18 -72414 -24938 246   -72440 -26438 216
+shot deepwood_blue19 -79262 -30056 303   -77892 -30666 273
+shot deepwood_blue20 -86437 -25189 283   -85340 -24166 253
+shot deepwood_toad21 -80901 -39087 288   -81414 -37677 193
+chuck orchard_spire22 -46775 -4398 269   -48173 -4325 279
+shot orchard_spire23 -45500 7340 249   -46114 6082 259
+shot orchard_spire24 -50820 -5619 259   -49902 -6676 269
+shot orchard_arch25 -32436 327 229   -31200 729 199
+shot orchard_arch26 -36513 -524 237   -36400 771 207
+chuck riverbank_bell27 -15146 5 244   -16647 803 264
+shot riverbank_bell28 -3868 342 804   -5189 -728 824
+shot riverbank_bell29 -7481 3193 307   -7012 1559 327
+# the giant lilies on the mere's great pools, the mirror water
+chuck merelily1 -61500 30500 90   -59500 32500 60
+shot merelily2 -73000 33000 260   -75500 35500 60
+# the jellyfish from below, the islands
+chuck jellyup -64000 4000 90   -67000 12000 7000
+shot jellyhigh -60000 -2000 1500   -67000 12000 8500
+chuck isles -100000 0 90   -108000 -22000 11000
+shot islesmeadow -98000 4000 400   -95000 30000 8800

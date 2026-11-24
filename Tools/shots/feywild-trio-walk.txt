@@ -1,0 +1,8 @@
+# trio mid-walk
+at FeyCrossroads
+origin feywild
+wait 14
+fov 50
+chuck chuckview -70900 300 120   -71200 -200 60
+shot walkwide -69300 900 380   -70125 1663 150
+shot walkside -70900 3300 260   -70125 1663 150

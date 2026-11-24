@@ -1,0 +1,1070 @@
+{
+ "npcs": {
+  "FeyGnome": {
+   "fbx": "FeyGnome/SK_FeyGnome.fbx",
+   "height_cm": 98,
+   "tris": 66850,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.32,
+      0.27,
+      0.2
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Jerkin": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.075,
+      0.05,
+      0.03
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.09,
+      0.07,
+      0.05
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.045,
+      0.032,
+      0.022
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.035,
+      0.024,
+      0.016
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Hero_felt": {
+     "type": "pbr",
+     "set": "poly_wool_herringbone",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.05,
+      0.12,
+      0.03
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 27.3,
+     "gain": 5.524
+    },
+    "Hero_leather_dk": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.035,
+      0.024,
+      0.016
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.66,
+      0.65,
+      0.62
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.7200000000000001,
+      0.7110000000000001,
+      0.675
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png",
+     "tint": [
+      0.98,
+      0.8,
+      0.66
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brownlight_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow010_grey.png",
+     "tint": [
+      1.25,
+      1.25,
+      1.2
+     ]
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02_fine.png",
+     "tint": [
+      0.35100000000000003,
+      0.34650000000000003,
+      0.3285
+     ]
+    }
+   },
+   "mouth_cm": [
+    10.9,
+    0.0,
+    86.6
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "FeyGnome/GR_FeyGnome_Hair.abc",
+     "bone": "head",
+     "strands": 5727,
+     "colour": [
+      0.78,
+      0.77,
+      0.73
+     ],
+     "root": 0.15,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.55,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       -0.1,
+       0.52,
+       94.27
+      ],
+      "min": [
+       -4.16,
+       -6.06,
+       87.93
+      ],
+      "max": [
+       6.62,
+       6.12,
+       100.53
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "FeyGnome/GR_FeyGnome_Beard.abc",
+     "bone": "head",
+     "strands": 3136,
+     "colour": [
+      0.8,
+      0.79,
+      0.75
+     ],
+     "root": 0.15,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       7.18,
+       0.34,
+       87.57
+      ],
+      "min": [
+       4.51,
+       -5.93,
+       84.38
+      ],
+      "max": [
+       11.41,
+       5.85,
+       90.7
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "FeyGnome/GR_FeyGnome_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 10509,
+     "colour": [
+      0.8,
+      0.79,
+      0.75
+     ],
+     "root": 0.15,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       8.82,
+       -0.07,
+       84.44
+      ],
+      "min": [
+       5.28,
+       -4.89,
+       82.67
+      ],
+      "max": [
+       10.87,
+       4.68,
+       86.94
+      ]
+     }
+    }
+   },
+   "bones": [
+    "Root",
+    "pelvis",
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "clavicle_l",
+    "upperarm_l",
+    "lowerarm_l",
+    "hand_l",
+    "index_01_l",
+    "index_02_l",
+    "index_03_l",
+    "middle_01_l",
+    "middle_02_l",
+    "middle_03_l",
+    "pinky_01_l",
+    "pinky_02_l",
+    "pinky_03_l",
+    "ring_01_l",
+    "ring_02_l",
+    "ring_03_l",
+    "thumb_01_l",
+    "thumb_02_l",
+    "thumb_03_l",
+    "clavicle_r",
+    "upperarm_r",
+    "lowerarm_r",
+    "hand_r",
+    "index_01_r",
+    "index_02_r",
+    "index_03_r",
+    "middle_01_r",
+    "middle_02_r",
+    "middle_03_r",
+    "pinky_01_r",
+    "pinky_02_r",
+    "pinky_03_r",
+    "ring_01_r",
+    "ring_02_r",
+    "ring_03_r",
+    "thumb_01_r",
+    "thumb_02_r",
+    "thumb_03_r",
+    "neck_01",
+    "head",
+    "jaw",
+    "lid_upper_l",
+    "brow_l",
+    "lid_upper_r",
+    "brow_r",
+    "thigh_l",
+    "calf_l",
+    "foot_l",
+    "ball_l",
+    "thigh_r",
+    "calf_r",
+    "foot_r",
+    "ball_r"
+   ]
+  },
+  "FeySatyr": {
+   "fbx": "FeySatyr/SK_FeySatyr.fbx",
+   "height_cm": 172,
+   "tris": 76854,
+   "slots": {
+    "Belt": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.06,
+      0.038,
+      0.024
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.10400000000000001,
+      0.064,
+      0.036
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.108,
+      0.0675,
+      0.036000000000000004
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/young_lightskinned_male_diffuse.png",
+     "tint": [
+      0.97,
+      0.8,
+      0.64
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brown_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow010.png",
+     "tint": [
+      2.8,
+      1.8,
+      1.1
+     ]
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02_fine.png",
+     "tint": [
+      0.0585,
+      0.036000000000000004,
+      0.03
+     ]
+    },
+    "Hero_coat_dark": {
+     "type": "pbr",
+     "set": "scuba_suede",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.06,
+      0.035,
+      0.02
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 28.2,
+     "gain": 10.699
+    },
+    "Hero_hoof": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.028,
+      0.024,
+      0.02
+     ],
+     "rough": 0.6,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "GoatFur": {
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
+     "tint": [
+      0.09,
+      0.055,
+      0.03
+     ]
+    },
+    "Hero_horn": {
+     "type": "pbr",
+     "set": null,
+     "folder": null,
+     "tint": [
+      0.38,
+      0.3,
+      0.2
+     ],
+     "rough": 0.5,
+     "metal": 0.0,
+     "tile_cm": 50.0
+    },
+    "Hero_leather": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.09,
+      0.055,
+      0.032
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    }
+   },
+   "mouth_cm": [
+    17.1,
+    0.0,
+    152.8
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "FeySatyr/GR_FeySatyr_Hair.abc",
+     "bone": "head",
+     "strands": 65430,
+     "colour": [
+      0.13,
+      0.08,
+      0.045
+     ],
+     "root": 0.3,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.55,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       2.62,
+       0.66,
+       165.9
+      ],
+      "min": [
+       -5.4,
+       -8.97,
+       153.58
+      ],
+      "max": [
+       16.32,
+       8.94,
+       172.99
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "FeySatyr/GR_FeySatyr_Beard.abc",
+     "bone": "head",
+     "strands": 2768,
+     "colour": [
+      0.12,
+      0.075,
+      0.04
+     ],
+     "root": 0.3,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       10.19,
+       0.19,
+       154.5
+      ],
+      "min": [
+       7.42,
+       -7.76,
+       149.21
+      ],
+      "max": [
+       13.01,
+       7.68,
+       157.61
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "FeySatyr/GR_FeySatyr_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 11079,
+     "colour": [
+      0.12,
+      0.075,
+      0.04
+     ],
+     "root": 0.3,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       13.05,
+       0.01,
+       148.98
+      ],
+      "min": [
+       7.99,
+       -6.95,
+       146.61
+      ],
+      "max": [
+       16.23,
+       7.04,
+       153.71
+      ]
+     }
+    }
+   },
+   "bones": [
+    "Root",
+    "pelvis",
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "clavicle_l",
+    "upperarm_l",
+    "lowerarm_l",
+    "hand_l",
+    "index_01_l",
+    "index_02_l",
+    "index_03_l",
+    "middle_01_l",
+    "middle_02_l",
+    "middle_03_l",
+    "pinky_01_l",
+    "pinky_02_l",
+    "pinky_03_l",
+    "ring_01_l",
+    "ring_02_l",
+    "ring_03_l",
+    "thumb_01_l",
+    "thumb_02_l",
+    "thumb_03_l",
+    "clavicle_r",
+    "upperarm_r",
+    "lowerarm_r",
+    "hand_r",
+    "index_01_r",
+    "index_02_r",
+    "index_03_r",
+    "middle_01_r",
+    "middle_02_r",
+    "middle_03_r",
+    "pinky_01_r",
+    "pinky_02_r",
+    "pinky_03_r",
+    "ring_01_r",
+    "ring_02_r",
+    "ring_03_r",
+    "thumb_01_r",
+    "thumb_02_r",
+    "thumb_03_r",
+    "neck_01",
+    "head",
+    "jaw",
+    "lid_upper_l",
+    "brow_l",
+    "lid_upper_r",
+    "brow_r",
+    "thigh_l",
+    "calf_l",
+    "foot_l",
+    "ball_l",
+    "thigh_r",
+    "calf_r",
+    "foot_r",
+    "ball_r"
+   ]
+  },
+  "FeyCentaur": {
+   "fbx": "FeyCentaur/SK_FeyCentaur.fbx",
+   "height_cm": 186,
+   "tris": 90260,
+   "slots": {
+    "Vambrace": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.07,
+      0.045,
+      0.028
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.032,
+      0.02
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Helmet": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.42,
+      0.28,
+      0.12
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
+    "Trim": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.6,
+      0.42,
+      0.16
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.08800000000000001,
+      0.05600000000000001,
+      0.036
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.09000000000000001,
+      0.0585,
+      0.036000000000000004
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_lightskinned_male_diffuse.png",
+     "tint": [
+      0.93,
+      0.8,
+      0.68
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brown_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow009.png",
+     "tint": [
+      3.2,
+      2.2,
+      1.4
+     ]
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02_fine.png",
+     "tint": [
+      0.0495,
+      0.03150000000000001,
+      0.03
+     ]
+    },
+    "Hero_coat": {
+     "type": "pbr",
+     "set": "scuba_suede",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.34,
+      0.17,
+      0.075
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 28.2,
+     "gain": 10.699
+    },
+    "Hero_hoof": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.028,
+      0.024,
+      0.02
+     ],
+     "rough": 0.6,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Hero_coat_dark": {
+     "type": "pbr",
+     "set": "scuba_suede",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.06,
+      0.035,
+      0.02
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 28.2,
+     "gain": 10.699
+    },
+    "HorseHair": {
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
+     "tint": [
+      0.05,
+      0.032,
+      0.02
+     ]
+    },
+    "Hero_blanket": {
+     "type": "pbr",
+     "set": "velour_velvet",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.13,
+      0.022,
+      0.16
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 27.9,
+     "gain": 8.846
+    },
+    "Hero_gilt": {
+     "type": "pbr",
+     "set": "metal054a",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      1.0,
+      0.72,
+      0.32
+     ],
+     "rough": 0.8,
+     "metal": 1.0,
+     "tile_cm": 40.0
+    },
+    "Hero_leather": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.09,
+      0.055,
+      0.032
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    }
+   },
+   "mouth_cm": [
+    17.0,
+    0.0,
+    166.2
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "FeyCentaur/GR_FeyCentaur_Hair.abc",
+     "bone": "head",
+     "strands": 4432,
+     "colour": [
+      0.11,
+      0.07,
+      0.045
+     ],
+     "root": 0.6,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.55,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       2.12,
+       0.67,
+       175.54
+      ],
+      "min": [
+       -4.78,
+       -7.75,
+       164.73
+      ],
+      "max": [
+       14.57,
+       7.85,
+       183.72
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "FeyCentaur/GR_FeyCentaur_Beard.abc",
+     "bone": "head",
+     "strands": 10120,
+     "colour": [
+      0.1,
+      0.065,
+      0.04
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       10.48,
+       0.01,
+       167.29
+      ],
+      "min": [
+       6.71,
+       -7.54,
+       162.42
+      ],
+      "max": [
+       17.25,
+       7.54,
+       171.91
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "FeyCentaur/GR_FeyCentaur_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 23708,
+     "colour": [
+      0.1,
+      0.065,
+      0.04
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       13.66,
+       -0.07,
+       162.82
+      ],
+      "min": [
+       7.96,
+       -6.62,
+       160.64
+      ],
+      "max": [
+       16.61,
+       6.73,
+       165.85
+      ]
+     }
+    }
+   },
+   "lift_cm": 45.7,
+   "bones": [
+    "Root",
+    "h_front",
+    "pelvis",
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "clavicle_l",
+    "upperarm_l",
+    "lowerarm_l",
+    "hand_l",
+    "index_01_l",
+    "index_02_l",
+    "index_03_l",
+    "middle_01_l",
+    "middle_02_l",
+    "middle_03_l",
+    "pinky_01_l",
+    "pinky_02_l",
+    "pinky_03_l",
+    "ring_01_l",
+    "ring_02_l",
+    "ring_03_l",
+    "thumb_01_l",
+    "thumb_02_l",
+    "thumb_03_l",
+    "clavicle_r",
+    "upperarm_r",
+    "lowerarm_r",
+    "hand_r",
+    "index_01_r",
+    "index_02_r",
+    "index_03_r",
+    "middle_01_r",
+    "middle_02_r",
+    "middle_03_r",
+    "pinky_01_r",
+    "pinky_02_r",
+    "pinky_03_r",
+    "ring_01_r",
+    "ring_02_r",
+    "ring_03_r",
+    "thumb_01_r",
+    "thumb_02_r",
+    "thumb_03_r",
+    "neck_01",
+    "head",
+    "jaw",
+    "lid_upper_l",
+    "brow_l",
+    "lid_upper_r",
+    "brow_r",
+    "thigh_l",
+    "calf_l",
+    "foot_l",
+    "ball_l",
+    "thigh_r",
+    "calf_r",
+    "foot_r",
+    "ball_r",
+    "h_rear",
+    "h_hl_upper",
+    "h_hl_lower",
+    "h_hl_cannon",
+    "h_hl_pastern",
+    "h_hr_upper",
+    "h_hr_lower",
+    "h_hr_cannon",
+    "h_hr_pastern",
+    "h_tail1",
+    "h_tail2",
+    "h_tail3",
+    "h_tail4",
+    "h_fl_upper",
+    "h_fl_lower",
+    "h_fl_cannon",
+    "h_fl_pastern",
+    "h_fr_upper",
+    "h_fr_lower",
+    "h_fr_cannon",
+    "h_fr_pastern"
+   ]
+  }
+ },
+ "generator": "Tools/build_fey_trio.py",
+ "mpfb": "2.0.17"
+}

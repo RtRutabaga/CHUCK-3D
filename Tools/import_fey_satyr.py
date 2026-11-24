@@ -71,7 +71,7 @@ def build_marble():
         for k, v in props.items(): e.set_editor_property(k, v)
         return e
     def tob(t, kind): return node(unreal.MaterialExpressionTextureObject, texture=t, sampler_type={'color': unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, 'normal': unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, 'mask': unreal.MaterialSamplerType.SAMPLERTYPE_MASKS}[kind])
-    ln = node(unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
+    ln = node(unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_INSTANCE)
     LIB.connect_material_expressions(node(unreal.MaterialExpressionVertexNormalWS), '', ln, '')
     inputs = {'P': node(unreal.MaterialExpressionLocalPosition), 'LN': ln, 'C': tob(C, 'color'), 'R': tob(R, 'mask'), 'NM': tob(N, 'normal'),
               'Scale': node(unreal.MaterialExpressionScalarParameter, parameter_name='Scale', default_value=70.),
@@ -85,7 +85,7 @@ def build_marble():
     c = node(unreal.MaterialExpressionCustom, code=MARBLE, inputs=args, output_type=F3, additional_outputs=outs)
     for name, expr in inputs.items():
         if not LIB.connect_material_expressions(expr, '', c, name): raise RuntimeError(f'M_FeyMarble: link {name}')
-    wn = node(unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    wn = node(unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_INSTANCE, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     LIB.connect_material_expressions(c, 'WN', wn, '')
     P_ = unreal.MaterialProperty
     for expr, pin, prop in ((c, '', P_.MP_BASE_COLOR), (c, 'Rough', P_.MP_ROUGHNESS), (wn, '', P_.MP_NORMAL)):

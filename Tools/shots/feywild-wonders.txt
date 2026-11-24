@@ -1,0 +1,25 @@
+# The wonder pass (2026-11-23): landmarks, arches, islands, the jellyfish. Tools/Take-Shots.ps1 Tools/shots/feywild-wonders.txt -Extra '-ChuckFeyJellyAt=0'
+at FeyCrossroads
+origin feywild
+wait 12
+fov 70
+# The jellyfish over the Crossroads' north edge, from the hub.
+shot jellyhub -66500 -3000 300   -67000 12000 6200
+shot crossroadswide -60000 -6000 500   -70000 3000 600
+chuck crossjelly -64000 -4000 90   -67000 12000 5000
+# The Highmeadow: the great wisteria, the arches, the islands.
+chuck meadow -101000 3000 90   -110300 14800 900
+shot meadowwide -96000 -2000 600   -110000 10000 1200
+shot meadowisles -100000 0 300   -108000 -22000 9000
+shot wisteria -104000 9000 400   -110300 14800 1000
+# The Lily Mere's mirror water and the giant lily.
+chuck mere -61500 19000 90   -59500 32500 100
+shot merewide -62000 21000 450   -60000 32000 0
+# The Deepwood.
+chuck deep -75000 -30000 90   -72000 -40000 300
+shot deepwide -73000 -26000 400   -76000 -36000 300
+# The orchard and riverbank.
+chuck orchard -40000 0 90   -47000 -5300 300
+shot orchardwide -38000 2000 500   -47000 0 300
+chuck river -12000 0 90   -18000 0 200
+shot riverwide -10000 1500 400   -20000 0 200

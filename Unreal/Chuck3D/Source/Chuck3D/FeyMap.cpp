@@ -12,6 +12,9 @@
 #include <atomic>
 #include "Components/BoxComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/SceneCaptureComponentCube.h"
+#include "Engine/TextureRenderTargetCube.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -213,6 +216,28 @@ namespace
     float MazeRadius(float X, float Y) { return FVector2D(X - Table[Maze].Hub.X, Y - Table[Maze].Hub.Y).Size(); }
 
     float MoatK(float X, float Y);
+    // (2026-11-23) The hag's cottage: just off the trail from the Crossroads into the Deepwood, on its outer side (away from the
+    // hub), its door facing the trail across a small fenced garden, so he passes close by it. X, Y its middle, Z its yaw.
+    const FVector& HagSpot()
+    {
+        static const FVector Spot = []()
+        {
+            const FVector2D Want(-66500.f, -21000.f); float Best = 1e18f; FVector2D At = Want, Tn(1, 0);
+            for (const TArray<FVector2D>& L : Data().Lines[Deepwood])
+                for (int32 I = 0; I + 1 < L.Num(); ++I)
+                {
+                    const FVector2D Q = FMath::ClosestPointOnSegment2D(Want, L[I], L[I + 1]); const float Dd = FVector2D::DistSquared(Q, Want);
+                    if (Dd < Best) { Best = Dd; At = Q; Tn = (L[I + 1] - L[I]).GetSafeNormal(); }
+                }
+            FVector2D Side(-Tn.Y, Tn.X); if (FVector2D::DotProduct(Side, Table[Deepwood].Hub - At) > 0.f) Side = -Side;
+            const FVector2D C = At + Side * 900.f;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HAG_SPOT at=%.0f,%.0f trail=%.0f,%.0f"), C.X, C.Y, At.X, At.Y);
+            return FVector(C.X, C.Y, FMath::RadiansToDegrees(FMath::Atan2(-Side.Y, -Side.X)));
+        }();
+        return Spot;
+    }
+    // The Deepwood's own lie of the land before the cottage's ground is levelled (Land's terms for it).
+    float DeepRaw(float X, float Y) { const int32 D = Deepwood; return 40.f * Noise(X, Y, 2600, D) + 18.f * Noise(X, Y, 700, D + 7) + 6.f * Noise(X, Y, 160, D + 13) + 80.f * Noise(X, Y, 1100, 50) + 40.f * Noise(X, Y, 330, 51); }
     // A district's land: its own character, its paths pressed in, flattened to each threshold's mouth, a wooded rim.
     float Land(int32 D, float X, float Y, float* OutPath = nullptr, float* OutWet = nullptr)
     {
@@ -232,7 +257,13 @@ namespace
             Wet = Smooth(1.5f, 1.f, E);
             break;
         }
-        case Deepwood: H += 80.f * Noise(X, Y, 1100, 50) + 40.f * Noise(X, Y, 330, 51); break;
+        case Deepwood:
+        {
+            H += 80.f * Noise(X, Y, 1100, 50) + 40.f * Noise(X, Y, 330, 51);
+            const FVector& Hs = HagSpot(); const float Dh = FVector2D::Distance(FVector2D(X, Y), FVector2D(Hs));   // (2026-11-23: the cottage's ground levelled)
+            if (Dh < 1300.f) H = FMath::Lerp(H, DeepRaw(Hs.X, Hs.Y), Smooth(1300.f, 800.f, Dh));
+            break;
+        }
         case Highmeadow:
         {
             H += 110.f * Noise(X, Y, 4200, 60) + 2000.f * Smooth(-100500.f, -110500.f, X) + 220.f * Smooth(12500.f, 15500.f, Y);
@@ -867,9 +898,26 @@ namespace
         // (2026-11-23) The maze's marble satyrs: SMK's public-domain scan of the Medici Faun (Tools/import_fey_satyr.py).
         {TEXT("/Game/Art/Feywild/Satyr/SM_FeySatyr.SM_FeySatyr"), 9000, 14000, true, false, false},
         {TEXT("/Game/Art/Feywild/Satyr/SM_FeySatyrFrown.SM_FeySatyrFrown"), 9000, 14000, true, false, false},   // (the same, scowling)
+        // (2026-11-23, the wonder pass; Tools/build_feywild_kit.py) Each district's landmarks, archway ruins, the great wisteria,
+        // oaks hung with purple moss. Seen from far (most stand out over the rest), shadowed; the arches and oaks with collision.
+        {TEXT("/Game/Art/Feywild/SM_FeyGiantBell.SM_FeyGiantBell"), 30000, 40000, true, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyGiantToadstool.SM_FeyGiantToadstool"), 30000, 40000, true, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyGiantBlue.SM_FeyGiantBlue"), 30000, 40000, true, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyGiantLily.SM_FeyGiantLily"), 26000, 34000, false, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyGiantSpire.SM_FeyGiantSpire"), 30000, 40000, true, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyArch0.SM_FeyArch0"), 24000, 32000, true, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyArch1.SM_FeyArch1"), 24000, 32000, true, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyArch0Collision.SM_FeyArch0Collision"), 0, 0, false, true, true},
+        {TEXT("/Game/Art/Feywild/SM_FeyArch1Collision.SM_FeyArch1Collision"), 0, 0, false, true, true},
+        {TEXT("/Game/Art/Feywild/SM_FeyOakWisteria.SM_FeyOakWisteria"), 40000, 52000, true, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyOakWisteriaCollision.SM_FeyOakWisteriaCollision"), 0, 0, false, true, true},
+        {TEXT("/Game/Art/Feywild/SM_FeyOakPurpleMoss.SM_FeyOakPurpleMoss"), 16000, 26000, true, false, false},
+        {TEXT("/Game/Art/Feywild/SM_FeyOakPurpleMossCollision.SM_FeyOakPurpleMossCollision"), 0, 0, false, true, true},
+        {TEXT("/Game/Art/Feywild/SM_FeyHagCottage.SM_FeyHagCottage"), 30000, 40000, true, false, false},   // (2026-11-23) the hag's cottage
     };
     enum EKit { KOak0, KOak1, KCol0, KCol1, KAmber, KBlue, KViolet, KFern0, KBroad = 11, KCrimson, KFox, KCel0, KCel1, KGrass0, KGrass1, KPetals, KRock0, KPad = 25, KLily, KBell,
-                KDeep0, KDeep1, KDCol0, KDCol1, KMoss, KPadBig, KHedge, KSatyr, KSatyrFrown, KitCount };
+                KDeep0, KDeep1, KDCol0, KDCol1, KMoss, KPadBig, KHedge, KSatyr, KSatyrFrown,
+                KGiantBell, KToad, KGiantBlue, KGiantLily, KSpire, KArch0, KArch1, KArchCol0, KArchCol1, KWist, KWistCol, KPurple, KPurpleCol, KHag, KitCount };
     static_assert(UE_ARRAY_COUNT(KitDefs) == KitCount, "a definition for every kit");
     const TCHAR* MatPaths[] = {TEXT("/Game/Art/Feywild/M_FeyGround.M_FeyGround"), TEXT("/Game/Art/Feywild/M_FeyWater.M_FeyWater"), TEXT("/Game/Art/Feywild/M_FeyRiver.M_FeyRiver"),
                                TEXT("/Game/Art/Feywild/M_FeyBlock.M_FeyBlock"), TEXT("/Game/Art/Feywild/M_FeyRoot.M_FeyRoot"), TEXT("/Game/Art/Feywild/M_FeyStone.M_FeyStone"),
@@ -1162,6 +1210,14 @@ const TArray<FVector2D>& FeyMap::RoadOf(int32 D, int32 T) { return Data().RoadOf
 const TArray<FVector2D>& FeyMap::SpurOf(int32 D) { return Data().SpurOf[FMath::Clamp(D, 0, Districts - 1)]; }
 float FeyMap::LandZ(int32 D, float X, float Y) { return Land(D, X, Y); }
 int32 FeyMap::SpotOf(const FString& Point) { for (int32 I = 0; I < SpotTotal; ++I) if (Point == Spot(I).Point) return I; return -1; }
+FVector FeyHagCottage() { return HagSpot(); }
+FVector FeyHagPoint(const FVector& Own)
+{
+    const FVector& Hs = HagSpot(); const float Ya = FMath::DegreesToRadians(Hs.Z);
+    const FVector2D Fx(FMath::Cos(Ya), FMath::Sin(Ya)), Fy(-Fx.Y, Fx.X), P = FVector2D(Hs) + Fx * Own.X + Fy * Own.Y;
+    return FVector(P.X, P.Y, DeepRaw(Hs.X, Hs.Y) + Own.Z);
+}
+
 FVector FeySpotWorld(int32 I) { return I < Districts ? FeyCheckpointWorld(I) : FeyWorld(SpotAt(I) + FVector(0, 0, Stand + 2.f)); }
 void FeyReachSpots(const FVector& World)
 {
@@ -1738,6 +1794,7 @@ namespace
         FRandomStream R(1000 + D);
         const float Ha = (Ds.X1 - Ds.X0) * (Ds.Y1 - Ds.Y0) / 1e8f;
         TArray<FVector> Oaks;   // (X, Y, scale)
+        TArray<FVector> Wonders; int32 WonderCount = 0;   // (2026-11-23, the wonder pass: X, Y, its clear radius)
         auto Put = [&](int32 K, float X, float Y, float S, float Yaw, float Sink, float Tilt)
         {
             const FRotator Rot(R.FRandRange(-Tilt, Tilt), Yaw, R.FRandRange(-Tilt, Tilt));
@@ -1762,6 +1819,7 @@ namespace
                 if (V.Size() < 14000.f && FVector2D::DotProduct(V.GetSafeNormal(), To) > .7f && Clear > 300.f) return false;
             }
             if (D == Deepwood && FVector2D::Distance(FVector2D(X, Y), Redcap) < 2200.f && Clear > 300.f) return false;
+            if (D == Deepwood && FVector2D::Distance(FVector2D(X, Y), FVector2D(HagSpot())) < (Clear > 300.f ? 1300.f + Clear * .5f : 680.f)) return false;   // (the hag's cottage and its garden)
             return true;
         };
         auto Oak = [&](float X, float Y, float S, float Gap)
@@ -1917,8 +1975,9 @@ namespace
         }
         case Highmeadow:
         {
-            const FTransform Xf(FRotator(0, 110.f, 0), FVector(Wisteria.X, Wisteria.Y, Land(D, Wisteria.X, Wisteria.Y) - 30.f), FVector(3.2f));   // (the great wisteria's stand-in)
-            Plan.Inst[KOak1].Add(Xf); Plan.Inst[KCol1].Add(Xf);
+            // (2026-11-23, the wonder pass) The great wisteria: an oak hung all over with wisteria (was the plain oak, a stand-in).
+            const FTransform Xf(FRotator(0, 110.f, 0), FVector(Wisteria.X, Wisteria.Y, Land(D, Wisteria.X, Wisteria.Y) - 30.f), FVector(2.7f));
+            Plan.Inst[KWist].Add(Xf); Plan.Inst[KWistCol].Add(Xf); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_WONDER district=Highmeadow kit=%d at=%.0f,%.0f,%.0f"), int32(KWist), Wisteria.X, Wisteria.Y, Xf.GetLocation().Z);
             const FVector Giants[] = {{-90000, 12000, 2.6f}, {-104000, -6000, 3.4f}, {-97500, 16500, 2.2f}, {-108000, -2000, 4.f}, {-88500, -7000, 1.8f}};
             for (const FVector& G : Giants) if (Free(G.X, G.Y, 500.f)) Put(KAmber, G.X, G.Y, G.Z, R.FRandRange(0.f, 360.f), 6.f, 2.f);
             // Rocks along the rapids' banks.
@@ -1944,6 +2003,130 @@ namespace
             break;
         }
         default: break;
+        }
+        // ------------------------------ the wonder pass (2026-11-23; docs/regions/FEYWILD.md#the-wonder-pass)
+        // A landmark or two in each district (great bell flowers on the riverbank and in the meadow, flower spires in the
+        // orchard, fly agarics at the Crossroads' edges and by the redcaps' camp, a stand of tall blue caps in the Deepwood,
+        // giant lilies on the mere), rounded archway ruins in the open districts, and oaks hung with purple moss by the mere's
+        // fen and the Crossroads' edges. Their own random stream, so the rest of the planting is as it was.
+        {
+            FRandomStream Rw(5000 + D);
+            auto Clear = [&](float X, float Y, float R0)
+            {
+                if (!Free(X, Y, R0)) return false;
+                for (const FVector& O : Oaks) if (FVector2D::Distance(FVector2D(X, Y), FVector2D(O)) < 650.f * O.Z + R0 * .6f) return false;
+                for (const FVector& W : Wonders) if (FVector2D::Distance(FVector2D(X, Y), FVector2D(W)) < W.Z + R0) return false;
+                return true;
+            };
+            auto Seek = [&](FVector2D Around, float Spread, float Near, float Far, float R0, FVector2D& Out)
+            {
+                for (int32 I = 0; I < 600; ++I)
+                {
+                    const FVector2D Q = Around + FVector2D(Rw.FRandRange(-Spread, Spread), Rw.FRandRange(-Spread, Spread));
+                    const float Pd = PathDist(D, Q.X, Q.Y);
+                    if (Pd < Near || Pd > Far || !Clear(Q.X, Q.Y, R0)) continue;
+                    Out = Q; Wonders.Add(FVector(Q.X, Q.Y, R0)); return true;
+                }
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_WONDER_MISSED district=%s near=%s"), Ds.Name, *Around.ToString());
+                return false;
+            };
+            auto Raise = [&](int32 K, int32 Col, const FVector2D& Q, float S, float Yaw, float Sink)
+            {
+                const FTransform Xf(FRotator(0, Yaw, 0), FVector(Q.X, Q.Y, Land(D, Q.X, Q.Y) - Sink), FVector(S));
+                Plan.Inst[K].Add(Xf); if (Col >= 0) Plan.Inst[Col].Add(Xf); ++WonderCount; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_WONDER district=%s kit=%d at=%.0f,%.0f,%.0f"), Ds.Name, K, Q.X, Q.Y, Xf.GetLocation().Z);
+            };
+            auto Stem = [&](const FVector2D& Q, float R0, float H) { Plan.Walls.Add({FVector(Q.X, Q.Y, Land(D, Q.X, Q.Y) + H * .5f), FVector(R0, R0, H * .5f), 45.f}); };
+            FVector2D P;
+            auto Bells = [&](FVector2D At, float S) { if (Seek(At, 1600.f, 380.f, 1500.f, 450.f, P)) Raise(KGiantBell, -1, P, S * Rw.FRandRange(.85f, 1.1f), Rw.FRandRange(0.f, 360.f), 6.f); };
+            auto Arch = [&](FVector2D At, int32 Kind, float Near, float Far)
+            {
+                if (Seek(At, 3200.f, Near, Far, 650.f, P)) Raise(Kind ? KArch1 : KArch0, Kind ? KArchCol1 : KArchCol0, P, Rw.FRandRange(.95f, 1.15f), Rw.FRandRange(0.f, 360.f), 18.f);
+            };
+            auto Mossed = [&](FVector2D At, float Spread) { if (Seek(At, Spread, 700.f, 5000.f, 1100.f, P)) { const float S = Rw.FRandRange(1.1f, 1.45f); Raise(KPurple, KPurpleCol, P, S, Rw.FRandRange(0.f, 360.f), 14.f); Oaks.Add(FVector(P.X, P.Y, S)); } };
+            switch (D)
+            {
+            case Riverbank:
+            {
+                const TArray<FVector2D>& Road = Data().RoadOf[D][0];
+                for (const float F : {.2f, .45f, .7f}) { const float Fi = F * (Road.Num() - 1); const int32 I = FMath::Min(int32(Fi), Road.Num() - 2); FVector2D At = FMath::Lerp(Road[I], Road[I + 1], Fi - I); At.X = FMath::Min(At.X, -6500.f); Bells(At, 1.5f); }   // (inside the district: its road runs on into the slice)
+                break;
+            }
+            case Orchard:
+            {
+                for (const FVector2D At : {FVector2D(-47000, -5300), FVector2D(-47000, 5300), FVector2D(-50000, -6000)})
+                    if (Seek(At, 1600.f, 350.f, 3000.f, 380.f, P)) Raise(KSpire, -1, P, Rw.FRandRange(.9f, 1.1f), Rw.FRandRange(0.f, 360.f), 4.f);
+                // Two whole arches over the road through the orchard's rows, walked under on purpose (its edges are all oaks).
+                for (const float Xa : {-31200.f, -36400.f})
+                {
+                    bool bDone = false;
+                    for (const TArray<FVector2D>& L : Data().Lines[D])
+                        for (int32 I = 0; I + 1 < L.Num() && !bDone; ++I)
+                            if ((L[I].X - Xa) * (L[I + 1].X - Xa) <= 0.f && L[I].X != L[I + 1].X && FMath::Abs(L[I].Y) < 5000.f)
+                            {
+                                const FVector2D Tn = (L[I + 1] - L[I]).GetSafeNormal(), Q = FMath::Lerp(L[I], L[I + 1], (Xa - L[I].X) / (L[I + 1].X - L[I].X));
+                                Raise(KArch0, KArchCol0, Q, 1.05f, FMath::RadiansToDegrees(FMath::Atan2(Tn.Y, Tn.X)) - 90.f, 18.f); Wonders.Add(FVector(Q.X, Q.Y, 500.f)); bDone = true;
+                            }
+                }
+                break;
+            }
+            case Crossroads:
+            {
+                for (const FVector2D At : {FVector2D(-74500, -8500), FVector2D(-61000, 8800)})
+                    if (Seek(At, 1600.f, 500.f, 3500.f, 650.f, P)) { Raise(KToad, -1, P, Rw.FRandRange(.9f, 1.15f), Rw.FRandRange(0.f, 360.f), 6.f); Stem(P, 34.f, 300.f); }
+                Mossed(FVector2D(-58800, -2500), 1500.f); Mossed(FVector2D(-77500, -3500), 1500.f); Mossed(FVector2D(-77200, 5200), 1500.f);
+                break;
+            }
+            case LilyMere:
+            {
+                for (const int32 Pi : {1, 2})   // a giant lily on each of the two great pools, on a great pad
+                {
+                    const FVector& Pl = Pools[Pi];
+                    for (int32 I = 0; I < 60; ++I)
+                    {
+                        const float A = Rw.FRandRange(0.f, 2 * PI), Rr = Pl.Z * Rw.FRandRange(.2f, .5f); const FVector2D Q(Pl.X + Rr * FMath::Cos(A), Pl.Y + Rr * FMath::Sin(A));
+                        int32 W; if (PoolE(Q.X, Q.Y, W) > .7f || FVector2D::Distance(Q, MoatC) < MoatOut + 900.f) continue;
+                        const float Yaw = Rw.FRandRange(0.f, 360.f);
+                        Plan.Inst[KPad].Add(FTransform(FRotator(0, Yaw, 0), FVector(Q.X, Q.Y, .8f), FVector(6.2f, 6.2f, 1.6f)));
+                        Plan.Inst[KGiantLily].Add(FTransform(FRotator(0, Yaw + 20.f, 0), FVector(Q.X, Q.Y, -2.f), FVector(1.f))); ++WonderCount; break;
+                    }
+                }
+                Mossed(FVector2D(-62500, 24500), 2000.f); Mossed(FVector2D(-71500, 29000), 2000.f); Mossed(FVector2D(-63500, 37500), 2000.f);
+                Arch(FVector2D(-56500, 18500), 1, 600.f, 5000.f); Arch(FVector2D(-70500, 20000), 0, 600.f, 5000.f);
+                break;
+            }
+            case Deepwood:
+            {
+                for (const FVector2D At : {FVector2D(-69500, -24000), FVector2D(-79500, -33500), FVector2D(-84500, -24500)})
+                    if (Seek(At, 3200.f, 450.f, 2600.f, 500.f, P)) { Raise(KGiantBlue, -1, P, Rw.FRandRange(.9f, 1.15f), Rw.FRandRange(0.f, 360.f), 6.f); Stem(P, 26.f, 420.f); }
+                if (Seek(Redcap + FVector2D(0, 2600), 1800.f, 400.f, 3000.f, 300.f, P)) { Raise(KToad, -1, P, .85f, Rw.FRandRange(0.f, 360.f), 6.f); Stem(P, 30.f, 260.f); }
+                break;
+            }
+            case Highmeadow:
+            {
+                Bells(FVector2D(-98000, 0), 1.7f); Bells(FVector2D(-86500, 2500), 1.5f);
+                Arch(FVector2D(-92000, -4500), 0, 600.f, 7000.f); Arch(FVector2D(-88000, 13000), 1, 600.f, 7000.f);
+                Arch(FVector2D(-104000, 1500), 0, 600.f, 7000.f); Arch(FVector2D(-96000, -8000), 1, 600.f, 7000.f);
+                break;
+            }
+            default: break;
+            }
+            if (WonderCount) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_WONDERS district=%s pieces=%d"), Ds.Name, WonderCount);
+        }
+        if (D == Deepwood)
+        {
+            // (2026-11-23) The hag's cottage (Tools/build_feywild_kit.py hag_cottage): the house, its collision (the walls, the
+            // chimney, the cauldron, the fence's posts as a few boxes), the warm light of its windows and lantern. Its fire and
+            // smoke are FeyLife's.
+            const FVector& Hs = HagSpot(); const float Z = DeepRaw(Hs.X, Hs.Y), Yaw = Hs.Z, Ya = FMath::DegreesToRadians(Yaw);
+            const FVector2D Fx(FMath::Cos(Ya), FMath::Sin(Ya)), Fy(-Fx.Y, Fx.X);
+            auto At = [&](float Ox, float Oy, float Oz) { const FVector2D P = FVector2D(Hs) + Fx * Ox + Fy * Oy; return FVector(P.X, P.Y, Z + Oz); };
+            Plan.Inst[KHag].Add(FTransform(FRotator(0, Yaw, 0), FVector(Hs.X, Hs.Y, Z - 4.f)));
+            Plan.Walls.Add({At(0, 0, 230), FVector(222.f, 272.f, 230.f), Yaw});
+            Plan.Walls.Add({At(-14, 308, 300), FVector(40.f, 36.f, 300.f), Yaw});
+            Plan.Walls.Add({At(440, -220, 60), FVector(52.f, 52.f, 60.f), Yaw});
+            for (const FVector& L : {FVector(250, 105, 135), FVector(28, -300, 135), FVector(244, 9, 172)})   // (in front of each window, and the lantern by the door)
+            { Plan.Lights.Add(FVector4(At(L.X, L.Y, L.Z), 12.f)); Plan.LightCols.Add(FLinearColor(1.f, .55f, .22f, 750.f)); }
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HAG_BUILT at=%.0f,%.0f,%.0f yaw=%.0f"), Hs.X, Hs.Y, Z, Yaw);
         }
         if (D == Deepwood) { Scatter(KMoss, 1600.f, .8f, 1.8f, 2.f, 6.f, 160.f, Clumps(400, 5)); Scatter(KBlue, 900.f, .6f, 1.6f, 1.f, 5.f, 140.f, Clumps(300, 6)); }
         for (int32 I = 0; I < 4; ++I) Scatter(KFern0 + I, D == Deepwood ? 1100.f : 360.f, 1.f, 1.9f, 2.f, 8.f, 170.f, Clumps(620, I + 3 + D));
@@ -2029,6 +2212,7 @@ bool AFeyDistrict::Step(double BudgetMs)
         if (!Plan.IsValid() || !Plan->bDone) return false;
         bPlanned = true; PlanSeconds = Plan->Seconds;
         for (const TCHAR* Path : MatPaths) { UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, Path); Missing += !M; Mats.Add(M); }
+        if (Mats[MPlant]) { auto* Still = UMaterialInstanceDynamic::Create(Mats[MPlant], this); Still->SetScalarParameterValue(TEXT("Sway"), 0.f); Mats[MPlant] = Still; }   // (2026-11-23: the kit's plants sway; the map's own surfaces in it stay put)
         for (const FKitDef& K : KitDefs)
         {
             UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, K.Path); Missing += !Mesh;
@@ -2038,6 +2222,7 @@ bool AFeyDistrict::Step(double BudgetMs)
             H->SetCollisionEnabled(K.bSolid ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
             if (K.bSolid) H->SetCollisionProfileName(TEXT("BlockAll"));
             H->SetHiddenInGame(K.bInvisible); H->bAutoRebuildTreeOnInstanceChanges = false;
+
             // (2026-11-21) The Deepwood's glowing caps, shelves and bark veins brighter than elsewhere (their own instances).
             const int32 Ki = Kits.Num();
             if (District == Deepwood && Mesh && (Ki == KBlue || Ki == KViolet || Ki == KAmber || Ki == KDeep0 || Ki == KDeep1))
@@ -2069,6 +2254,25 @@ bool AFeyDistrict::Step(double BudgetMs)
             if (S.bSolid) Mesh->SetCollisionProfileName(TEXT("BlockAll"));
             Mesh->SetCastShadow(S.bShadow); Mesh->SetHiddenInGame(S.bHidden);
             Triangles += S.T.Num() / 3;
+            if (District == LilyMere && S.Mat == MWater && !Mirror && Mats.IsValidIndex(MWater) && Mats[MWater])
+            {
+                // (2026-11-23, the wonder pass: mirror water at the lily-pad crossing) One capture taken from the great pool's
+                // middle once the mere stands (and again when its textures have streamed in), the water reflecting it carried
+                // out to about the trees' distance (M_FeyWater's Probe and Reach). Never drawn again per frame.
+                const FVector At(Pools[1].X, Pools[1].Y, 70.f);
+                MirrorTarget = NewObject<UTextureRenderTargetCube>(this); MirrorTarget->Init(512, PF_FloatRGBA); MirrorTarget->ClearColor = FLinearColor::Black; MirrorTarget->UpdateResourceImmediate(true);
+                Mirror = NewObject<USceneCaptureComponentCube>(this); Mirror->SetupAttachment(RootComponent); Mirror->SetRelativeLocation(At);
+                Mirror->TextureTarget = MirrorTarget; Mirror->CaptureSource = SCS_SceneColorHDR; Mirror->bCaptureEveryFrame = false; Mirror->bCaptureOnMovement = false;
+                Mirror->HideComponent(Mesh); if (AActor* Chuck = UGameplayStatics::GetPlayerPawn(this, 0)) Mirror->HideActorComponents(Chuck);
+                Mirror->RegisterComponent();
+                auto* Mid = UMaterialInstanceDynamic::Create(Mats[MWater], this);
+                Mid->SetTextureParameterValue(TEXT("Reflection"), MirrorTarget); Mid->SetVectorParameterValue(TEXT("Probe"), FLinearColor(At.X, At.Y, At.Z, 0)); Mid->SetVectorParameterValue(TEXT("Reach"), FLinearColor(7000.f, 7000.f, 2600.f, 0));
+                Mesh->SetMaterial(0, Mid);
+                for (const float When : {4.f, 12.f})
+                {
+                    FTimerHandle Th; GetWorldTimerManager().SetTimer(Th, FTimerDelegate::CreateWeakLambda(this, [this]() { if (Mirror) { Mirror->CaptureScene(); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MERE_MIRROR_CAPTURED")); } }), When, false);
+                }
+            }
             S = FMapSurf();   // (its arrays are not needed again)
         }
         else if (Stage == 1)   // the planting, a few thousand at a time
@@ -2159,7 +2363,8 @@ AFeyMap* AFeyMap::Ensure(UWorld* World)
     FActorSpawnParameters P; P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     auto* Map = World->SpawnActor<AFeyMap>(FeywildOrigin(), FRotator::ZeroRotator, P);
     Map->Districts.SetNum(FeyMap::Districts); FeyForgetSpots();
-    Map->BuildThresholds(); Map->BuildDistance(); Map->BuildTower(); Map->BuildStandIn(); Map->BuildBrink();
+    Map->BuildThresholds(); Map->BuildDistance(); Map->BuildTower(); Map->BuildStandIn(); Map->BuildBrink(); Map->BuildWonders();
+    { float Jt; if (FParse::Value(FCommandLine::Get(), TEXT("-ChuckFeyJellyAt="), Jt)) JellyTime = Jt; }   // (stills: the jellyfish held where it is at that time)
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_BUILT seconds=%.2f triangles=%d missing=%d maze_cells=%d maze_way_m=%.0f maze_hedges=%d pads=%d signs=%d"), FPlatformTime::Seconds() - T0, Map->Triangles, Map->Missing,
         MazeCells(), MazeWay() / 100.f, MazeData().Hedges.Num(), MoatPads().Num(), SignPosts().Num());
     return Map;
@@ -2531,6 +2736,43 @@ bool AFeyMap::IsReady(int32 D) const
 int32 AFeyMap::GetLoadedCount() const { int32 N = 0; for (const AFeyDistrict* D : Districts) N += D != nullptr; return N; }
 int32 AFeyMap::GetMissing() const { int32 N = Missing; for (const AFeyDistrict* D : Districts) if (D) N += D->Missing; return N; }
 
+// (2026-11-23, the wonder pass; docs/regions/FEYWILD.md#the-wonder-pass) Floating islands with thin falls, glimpsed high over
+// Highmeadow, the overlook and the mere, bobbing and turning very slowly; and one giant jellyfish drifting on a wide slow loop
+// high over Highmeadow, the Crossroads and the Lily Mere, pulsing (its material moves it), with one soft light under it. None
+// collides or casts a shadow; all are always there, like the tower.
+float AFeyMap::JellyTime = -1.f;
+FVector AFeyMap::JellyAt(float Time)
+{
+    const float A = Time * (2 * PI / 540.f);   // (once round in nine minutes)
+    return FVector(-84000.f + 17000.f * FMath::Cos(A), 12000.f + 13000.f * FMath::Sin(A) + 3000.f * FMath::Sin(2 * A), 9000.f + 900.f * FMath::Sin(A * 3.f));
+}
+FVector AFeyMap::GetJellyAt() const { return Jelly ? Jelly->GetRelativeLocation() : FVector::ZeroVector; }
+
+void AFeyMap::BuildWonders()
+{
+    auto Mesh = [&](const TCHAR* Path) { UStaticMesh* M = LoadObject<UStaticMesh>(nullptr, Path); Missing += !M; return M; };
+    auto Part = [&](UStaticMesh* M, const FVector& At, float Yaw, float S)
+    {
+        auto* C = NewObject<UStaticMeshComponent>(this); C->SetupAttachment(RootComponent); C->SetMobility(EComponentMobility::Movable); C->SetStaticMesh(M);
+        C->SetCollisionEnabled(ECollisionEnabled::NoCollision); C->SetCastShadow(false); C->bNeverDistanceCull = true;
+        C->SetRelativeLocationAndRotation(At, FRotator(0, Yaw, 0)); C->SetRelativeScale3D(FVector(S)); C->RegisterComponent();
+        return C;
+    };
+    UStaticMesh* Isle[3] = {Mesh(TEXT("/Game/Art/Feywild/SM_FeyIsland0.SM_FeyIsland0")), Mesh(TEXT("/Game/Art/Feywild/SM_FeyIsland1.SM_FeyIsland1")), Mesh(TEXT("/Game/Art/Feywild/SM_FeyIsland2.SM_FeyIsland2"))};
+    struct FIsle { int32 Kind; FVector At; float Yaw, S; };
+    const FIsle Isles_[] = {{0, {-108000, -22000, 11000}, 20.f, 1.6f}, {1, {-95000, 30000, 8800}, 140.f, 1.5f}, {2, {-118000, 26000, 7600}, 260.f, 1.1f},
+                            {1, {-64000, 52000, 9500}, 70.f, .9f}, {2, {-56000, 46000, 8200}, 200.f, 1.f}, {0, {-160000, -20000, 14000}, 300.f, 1.3f}, {2, {-30000, -16000, 9000}, 120.f, 1.f}};
+    for (const FIsle& I : Isles_) if (Isle[I.Kind]) { Isles.Add(Part(Isle[I.Kind], I.At, I.Yaw, I.S)); IsleAt.Add(FVector(I.At.X, I.At.Y, I.At.Z)); }
+    if (UStaticMesh* J = Mesh(TEXT("/Game/Art/Feywild/SM_FeyJelly.SM_FeyJelly")))
+    {
+        Jelly = Part(J, JellyAt(0.f), 0.f, 2.f);   // (24 m across its bell: a wonder from far below) Jelly->SetTranslucentSortPriority(1);
+        JellyLight = NewObject<UPointLightComponent>(this); JellyLight->SetupAttachment(Jelly); JellyLight->SetRelativeLocation(FVector(0, 0, -200.f));
+        JellyLight->SetIntensityUnits(ELightUnits::Candelas); JellyLight->SetIntensity(6000.f); JellyLight->SetAttenuationRadius(12000.f); JellyLight->SetLightColor(FLinearColor(.75f, .35f, 1.f));
+        JellyLight->SetCastShadows(false); JellyLight->SetSourceRadius(400.f); JellyLight->RegisterComponent();
+    }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_WONDERS_SKY isles=%d jelly=%d"), Isles.Num(), Jelly ? 1 : 0);
+}
+
 void AFeyMap::Want(int32 D)
 {
     if (!Districts.IsValidIndex(D)) return;
@@ -2657,6 +2899,15 @@ void AFeyMap::Tick(float Dt)
 {
     Super::Tick(Dt);
     Clock += Dt;
+    // The islands bob and turn very slowly; the jellyfish drifts on its loop, turning to its way.
+    for (int32 I = 0; I < Isles.Num(); ++I)
+        Isles[I]->SetRelativeLocationAndRotation(IsleAt[I] + FVector(0, 0, 160.f * FMath::Sin(Clock * .11f + I * 1.7f)), FRotator(1.2f * FMath::Sin(Clock * .07f + I), Clock * (.25f + .05f * I) + I * 51.f, 1.2f * FMath::Cos(Clock * .08f + I * 2.f)));
+    if (Jelly)
+    {
+        const float Tj = JellyTime >= 0.f ? JellyTime : Clock;
+        const FVector P = JellyAt(Tj), V = JellyAt(Tj + 1.f) - P;
+        Jelly->SetRelativeLocationAndRotation(P, FRotator(FMath::Clamp(-V.Z * .3f, -6.f, 6.f), FMath::RadiansToDegrees(FMath::Atan2(V.Y, V.X)), 3.f * FMath::Sin(Tj * .2f)));
+    }
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Chuck || Chuck->IsInFeyRiver() || !InFeywild(Chuck->GetActorLocation())) return;
     const FVector L = FeyLocal(Chuck->GetActorLocation());

@@ -366,6 +366,284 @@
     "FeyHedgeLeaf"
    ],
    "sha256": "7A427DFDEF082067EA56F0BBACE24075818E57A54CC1E554402E9342F2C17FBC"
+  },
+  {
+   "file": "SM_FeyGiantBell.fbx",
+   "source": "modelled",
+   "triangles": 4326,
+   "dimensions_cm": [
+    635.217,
+    472.531,
+    564.877
+   ],
+   "slots": [
+    "FeyPlant",
+    "FeyFungus",
+    "FeyBlade"
+   ],
+   "sha256": "EFEC78F903D963A6D92C1BA937318078380A3088479227802A729C340C2438FB"
+  },
+  {
+   "file": "SM_FeyGiantToadstool.fbx",
+   "source": "modelled",
+   "triangles": 15780,
+   "dimensions_cm": [
+    635.453,
+    474.49,
+    454.571
+   ],
+   "slots": [
+    "FeyFungusBig",
+    "FeyPlant"
+   ],
+   "sha256": "D2DCDFD3CA64954B665DCBF3C8045EC6C05672F90F9A3C1BAD28DE97036A00A1"
+  },
+  {
+   "file": "SM_FeyGiantBlue.fbx",
+   "source": "modelled",
+   "triangles": 14080,
+   "dimensions_cm": [
+    605.541,
+    537.623,
+    552.75
+   ],
+   "slots": [
+    "FeyFungusBig",
+    "FeyPlant"
+   ],
+   "sha256": "2A2F3551FE59A578443F3CB8CACAA6940EBA7410EB3D185078706931E20D0A94"
+  },
+  {
+   "file": "SM_FeyGiantLily.fbx",
+   "source": "modelled",
+   "triangles": 7810,
+   "dimensions_cm": [
+    300.45,
+    303.54,
+    80.954
+   ],
+   "slots": [
+    "FeyPlant",
+    "FeyPetal"
+   ],
+   "sha256": "0BDFDB81F841144C5215858ADE05FA9A5B7A8D840622023E7C9B7619BFC4E802"
+  },
+  {
+   "file": "SM_FeyGiantSpire.fbx",
+   "source": "modelled",
+   "triangles": 20562,
+   "dimensions_cm": [
+    370.506,
+    356.675,
+    538.147
+   ],
+   "slots": [
+    "FeyPlant",
+    "FeyBlade"
+   ],
+   "sha256": "53E3C99BB5F7899363EB91891A3A8DDF78900C1691F414674D1412975BC68F9B"
+  },
+  {
+   "file": "SM_FeyIsland0.fbx",
+   "source": "modelled",
+   "triangles": 4348,
+   "dimensions_cm": [
+    3348.398,
+    3347.375,
+    4558.34
+   ],
+   "slots": [
+    "FeyStone",
+    "FeyPlant",
+    "FeyFall"
+   ],
+   "sha256": "6B0B4F650E8A52308C6E371650D83299592ABE7A9C77140BCA2B09A0B7B9A945"
+  },
+  {
+   "file": "SM_FeyIsland1.fbx",
+   "source": "modelled",
+   "triangles": 3830,
+   "dimensions_cm": [
+    2101.861,
+    2283.782,
+    4527.34
+   ],
+   "slots": [
+    "FeyStone",
+    "FeyPlant",
+    "FeyFall"
+   ],
+   "sha256": "3168220A0FE75B48ECC144E9BF160663E5206258049EC916F4BED7C460C5F1C2"
+  },
+  {
+   "file": "SM_FeyIsland2.fbx",
+   "source": "modelled",
+   "triangles": 3595,
+   "dimensions_cm": [
+    1378.913,
+    1510.143,
+    3940.294
+   ],
+   "slots": [
+    "FeyStone",
+    "FeyPlant",
+    "FeyFall"
+   ],
+   "sha256": "9328391A0DB319B0E6F4C53F7E4755D549F7E23C735964FC33507C180D326CEF"
+  },
+  {
+   "file": "SM_FeyJelly.fbx",
+   "source": "modelled",
+   "triangles": 12096,
+   "dimensions_cm": [
+    1284.198,
+    1284.198,
+    3097.459
+   ],
+   "slots": [
+    "FeyJelly"
+   ],
+   "sha256": "47947F8CF3F1CD0D66E2DAB7A1B30A504372689A232CF9667B1B921B61751663"
+  },
+  {
+   "file": "SM_FeyOakWisteria.fbx",
+   "source": "modelled",
+   "triangles": 325064,
+   "dimensions_cm": [
+    2068.224,
+    1941.614,
+    1693.972
+   ],
+   "slots": [
+    "FeyBark",
+    "FeyLeaf",
+    "FeyPlant"
+   ],
+   "sha256": "FEDE71C39B92EA8B63E643B0A169EA048E26D818A4770245AFEEFB3C228BD687"
+  },
+  {
+   "file": "SM_FeyOakWisteriaCollision.fbx",
+   "source": "modelled",
+   "triangles": 724,
+   "dimensions_cm": [
+    1093.367,
+    1271.896,
+    852.336
+   ],
+   "slots": [
+    "FeyBark"
+   ],
+   "sha256": "C6259AE5FD78A17D32A675C6E479B344F902E23D5729B795DA4ADD173A6C8C78"
+  },
+  {
+   "file": "SM_FeyOakPurpleMoss.fbx",
+   "source": "modelled",
+   "triangles": 126686,
+   "dimensions_cm": [
+    2274.859,
+    2049.293,
+    1510.003
+   ],
+   "slots": [
+    "FeyBark",
+    "FeyLeaf",
+    "FeyPlant",
+    "FeyHangMossPurple"
+   ],
+   "sha256": "20371D6C7F651265887D7DAC1DD98B9D3EEB695F8526DD87E2160E2D1300C618"
+  },
+  {
+   "file": "SM_FeyOakPurpleMossCollision.fbx",
+   "source": "modelled",
+   "triangles": 724,
+   "dimensions_cm": [
+    1319.693,
+    1112.99,
+    852.684
+   ],
+   "slots": [
+    "FeyBark"
+   ],
+   "sha256": "FD5A01ED3594C7B4F3D7047BDBACBF819F6BF4DFE7D919ABFF5F23BC0D4AA9FF"
+  },
+  {
+   "file": "SM_FeyArch0.fbx",
+   "source": "modelled",
+   "triangles": 57044,
+   "dimensions_cm": [
+    539.251,
+    108.775,
+    503.953
+   ],
+   "slots": [
+    "FeyArchStone",
+    "FeyBlade",
+    "FeyHangMoss"
+   ],
+   "sha256": "204428FC3AEA210AE168EDEA8DBE2C828C7DA72278A8F1A4A760B9F3D97A2739"
+  },
+  {
+   "file": "SM_FeyArch0Collision.fbx",
+   "source": "modelled",
+   "triangles": 300,
+   "dimensions_cm": [
+    523.84,
+    88.32,
+    499.34
+   ],
+   "slots": [
+    "FeyArchStone"
+   ],
+   "sha256": "2B5D28F28522FA1E04ED46F05769CBF6704A8205BA5B41369C82A1D2C96EDCF3"
+  },
+  {
+   "file": "SM_FeyArch1.fbx",
+   "source": "modelled",
+   "triangles": 39648,
+   "dimensions_cm": [
+    676.442,
+    250.718,
+    541.235
+   ],
+   "slots": [
+    "FeyArchStone",
+    "FeyBlade",
+    "FeyHangMoss"
+   ],
+   "sha256": "AEC1097BE472CDD2D4A1BDCF0A6DD5897E4A97B933BF33E15BAC29355D3EC1CC"
+  },
+  {
+   "file": "SM_FeyArch1Collision.fbx",
+   "source": "modelled",
+   "triangles": 240,
+   "dimensions_cm": [
+    664.994,
+    250.817,
+    536.715
+   ],
+   "slots": [
+    "FeyArchStone"
+   ],
+   "sha256": "11A18D8675BF8D0985DDF9A94C830B07F4C79DF52B3A79B75E0C9184429202F4"
+  },
+  {
+   "file": "SM_FeyHagCottage.fbx",
+   "source": "modelled",
+   "triangles": 131643,
+   "dimensions_cm": [
+    852.109,
+    948.344,
+    638.623
+   ],
+   "slots": [
+    "FeyHagThatch",
+    "FeyHagWall",
+    "FeyPlank",
+    "FeyArchStone",
+    "FeyPlant",
+    "FeyBlade"
+   ],
+   "sha256": "C2A983E6CA1AA26A4A480914B6C7253262696C63FFEF253B99FD806B27DCE665"
   }
  ]
 }

@@ -6,6 +6,10 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Feywild: aiming orchids, the wonder pass, the hag's cottage, the Crossroads trio (November 24, Claude):**
+  - Orchids wake, turn and spit at Chuck like the spined devils. Giant bell flowers, spires, fly agarics, blue caps, giant lilies, the great wisteria, purple-moss oaks, stone arch ruins, seven floating islands and a 24 m glowing jellyfish over Highmeadow; mirror water at the lily crossing.
+  - A hag's cottage (thatch, daub, cauldron fire, chimney smoke) just off the Deepwood trail. The centaur, satyr and gnome mill by the Crossroads tree in one 60 s loop (no lines yet). See [regions/FEYWILD.md](regions/FEYWILD.md).
+  - Editor: `=life` 0 failures; route 1 stuck at the Lily Mere moat (known walker flake). Package verified 50/50, 182 passes; promoted as FeywildWonders. Not played by hand.
 - **Feywild: the start's narrow cut, the maze laid from its way, marble satyrs (November 23, Claude):**
   - The cut beside the arrival: no blue streaks down its walls, and no floating petals.
   - The maze laid from its way through: all hazards, parkour, crawl gaps and smiling marble satyrs are on the way. Frowning satyrs (the same public-domain scan, re-carved) are in the dead ends.

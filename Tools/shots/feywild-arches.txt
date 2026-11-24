@@ -1,0 +1,9 @@
+# The archway ruins' stone (2026-11-23). Tools/Take-Shots.ps1 Tools/shots/feywild-arches.txt
+at FeyHighmeadow
+origin feywild
+wait 10
+fov 60
+chuck arch9 -94667 -5488 272   -93499 -4918 242
+shot archbroken10 -88379 8703 234   -88447 10001 174
+shot archclose -94100 -5300 200   -93499 -4918 300
+chuck orcharch -32436 327 229   -31200 729 199

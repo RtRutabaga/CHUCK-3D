@@ -1,0 +1,25 @@
+{
+ "loop_s": 60.0,
+ "fps": 30,
+ "circle_m": [
+  0.0,
+  2.0,
+  2.0
+ ],
+ "walks_s": [
+  [
+   8.0,
+   20.0
+  ],
+  [
+   32.0,
+   44.0
+  ]
+ ],
+ "seat_m": [
+  -0.41999998688697815,
+  0.0,
+  1.1534781455993652
+ ],
+ "note": "All three clips start together at the same place; the centaur Root carries them round the circle."
+}

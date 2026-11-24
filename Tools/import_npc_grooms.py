@@ -4,7 +4,7 @@ SourceAssets/Heroes/manifest.json) into each NPC's folder as GR_<Name>_<Group>, 
 instance MI_<Name>_<Group> of M_NPCHair (/Game/Characters/Humans: the hair shading model,
 the group's colour varied per strand, darker toward the roots, a share of grey strands).
 
-CHUCK_GROOMS_SET = humans | heroes; CHUCK_GROOMS_ONLY = comma-separated names (default all).
+CHUCK_GROOMS_SET = humans | heroes | fey; CHUCK_GROOMS_ONLY = comma-separated names (default all).
 The runtime attaches each groom rigidly to its bone (Source/Chuck3D/NPCGroom.cpp): no binding.
 """
 from pathlib import Path
@@ -14,8 +14,8 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[1]
 SET = os.environ.get('CHUCK_GROOMS_SET', 'humans')
-SOURCE = ROOT / ('SourceAssets/Heroes' if SET == 'heroes' else 'SourceAssets/NPCs/Humans')
-DEST = '/Game/Characters/Heroes' if SET == 'heroes' else '/Game/Characters/Humans'
+SOURCE = ROOT / {'heroes': 'SourceAssets/Heroes', 'fey': 'SourceAssets/NPCs/Fey'}.get(SET, 'SourceAssets/NPCs/Humans')   # (fey: the Crossroads trio, 2026-11-23)
+DEST = {'heroes': '/Game/Characters/Heroes', 'fey': '/Game/Characters/FeyTrio'}.get(SET, '/Game/Characters/Humans')
 MASTER = '/Game/Characters/Humans/M_NPCHair'
 ONLY = {x.strip() for x in os.environ.get('CHUCK_GROOMS_ONLY', '').split(',') if x.strip()}
 TOOLS = unreal.AssetToolsHelpers.get_asset_tools()

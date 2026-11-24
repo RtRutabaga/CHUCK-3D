@@ -2,6 +2,34 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 24 — Feywild: aiming orchids, wonder pass, hag's cottage, Crossroads trio (Claude)
+
+- **Asked:**
+  - Orchids that target Chuck like the spined devils.
+  - The wonder pass (giant jellyfish, unique giant plants, the rest).
+  - A hag's cottage just off the Deepwood trail.
+  - The image's centaur, satyr and gnome milling by the Crossroads tree; their dialogue comes later from the user.
+- **Source:** `main` at 21d8fc71; this commit. The package was built from the working tree on 21d8fc7, so its receipt names 21d8fc7.
+- **Changed:** see `docs/regions/FEYWILD.md`, "Aiming orchids, the wonder pass, the hag's cottage and the Crossroads trio".
+  - `FeyLife.cpp/.h` (orchids aim; the cottage's fire, light and sounds; the trio spawned), `FeyMap.cpp/.h` (wonder pieces,
+    islands, jellyfish, mere mirror, cottage spot), `FeyMapTest.cpp` (step 12 aim checks), new `FeyTrio.cpp/.h`.
+  - Tools: `build_feywild_kit.py`, `create_feywild_assets.py`, `Fetch-FeyHag.ps1` (Poly Haven CC0 thatch and plaster),
+    `build_fey_trio.py`, `build_fey_trio_anims.py`, `import_fey_trio.py`, `import_npc_grooms.py` (`CHUCK_GROOMS_SET=fey`).
+  - Triplanar materials on instanced meshes now project in the instance's frame (bark, roots, timber, stone, marble).
+- **Contract:** Chuck's rig, controls and scale unchanged. The trio are three new skeletons under `/Game/Characters/FeyTrio`.
+- **Validation (actual):**
+  - Editor `=life` (`Local/feywonder-life2.log`): 0 failures, 8 orchid shots, 2 hits; new checks `orchid_aims_off_lane`, `orchid_turns_to_him`.
+  - Editor route (`Local/feywonder-route.log`): 1 failure, a stuck at the Lily Mere moat (leg LilyMere_3_4) after one missed pad hop, the known walker flake; the nearest new piece is about 50 m away. `missing=0`; the trio spawned with 3 parts and 9 grooms.
+  - Stills: `Tools/shots/feywild-wonders*.txt`, `feywild-arches.txt`, `feywild-hag.txt`, `feywild-trio*.txt`.
+  - Package FeyWonderCandidate: Verify-Package 50/50 steps, 182 passes (`Local/verify-package-20261124-074138.log`; sound-Chult passed on its retry). Promoted as **FeywildWonders**; the candidate folder is removed. Not played by hand.
+- **Known flaws:**
+  - The trio: contact by IK; the satyr's legs cut into the horse's body, the gnome sits rather than riding piggyback, and the horse is a smooth stylised body. The user has asked for all of this next, with clothes for the satyr and a vest for the centaur.
+  - The cauldron and chimney flames and smoke did not show in stills.
+  - Satyr hair has 65k strands (heavy). The great bell flowers have no collision. Crows not built.
+  - Downloaded JPGs and STLs are left out of Git, as before (`Tools/Fetch-FeyHag.ps1` fetches the hag textures again).
+
+Next part of the work can be done here (the trio improvement the user asked for: piggyback gnome, the satyr's legs round the horse, a real horse body, satyr clothes, centaur vest).
+
 ## November 23 — Feywild: the start's narrow cut, the maze laid from its way, marble satyrs, squeeze, decor (Claude)
 
 - **Asked:**

@@ -38,7 +38,11 @@ struct FFeyPadRise { TArray<FVector> Pads; float Up = 0, Want = 0; };
 struct FFeyVines { FVector C = FVector::ZeroVector; float Yaw = 0, Width = 300, Height = 190, Up = 1, Want = 1; };
 struct FFeyPollen { FVector2D C = FVector2D::ZeroVector, R = FVector2D(100, 100); float Yaw = 0; };
 struct FFeySeed { FVector P = FVector::ZeroVector, V = FVector::ZeroVector; float Life = 0; };
-struct FFeyOrchid { FVector Pos = FVector::ZeroVector, Dir = FVector::ForwardVector; float Phase = 0, Range = 1500; bool bFired = false; };
+// (2026-11-23, the user: "make the plants that shoot work like the spined devils where they target chuck".) Each sleeps facing
+// its lane until he is in front of it, in sight and in reach; then its bulb turns to follow him, swells, and spits at where he
+// was as it began to swell (no lead), often wide. It stops when he leaves.
+struct FFeyOrchid { FVector Pos = FVector::ZeroVector, Dir = FVector::ForwardVector; float Phase = 0, Range = 1500; bool bFired = false;
+                    FVector Look = FVector::ZeroVector, AimAt = FVector::ZeroVector; float Beat = -1.f, Wait = 0.f; bool bAimed = false; };
 struct FFeyMoth { FVector Home = FVector::ZeroVector, Axis = FVector::ForwardVector; float Range = 280, Weave = 35, Bob = 28, Rate = 1.6f, Phase = 0, TouchWait = 0; FRotator Facing = FRotator::ZeroRotator; FVector Last = FVector::ZeroVector; };
 
 UCLASS()
@@ -57,6 +61,9 @@ public:
     static int32 FlowerToggles;
     static int32 OrchidShots;
     static int32 OrchidHits;
+    static int32 OrchidAimed;
+    /** Tests: an orchid never misses on purpose while set. */
+    static bool bOrchidSure;
     static int32 MothTouches;
     // (2026-11-22, stage 6) The maze: bees knocking him off the hedge tops, statues turning while unwatched, hit plants
     // revealed the longer he is lost (first after RevealAfter seconds in the maze, then every RevealEvery).
@@ -135,6 +142,7 @@ private:
     float MazeTime = 0, NextReveal = 0, OnTop = 0, BeeShow = 0, NextPrick = 0;
     FVector BeeAt = FVector::ZeroVector;
     void BuildCamp();
+    void BuildHag();   // (2026-11-23) the hag's cottage: its cauldron's fire and light, its chimney's smoke, their sounds
     void BuildRefuges();
     void BuildPadRise();
     TArray<FFeyPadRise> PadRises;
@@ -146,6 +154,7 @@ private:
     UPROPERTY() TArray<ATempleSkeleton*> Redcaps;
     UPROPERTY() AFeyDisplacer* Beast = nullptr;
     UPROPERTY() UPointLightComponent* FireLight = nullptr;
+    UPROPERTY() UPointLightComponent* HagLight = nullptr;
     // (2026-11-22) Its sounds (Tools/build_fey_sfx.py, CC0 recordings): one-shots and the loops (moths' wings, the camp).
     UPROPERTY() TArray<class USoundBase*> Sfx;
     UPROPERTY() class USoundAttenuation* Falloff = nullptr;

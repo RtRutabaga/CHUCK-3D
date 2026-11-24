@@ -1,5 +1,7 @@
 // The Feywild's mechanics and small living hazards, stage 5 part one (Claude, 2026-11-21). See FeyLife.h.
 #include "FeyLife.h"
+#include "FeyTrio.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "FeyMap.h"
 #include "FeyMesh.h"
 #include "FeywildSetting.h"
@@ -34,6 +36,8 @@ namespace
     const TCHAR* MatPaths[] = {TEXT("/Game/Art/Feywild/M_FeyPetal.M_FeyPetal"), TEXT("/Game/Art/Feywild/M_FeyBlade.M_FeyBlade"), TEXT("/Game/Art/Feywild/M_FeyPlant.M_FeyPlant"), TEXT("/Game/Art/Feywild/M_FeyRoot.M_FeyRoot"),
                                TEXT("/Game/Art/Feywild/M_FeyGround.M_FeyGround"), TEXT("/Game/Art/Feywild/M_FeyHedge.M_FeyHedge"), TEXT("/Game/Art/Feywild/M_FeyStone.M_FeyStone")};
     constexpr float OrchidBeat = 2.4f, OrchidWind = .7f, SeedSpeed = 1000.f, SeedRadius = 3.f, MothRadius = 22.f;
+    // (2026-11-23) Targeting, as the spined devils: how far it sees him, how wide of its lane it turns, how often it throws wide.
+    constexpr float OrchidSees = 1.25f, OrchidArc = -.25f, OrchidMiss = .5f;
     enum ESfx { SFlowerOpen, SFlowerClose, SVines, SOrchidSwell, SOrchidSpit, SOrchidHit, SPads, SMoth, SFire, SCauldron, SBees, SfxCount };
     const TCHAR* SfxNames[] = {TEXT("SFX_FeyFlowerOpen_00"), TEXT("SFX_FeyFlowerClose_00"), TEXT("SFX_FeyVines_00"), TEXT("SFX_FeyOrchidSwell_00"), TEXT("SFX_FeyOrchidSpit_00"),
                                TEXT("SFX_FeyOrchidHit_00"), TEXT("SFX_FeyPadsRise_00"), TEXT("SFX_FeyMothLoop_00"), TEXT("SFX_FeyFireLoop_00"), TEXT("SFX_FeyCauldronLoop_00"), TEXT("SFX_FeyBeeLoop_00")};
@@ -362,7 +366,8 @@ namespace
 
 // ------------------------------------------------------------------ AFeyLife
 bool AFeyLife::bCalm = false;
-int32 AFeyLife::FlowerToggles = 0, AFeyLife::OrchidShots = 0, AFeyLife::OrchidHits = 0, AFeyLife::MothTouches = 0;
+int32 AFeyLife::FlowerToggles = 0, AFeyLife::OrchidShots = 0, AFeyLife::OrchidHits = 0, AFeyLife::MothTouches = 0, AFeyLife::OrchidAimed = 0;
+bool AFeyLife::bOrchidSure = false;
 const TArray<TWeakObjectPtr<AFeyLife>>& AFeyLife::All() { return GLife; }
 const TArray<FVector>& FeyLifeClearings()
 {
@@ -397,6 +402,7 @@ void AFeyLife::Build(int32 D)
     District = D; GLife.Add(this);
     const FPlace& P = Placed(D);
     for (const TCHAR* Path : MatPaths) Mats.Add(LoadObject<UMaterialInterface>(nullptr, Path));
+    if (Mats[MPlant]) { auto* Still = UMaterialInstanceDynamic::Create(Mats[MPlant], this); Still->SetScalarParameterValue(TEXT("Sway"), 0.f); Mats[MPlant] = Still; }   // (2026-11-23: its own surfaces do not sway)
     for (const TCHAR* Name : SfxNames) Sfx.Add(LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), Name, Name)));
     Falloff = NewObject<USoundAttenuation>(this); Falloff->Attenuation.bAttenuate = Falloff->Attenuation.bSpatialize = true;
     Falloff->Attenuation.AttenuationShape = EAttenuationShape::Sphere; Falloff->Attenuation.AttenuationShapeExtents = FVector(150.f); Falloff->Attenuation.FalloffDistance = 2200.f;
@@ -514,6 +520,17 @@ void AFeyLife::Build(int32 D)
     Pending.Add([this, D, &P]()
     {
     BuildCamp();
+    if (District == Deepwood) BuildHag();
+    if (District == FeyMap::Crossroads)
+    {
+        // (2026-11-23) The trio milling by the great tree: on its ring road to the north-west, between the roads to the
+        // Lily Mere and Highmeadow, heading round it the way the clock's hands go back (their circle turns left, toward
+        // the tree).
+        const FVector2D Hub(-67750.f, 0.f); const float A = FMath::DegreesToRadians(145.f), Ring = 3100.f;
+        const FVector2D At = Hub + FVector2D(FMath::Cos(A), FMath::Sin(A)) * Ring;
+        const float Yaw = FMath::RadiansToDegrees(A) + 90.f;
+        if (AFeyTrio* Trio = AFeyTrio::Spawn(GetWorld(), FeyWorld(FVector(At.X, At.Y, LandZ(District, At.X, At.Y))), Yaw)) Spawned.Add(Trio);
+    }
     });
     Pending.Add([this, D, &P]()
     {
@@ -666,6 +683,7 @@ void AFeyLife::Tick(float DeltaSeconds)
         }
     }
     if (FireLight) { FireFlicker = FMath::FInterpTo(FireFlicker, FMath::FRandRange(.75f, 1.15f), Dt, 12.f); FireLight->SetIntensity(55.f * FireFlicker); }
+    if (HagLight) HagLight->SetIntensity(55.f * FMath::Lerp(.8f, 1.1f, .5f + .5f * FMath::Sin(Clock * 9.f) * FMath::Sin(Clock * 3.7f)));
     // Spores drift up and round, then begin again.
     if (SporeMesh && Spores.Num())
     {
@@ -678,22 +696,66 @@ void AFeyLife::Tick(float DeltaSeconds)
         }
         Emit(SporeMesh, S, Mats[MPlant], false);
     }
-    // Orchids: swell and glow, then spit along their lanes.
+    // Orchids (2026-11-23: as the spined devils): asleep facing their lanes until he is in front, in sight and in reach; then
+    // the bulb follows him, swells, and spits at where he was as it began to swell, often wide. A shot under way finishes.
+    if (!OrchidSwelled.IsValidIndex(Orchids.Num() - 1)) OrchidSwelled.SetNumZeroed(Orchids.Num());
+    const FVector Chest = Feet + FVector(0, 0, 34.f);
     for (int32 I = 0; I < Orchids.Num(); ++I)
     {
         FFeyOrchid& O = Orchids[I];
-        const float T = FMath::Fmod(Clock + O.Phase, OrchidBeat), Wind = Smooth(OrchidBeat - OrchidWind, OrchidBeat, T), After = Smooth(.25f, 0.f, T);
-        OrchidBulbs[I]->SetRelativeScale3D(FVector(1.f + .35f * Wind - .15f * After));
-        OrchidLights[I]->SetIntensity(70.f * Wind + 25.f * After);
-        if (!OrchidSwelled.IsValidIndex(I)) OrchidSwelled.SetNumZeroed(Orchids.Num());
-        if (T > OrchidBeat - OrchidWind && !OrchidSwelled[I]) { OrchidSwelled[I] = true; Play(SOrchidSwell, O.Pos + FVector(0, 0, 100.f), .7f); }
-        if (T < .1f && !O.bFired)
+        if (O.Look.IsZero()) O.Look = O.Dir;
+        const FVector Mouth = OrchidBulbs[I]->GetComponentLocation() - GetActorLocation();
+        bool bSees = false;
         {
-            O.bFired = true; ++OrchidShots; OrchidSwelled[I] = false; Play(SOrchidSpit, O.Pos + FVector(0, 0, 100.f));
-            FFeySeed Sd; Sd.P = OrchidBulbs[I]->GetComponentLocation() - GetActorLocation() + O.Dir * 14.f; Sd.P.Z = O.Pos.Z + 48.f; Sd.V = O.Dir * SeedSpeed; Sd.Life = O.Range / SeedSpeed;
-            Seeds.Add(Sd);
+            const FVector To = Chest - Mouth;
+            if (!bCalm && !Chuck->IsAstral() && To.Size2D() < O.Range * OrchidSees && To.Size2D() > 60.f && FVector::DotProduct(To.GetSafeNormal2D(), O.Dir) > OrchidArc)
+            {
+                FHitResult Hit; FCollisionQueryParams Q(SCENE_QUERY_STAT(OrchidAim), false, this); Q.AddIgnoredActor(Chuck);
+                bSees = !GetWorld()->LineTraceSingleByChannel(Hit, FeyWorld(Mouth + To.GetSafeNormal() * 30.f), FeyWorld(Chest), ECC_Visibility, Q);
+            }
         }
-        if (T > .5f) O.bFired = false;
+        if (O.Beat < 0.f)
+        {
+            // Asleep: back toward its lane; wakes (staggered with its neighbours) when it sees him.
+            if (bSees) { O.Wait += Dt; if (O.Wait > .35f + FMath::Fmod(O.Phase, 1.2f)) { O.Beat = OrchidBeat - OrchidWind - .5f; O.Wait = 0.f; } }
+            else O.Wait = 0.f;
+        }
+        else
+        {
+            O.Beat += Dt;
+            if (O.Beat >= OrchidBeat)
+            {
+                // the spit
+                O.Beat -= OrchidBeat; ++OrchidShots; OrchidSwelled[I] = false; Play(SOrchidSpit, O.Pos + FVector(0, 0, 100.f));
+                FFeySeed Sd; Sd.P = Mouth + O.Look * 25.f;
+                const FVector Aim = O.bAimed ? (O.AimAt - Sd.P).GetSafeNormal() : O.Look;
+                Sd.V = Aim * SeedSpeed; Sd.Life = FMath::Max(O.Range, O.bAimed ? FVector::Dist(O.AimAt, Sd.P) * 1.6f : 0.f) / SeedSpeed;
+                Seeds.Add(Sd); O.bAimed = false;
+                if (!bSees) O.Beat = -1.f;   // (he has gone: back to sleep after this one)
+            }
+            if (O.Beat >= OrchidBeat - OrchidWind && !OrchidSwelled[I])
+            {
+                // the wind-up: it takes aim where he is now, and usually wide of him
+                OrchidSwelled[I] = true; Play(SOrchidSwell, O.Pos + FVector(0, 0, 100.f), .7f);
+                if (bSees)
+                {
+                    const bool bWide = !bOrchidSure && FMath::FRand() < OrchidMiss;
+                    const float Miss = bWide ? FMath::FRandRange(30.f, 95.f) : FMath::FRandRange(0.f, 8.f), A = FMath::FRandRange(0.f, 2.f * PI);
+                    const FVector Side = FVector::CrossProduct((Chest - Mouth).GetSafeNormal(), FVector::UpVector).GetSafeNormal();
+                    O.AimAt = Chest + Side * FMath::Cos(A) * Miss + FVector::UpVector * FMath::Sin(A) * Miss * .5f; O.bAimed = true; ++OrchidAimed;
+                }
+                else O.Beat = -1.f;   // (lost him before it swelled: no shot at nothing)
+            }
+        }
+        // The bulb turns to follow him while awake (to its aim once wound up), else back to its lane.
+        FVector Want = O.Dir;
+        if (O.Beat >= 0.f) Want = (O.bAimed ? O.AimAt - Mouth : Chest - Mouth).GetSafeNormal();
+        if (Want.IsNearlyZero()) Want = O.Dir;
+        O.Look = FMath::VInterpNormalRotationTo(O.Look, Want, Dt, O.Beat >= 0.f ? 160.f : 45.f);
+        OrchidBulbs[I]->SetRelativeRotation(FRotationMatrix::MakeFromZX(O.Look + FVector(0, 0, .25f), FVector::UpVector).Rotator());
+        const float T = O.Beat < 0.f ? 1.f : O.Beat, Wind = O.Beat < 0.f ? 0.f : Smooth(OrchidBeat - OrchidWind, OrchidBeat, T), After = O.Beat < 0.f ? 0.f : Smooth(.25f, 0.f, T);
+        OrchidBulbs[I]->SetRelativeScale3D(FVector(1.f + .35f * Wind - .15f * After));
+        OrchidLights[I]->SetIntensity(70.f * Wind + 25.f * After + (O.Beat >= 0.f ? 8.f : 0.f));
     }
     if (SeedMesh)
     {
@@ -826,6 +888,20 @@ void AFeyLife::SpawnRedcaps()
         Post.Leash = FBox2D(Lc - FVector2D(Lr, Lr), Lc + FVector2D(Lr, Lr));
         if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) Redcaps.Add(S);
     }
+}
+
+void AFeyLife::BuildHag()
+{
+    // The cauldron's fire between its three stones, and its light; a little fire hidden in the chimney's top for its smoke; the
+    // fire's crackle and the brew's bubbling (FeyMap.cpp places the cottage; its own frame: +X the front).
+    const FVector Fire = FeyHagPoint(FVector(440.f, -220.f, 2.f)), Chimney = FeyHagPoint(FVector(-14.f, 318.f, 596.f));
+    AChuckFlames* Fl = AChuckFlames::Get(GetWorld());
+    if (Fl) { Fl->Add(this, FeyWorld(Fire), 38.f, 42.f); Fl->Add(this, FeyWorld(Chimney), 64.f, 12.f); }   // (the chimney's: wide, for a broad slow plume)
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HAG_FIRE flames=%d fire=%s chimney=%s"), Fl != nullptr, *Fire.ToCompactString(), *Chimney.ToCompactString());
+    HagLight = NewObject<UPointLightComponent>(this); HagLight->SetupAttachment(RootComponent); HagLight->SetRelativeLocation(Fire + FVector(-70.f, 0, 125.f));   // (beside and over the pot, not inside it)
+    HagLight->SetLightColor(FLinearColor(1.f, .5f, .2f)); HagLight->SetIntensityUnits(ELightUnits::Candelas); HagLight->SetIntensity(38.f);
+    HagLight->SetAttenuationRadius(1500.f); HagLight->SetCastShadows(false); HagLight->RegisterComponent();
+    Loop(SFire, nullptr, Fire + FVector(0, 0, 20.f), .55f, 1800.f); Loop(SCauldron, nullptr, Fire + FVector(0, 0, 90.f), .6f, 1000.f);
 }
 
 void AFeyLife::BuildCamp()

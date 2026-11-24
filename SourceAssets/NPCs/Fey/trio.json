@@ -1,0 +1,82 @@
+{
+ "note": "The Crossroads trio (the user, 2026-11-23, with an image, References/Feywild/crossroads-trio.png: a centaur carrying a satyr on its back, a gnome on the satyr's shoulders; they mill around by the Crossroads' giant tree; dialogue later). In the human kit's format (Tools/build_npc_humans.py); built by Tools/build_fey_trio.py, which adds the centaur's horse body, the satyr's goat legs and horns, the gnome's hat and the gear. 'expr:' targets are MakeHuman expression units (MPFB data/targets/expression/units/caucasian), baked into the face.",
+ "npcs": {
+  "FeyCentaur": {
+   "height_cm": 186,
+   "macro": {"gender": 1.0, "age": 0.48, "muscle": 0.95, "weight": 0.62, "height": 0.6, "proportions": 0.6, "cupsize": 0.5, "firmness": 0.5,
+             "race": {"african": 0.05, "asian": 0.05, "caucasian": 0.9}},
+   "targets": {"measure-shoulder-dist-incr": 0.6, "measure-neck-circ-incr": 0.5, "torso-scale-depth-incr": 0.3, "head-square": 0.4, "chin-prominent-incr": 0.3,
+               "nose-hump-incr": 0.4, "nose-scale-vert-incr": 0.2, "l-ear-shape-pointed": 0.55, "r-ear-shape-pointed": 0.55, "l-ear-scale-incr": 0.2, "r-ear-scale-incr": 0.2,
+               "expr:eyebrows-left-down": 0.35, "expr:eyebrows-right-down": 0.35, "expr:mouth-compression": 0.25},
+   "skin": "middleage_caucasian_male", "skin_tint": [0.93, 0.8, 0.68],
+   "eyes": "brown", "eyebrows": "eyebrow009", "eyelashes": "eyelashes02", "brow_tint": [3.2, 2.2, 1.4], "face": true, "hair": null,
+   "groom": [
+    {"group": "Hair", "style": "hair_to_shoulder", "colour": [0.11, 0.07, 0.045], "points": 12, "hairline": 0.05, "roughness": 0.55, "set": {"Duplicate Hair Curves/Amount": 2}},
+    {"group": "Beard", "style": "wild_thick_beard", "fill": "beard", "colour": [0.1, 0.065, 0.04], "length": 0.16, "points": 14, "bow": 0.45, "mass": true, "root": 0.5, "copies": 2, "wave": 0.4,
+     "set": {"Duplicate Hair Curves/Amount": 3}},
+    {"group": "Beard", "style": "wild_thick_moustache", "fill": "beard", "length": 0.05, "points": 10, "bend": 0.012, "copies": 2, "wave": 0.4}
+   ],
+   "beard": {"bushy": true, "cards": 30, "cheek": 0.05, "chest_fade": 0.05, "chest_from": 0.02, "clear": 0.05, "depth": 0.06, "fluff_cards": 200, "length": 0.16,
+             "lying_cards": 160, "sideburn_cards": 40, "strand_tint": [0.2, 0.12, 0.07], "tint": [0.16, 0.1, 0.06], "width": 0.1, "braids": false},
+   "outfit": [
+    {"piece": "vambrace", "fabric": "brown_leather", "offset": 0.012, "tint": [0.07, 0.045, 0.028]},
+    {"piece": "belt", "fabric": "brown_leather", "offset": 0.03, "tint": [0.05, 0.032, 0.02], "z": -0.02},
+    {"piece": "helmet", "fabric": "metal_plate_02", "tint": [0.42, 0.28, 0.12], "nasal": true},
+    {"piece": "trim", "of": "helmet", "fabric": "metal_plate_02", "radius": 0.007, "rolled": true, "tint": [0.6, 0.42, 0.16]}
+   ]
+  },
+  "FeySatyr": {
+   "height_cm": 172,
+   "macro": {"gender": 1.0, "age": 0.36, "muscle": 0.72, "weight": 0.32, "height": 0.4, "proportions": 0.55, "cupsize": 0.5, "firmness": 0.5,
+             "race": {"african": 0.05, "asian": 0.05, "caucasian": 0.9}},
+   "targets": {"l-ear-shape-pointed": 1.0, "r-ear-shape-pointed": 1.0, "l-ear-scale-incr": 0.7, "r-ear-scale-incr": 0.7, "l-ear-rot-backward": 0.5, "r-ear-rot-backward": 0.5,
+               "l-ear-wing-incr": 0.6, "r-ear-wing-incr": 0.6, "nose-scale-vert-incr": 0.3, "nose-point-width-incr": 0.3, "nose-curve-convex": 0.4, "chin-prominent-incr": 0.4,
+               "head-scale-vert-incr": 0.1, "l-cheek-volume-incr": 0.3, "r-cheek-volume-incr": 0.3,
+               "expr:mouth-corner-puller": 1.0, "expr:mouth-open": 0.32, "expr:mouth-upward-retraction": 0.3, "expr:eye-left-slit": 0.35, "expr:eye-right-slit": 0.35,
+               "expr:eyebrows-left-extern-up": 0.4, "expr:eyebrows-right-extern-up": 0.4, "expr:nose-left-elevation": 0.3, "expr:nose-right-elevation": 0.3},
+   "skin": "young_caucasian_male", "skin_tint": [0.97, 0.8, 0.64],
+   "eyes": "brown", "eyebrows": "eyebrow010", "eyelashes": "eyelashes02", "brow_tint": [2.8, 1.8, 1.1], "face": true, "hair": null,
+   "groom": [
+    {"group": "Hair", "style": "hedgehog", "colour": [0.13, 0.08, 0.045], "points": 8, "hairline": 0.04, "roughness": 0.55, "root": 0.3, "set": {"Duplicate Hair Curves/Amount": 300}},
+    {"group": "Hair", "style": "basic_short_hair", "points": 8, "hairline": 0.04, "set": {"Duplicate Hair Curves/Amount": 360, "Set Hair Curve Profile/Length": 0.7}},
+    {"group": "Beard", "style": "wild_thick_beard", "fill": "beard", "colour": [0.12, 0.075, 0.04], "length": 0.05, "points": 10, "root": 0.3}
+   ],
+   "beard": {"braids": false, "card_scale": 0.5, "cards": 14, "cheek": 0.02, "clear": 0.03, "length": 0.04, "lying_cards": 90, "sideburn_cards": 16, "sideburn_width": 0.018,
+             "strand_tint": [0.2, 0.13, 0.07], "tint": [0.15, 0.09, 0.05], "width": 0.04},
+   "outfit": [
+    {"piece": "belt", "fabric": "brown_leather", "offset": 0.02, "tint": [0.06, 0.038, 0.024], "z": -0.02}
+   ]
+  },
+  "FeyGnome": {
+   "height_cm": 98,
+   "macro": {"gender": 1.0, "age": 0.86, "muscle": 0.35, "weight": 0.5, "height": 0.0, "proportions": 0.3, "cupsize": 0.5, "firmness": 0.5,
+             "race": {"african": 0.05, "asian": 0.1, "caucasian": 0.85}},
+   "targets": {"chin-prominent-incr": 0.2, "head-round": 0.4, "head-scale-depth-incr": 0.35, "head-scale-horiz-incr": 0.4, "head-scale-vert-incr": 0.35,
+               "l-cheek-volume-incr": 0.4, "r-cheek-volume-incr": 0.4, "l-ear-shape-pointed": 0.9, "r-ear-shape-pointed": 0.9, "l-ear-scale-incr": 0.5, "r-ear-scale-incr": 0.5,
+               "l-ear-wing-incr": 0.5, "r-ear-wing-incr": 0.5, "l-eye-scale-incr": 0.4, "r-eye-scale-incr": 0.4, "lowerlegs-height-decr": 0.9,
+               "measure-lowerarm-length-decr": 0.3, "measure-upperarm-length-decr": 0.4, "neck-scale-vert-decr": 0.4,
+               "nose-curve-convex": 0.5, "nose-flaring-incr": 0.5, "nose-point-down": 0.4, "nose-point-width-incr": 1.0, "nose-scale-depth-incr": 0.8,
+               "nose-scale-horiz-incr": 0.5, "nose-scale-vert-incr": 0.6, "nose-volume-incr": 1.0, "upperlegs-height-decr": 1.0,
+               "expr:eyebrows-left-down": 0.75, "expr:eyebrows-right-down": 0.55, "expr:mouth-corner-puller": 0.45, "expr:eye-left-slit": 0.35, "expr:eye-right-slit": 0.25,
+               "expr:mouth-compression": 0.3},
+   "skin": "old_caucasian_male", "skin_tint": [0.98, 0.8, 0.66],
+   "eyes": "brownlight", "eyebrows": "eyebrow010", "eyelashes": "eyelashes02", "brow_texture": "SourceAssets/NPCs/Humans/Textures/eyebrow010_grey.png", "brow_tint": [1.25, 1.25, 1.2],
+   "face": true, "hair": null,
+   "groom": [
+    {"group": "Hair", "style": "hedgehog", "colour": [0.78, 0.77, 0.73], "grey": 0.0, "points": 8, "hairline": 0.06, "root": 0.15, "roughness": 0.55, "set": {"Duplicate Hair Curves/Amount": 220}},
+    {"group": "Beard", "style": "wild_thick_beard", "fill": "beard", "colour": [0.8, 0.79, 0.75], "grey": 0.0, "length": 0.11, "points": 12, "root": 0.15, "bow": 0.4, "mass": true, "wave": 0.4},
+    {"group": "Beard", "style": "wild_moustache", "fill": "beard", "length": 0.04, "points": 8, "bend": 0.012, "set": {"Duplicate Hair Curves/Amount": 220}}
+   ],
+   "beard": {"braids": false, "card_scale": 0.5, "cards": 24, "cheek": 0.04, "clear": 0.03, "length": 0.1, "lying_cards": 140, "sideburn_cards": 16, "sideburn_width": 0.022,
+             "strand_tint": [1.05, 1.03, 0.98], "tint": [0.95, 0.93, 0.88], "width": 0.06},
+   "scalp": {"fade": 0.018, "tint": [0.66, 0.65, 0.62]},
+   "outfit": [
+    {"piece": "shirt", "fabric": "rough_linen", "tint": [0.17, 0.12, 0.075]},
+    {"piece": "jerkin", "fabric": "brown_leather", "offset": 0.012, "tint": [0.075, 0.05, 0.03]},
+    {"piece": "trousers", "fabric": "caban", "tint": [0.09, 0.07, 0.05]},
+    {"piece": "boots", "fabric": "brown_leather", "height": 0.24, "tint": [0.045, 0.032, 0.022]},
+    {"piece": "belt", "fabric": "brown_leather", "offset": 0.03, "tint": [0.035, 0.024, 0.016]}
+   ]
+  }
+ }
+}

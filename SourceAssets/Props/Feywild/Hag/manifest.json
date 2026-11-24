@@ -1,0 +1,42 @@
+{
+    "textures":  "Poly Haven thatch_roof_angled and worn_mossy_plasterwall, CC0-1.0 (https://polyhaven.com/a/thatch_roof_angled, https://polyhaven.com/a/worn_mossy_plasterwall)",
+    "downloaded":  "2026-11-23 (Claude, at the user\u0027s request)",
+    "files":  [
+                  {
+                      "file":  "thatch_roof_angled_diff_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/thatch_roof_angled/thatch_roof_angled_diff_2k.jpg",
+                      "bytes":  3225496,
+                      "sha256":  "dd544436986e9be6ae80996fbd132c67b38c81e8ed1b7c4384a961efe87460b7"
+                  },
+                  {
+                      "file":  "thatch_roof_angled_nor_dx_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/thatch_roof_angled/thatch_roof_angled_nor_dx_2k.jpg",
+                      "bytes":  5034421,
+                      "sha256":  "179a2c55d72b989f8bdfd73cb3516821d698589f6d4aa0c09f95770ba1841b1c"
+                  },
+                  {
+                      "file":  "thatch_roof_angled_rough_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/thatch_roof_angled/thatch_roof_angled_rough_2k.jpg",
+                      "bytes":  2202771,
+                      "sha256":  "511d4d0369fe1676bc31587390a3d5823664ef516efd5bef7d9a4f809bd55382"
+                  },
+                  {
+                      "file":  "worn_mossy_plasterwall_diff_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/worn_mossy_plasterwall/worn_mossy_plasterwall_diff_2k.jpg",
+                      "bytes":  3987892,
+                      "sha256":  "b55a5ac7b045d64d7615c30cc47d8c2f630127877ddf686585722c178fab4b4c"
+                  },
+                  {
+                      "file":  "worn_mossy_plasterwall_nor_dx_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/worn_mossy_plasterwall/worn_mossy_plasterwall_nor_dx_2k.jpg",
+                      "bytes":  3875710,
+                      "sha256":  "866477fbaac0fbdc5c550e4c26edca1b8ece6cf77fe46e8a021833dce1e81cb4"
+                  },
+                  {
+                      "file":  "worn_mossy_plasterwall_rough_2k.jpg",
+                      "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/worn_mossy_plasterwall/worn_mossy_plasterwall_rough_2k.jpg",
+                      "bytes":  2601005,
+                      "sha256":  "ef28f4ea25072e0e756ac43b38b16d25f009c001e72427f1f26ee444829644bb"
+                  }
+              ]
+}

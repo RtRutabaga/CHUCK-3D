@@ -254,11 +254,11 @@ ROOT = BARK.replace('return normalize(n+dn', 'Base*=lerp(.03,1.,VC.g);AO*=lerp(.
 
 def bark(m, code=BARK):
     m.set_editor_property('tangent_space_normal', False)
-    ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
+    ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_INSTANCE)
     link(node(m, unreal.MaterialExpressionVertexNormalWS), ln, '')
     c = custom(m, code, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'LN': ln, 'VC': node(m, unreal.MaterialExpressionVertexColor), 'D': chult(m, 'T_tree_bark_03_diff_2k', 'diffuse'),
                          'NM': chult(m, 'T_tree_bark_03_nor_dx_2k', 'nor_dx'), 'A': chult(m, 'T_tree_bark_03_arm_2k', 'arm'), 'T': node(m, unreal.MaterialExpressionTime), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom), 'VG': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='VeinGain', default_value=1.)}, extra=[('Base', F3), ('Rough', F1), ('AO', F1), ('Glow', F3)])
-    wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_INSTANCE, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     link(c, wn, '')
     out(wn, P.MP_NORMAL); out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_AMBIENT_OCCLUSION, 'AO'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(const(m, .3), P.MP_SPECULAR)
 
@@ -273,21 +273,29 @@ assert PLANK.count('S=110.') == 1 and PLANK.count('.78,.66,.55') == 1 and PLANK.
 def plank(m):
     m.set_editor_property('tangent_space_normal', False)
     W = '/Game/Art/Textures/WeatheredTimber/T_rough_wood'
-    ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
+    ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_INSTANCE)
     link(node(m, unreal.MaterialExpressionVertexNormalWS), ln, '')
     c = custom(m, PLANK, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'LN': ln, 'VC': node(m, unreal.MaterialExpressionVertexColor), 'D': tobj(m, unreal.load_asset(f'{W}_diff_2k'), 'diffuse'),
                          'NM': tobj(m, unreal.load_asset(f'{W}_nor_dx_2k'), 'nor_dx'), 'A': tobj(m, unreal.load_asset(f'{W}_arm_2k'), 'arm'), 'T': node(m, unreal.MaterialExpressionTime), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom), 'VG': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='VeinGain', default_value=1.)}, extra=[('Base', F3), ('Rough', F1), ('AO', F1), ('Glow', F3)])
-    wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_INSTANCE, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     link(c, wn, '')
     out(wn, P.MP_NORMAL); out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_AMBIENT_OCCLUSION, 'AO'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(const(m, .3), P.MP_SPECULAR)
 
 
 # ---------------------------------------------------------------- plants and fungi: vertex colour RGB, glow in A
+# (2026-11-23, the wonder pass: gentle motion) Plants sway slowly, more the higher a part stands on its stem (a bell flower's
+# heads, a wisteria's racemes), a few centimetres; fungi breathe, their caps swelling and easing a little. Small, since
+# collision does not move with it.
+SWAY = 'float k=min(pow(max(P.z,0.)/250.,2.),4.)*3.;float a=T*.75+W.x*.004+W.y*.0031;return float3(sin(a)*k,cos(a*.83+1.)*k*.7,0)*Sway;'
+BREATHE = 'float s=sin(T*.55+W.x*.0021+W.y*.0017);float up=saturate(P.z/40.);return float3(P.xy*.012*s*up,P.z*.006*s);'
+
+
 def plant(m):
     m.set_editor_property('two_sided', True); m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
     vc = node(m, unreal.MaterialExpressionVertexColor)
     c = custom(m, 'float3 L=pow(max(VC,.0001),1.9);Base=L;Sub=L*.65;return L*VA*VA*10.*Gain;', {'VC': vc, 'VA': (vc, 'A'), 'Gain': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='GlowGain', default_value=2.2)}, extra=[('Base', F3), ('Sub', F3)])
     out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_EMISSIVE_COLOR); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(const(m, .62), P.MP_ROUGHNESS); out(const(m, .25), P.MP_SPECULAR)
+    out(custom(m, SWAY, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'T': node(m, unreal.MaterialExpressionTime), 'Sway': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='Sway', default_value=1.)}), P.MP_WORLD_POSITION_OFFSET)
 
 
 # Fungi and bell flowers. UV.x runs round the part, UV.y says which part: 0 gills, 1 dome, 2 stem, 3 bell, 4 the bell's lit heart.
@@ -329,6 +337,7 @@ def fungus(m, count):
     c = custom(m, FUNGUS, {'VC': vc, 'VA': (vc, 'A'), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Count': const(m, count), 'Gain': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='GlowGain', default_value=2.2)},
                extra=[('Base', F3), ('Sub', F3), ('Rough', F1), ('TN', F3)])
     out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_EMISSIVE_COLOR); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_NORMAL, 'TN'); out(const(m, .38), P.MP_SPECULAR)
+    out(custom(m, BREATHE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'T': node(m, unreal.MaterialExpressionTime)}), P.MP_WORLD_POSITION_OFFSET)
 
 
 # Leaves. UV.x along the blade, UV.y across it.
@@ -489,7 +498,7 @@ Base=lerp(lerp(float3(.004,.016,.02),float3(.022,.05,.04),saturate(VC.r)),float3
 // The pond mirrors a capture of the glade taken from its middle (AFeywildSetting::BuildProbe): the reflected ray is carried
 // out to an ellipsoid about as far off as the trees and falls, so what it finds lines up from wherever he stands.
 float3 v=normalize(Cam),r=reflect(-v,n);r.z=abs(r.z)+.012;r=normalize(r);
-float3 o=P-Probe,sc=float3(1./2100.,1./2100.,1./1500.),ao=o*sc,bo=r*sc;
+float3 o=P-Probe,sc=1./Reach,ao=o*sc,bo=r*sc;
 float A=dot(bo,bo),B=dot(ao,bo),CC=dot(ao,ao)-1.;
 float3 dir=normalize(o+r*((-B+sqrt(max(B*B-A*CC,0.)))/A));
 float3 m=min(TextureCubeSampleLevel(Cube,CubeSampler,dir,0.).rgb,float3(7.,7.,7.));
@@ -502,9 +511,11 @@ return n;
 def water(m):
     m.set_editor_property('tangent_space_normal', False)
     cube = node(m, unreal.MaterialExpressionTextureObjectParameter, parameter_name='Reflection', texture=unreal.load_asset('/Engine/EngineResources/DefaultTextureCube'), sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
-    probe = node(m, unreal.MaterialExpressionConstant3Vector, constant=unreal.LinearColor(3400., 1300., 60., 1))
+    # (2026-11-23, the wonder pass) Probe and Reach are parameters: the Lily Mere mirrors its own capture (FeyMap.cpp).
+    probe = node(m, unreal.MaterialExpressionVectorParameter, parameter_name='Probe', default_value=unreal.LinearColor(3400., 1300., 60., 1))
+    reach = node(m, unreal.MaterialExpressionVectorParameter, parameter_name='Reach', default_value=unreal.LinearColor(2100., 2100., 1500., 1))
     c = custom(m, WATER, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'T': node(m, unreal.MaterialExpressionTime), 'VC': node(m, unreal.MaterialExpressionVertexColor), 'Cam': node(m, unreal.MaterialExpressionCameraVectorWS),
-                          'Cube': cube, 'Probe': probe}, extra=[('Base', F3), ('Rough', F1), ('Foam', F1), ('Mirror', F3)])
+                          'Cube': cube, 'Probe': probe, 'Reach': reach}, extra=[('Base', F3), ('Rough', F1), ('Foam', F1), ('Mirror', F3)])
     out(c, P.MP_NORMAL); out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_EMISSIVE_COLOR, 'Mirror'); out(const(m, 0.), P.MP_SPECULAR)
 
 
@@ -619,10 +630,15 @@ return normalize(n+dn*.8);
 
 def stone(m):
     m.set_editor_property('tangent_space_normal', False)
-    c = custom(m, STONE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'VC': node(m, unreal.MaterialExpressionVertexColor), 'T': node(m, unreal.MaterialExpressionTime),
+    # (2026-11-23) the normal in each instance's own frame, as its position (a turned island's stone stretched)
+    ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_INSTANCE)
+    link(node(m, unreal.MaterialExpressionVertexNormalWS), ln, '')
+    c = custom(m, STONE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': ln, 'VC': node(m, unreal.MaterialExpressionVertexColor), 'T': node(m, unreal.MaterialExpressionTime),
                           'D': tobj(m, unreal.load_asset('/Game/Art/ChultGorge/T_cliff_side_diff_2k'), 'diffuse'), 'NM': tobj(m, unreal.load_asset('/Game/Art/ChultGorge/T_cliff_side_nor_dx_2k'), 'nor_dx')},
                extra=[('Base', F3), ('Rough', F1), ('Glow', F3)])
-    out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(c, P.MP_NORMAL); out(const(m, .3), P.MP_SPECULAR)
+    wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_INSTANCE, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    link(c, wn, '')
+    out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(wn, P.MP_NORMAL); out(const(m, .3), P.MP_SPECULAR)
 
 
 # The maze's hedges (2026-11-21): the box under the leaf shell (SM_FeyHedgeLeaves), and the whole hedge beyond the shell's
@@ -705,17 +721,138 @@ return lerp(lerp(float3(.13,.17,.09),float3(.33,.38,.24),t),float3(.42,.46,.34),
 """
 
 
-def hang(m):
+def hang(m, purple=False):
     m.set_editor_property('blend_mode', unreal.BlendMode.BLEND_MASKED); m.set_editor_property('two_sided', True)
     m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE); m.set_editor_property('opacity_mask_clip_value', .4)
-    c = custom(m, HANG, {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom)}, extra=[('Op', F1), ('Sub', F3)])
+    # (2026-11-23, the wonder pass) M_FeyHangMossPurple: the same strands in violet, hung from some oaks outside the Deepwood.
+    code = HANG.replace('return lerp(lerp(float3(.13,.17,.09),float3(.33,.38,.24),t),float3(.42,.46,.34),UV.y*.6)', 'Sub=float3(.3,.12,.36);return lerp(lerp(float3(.16,.07,.22),float3(.42,.24,.55),t),float3(.55,.4,.66),UV.y*.6)') if purple else HANG
+    c = custom(m, code, {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom)}, extra=[('Op', F1), ('Sub', F3)])
     out(c, P.MP_BASE_COLOR); out(c, P.MP_OPACITY_MASK, 'Op'); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(const(m, .9), P.MP_ROUGHNESS); out(const(m, .15), P.MP_SPECULAR)
     out(custom(m, 'float k=sin(T*.7+W.x*.011+W.y*.013)*VC.r*VC.r*6.;return float3(k,k*.7,0);', {'T': node(m, unreal.MaterialExpressionTime), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'VC': node(m, unreal.MaterialExpressionVertexColor)}), P.MP_WORLD_POSITION_OFFSET)
 
 
+# The giant flying jellyfish (2026-11-23, the wonder pass; Tools/build_feywild_kit.py jelly): unlit, glowing, its bell mostly
+# solid with only its edge see-through, its arms and tentacles fading to their tips. It moves in this material: the bell
+# pulses (its rim drawn in, its crown lifted), the arms and tentacles wave in travelling waves growing toward their tips.
+# Vertex colour: R along a part, G a phase, B the part (0 bell, .25 underside, .6 arm, 1 tentacle).
+JELLY = NOISE + r"""
+float part=VC.b,fl=VC.r,ph=VC.g*6.2832;
+float3 n=normalize(N),v=normalize(Cam);float fr=1.-abs(dot(n,v));
+float3 deep=float3(.3,.05,.42),pink=float3(.95,.32,.78),cyan=float3(.3,.85,1.);
+float a=atan2(P.y,P.x),r=length(P.xy)/600.;
+float canal=smoothstep(.86,.985,abs(cos(a*8.)))*smoothstep(.12,.55,r);
+float ring=smoothstep(.035,0.,abs(r-.62))*.8+smoothstep(.03,0.,abs(r-.9))*.6;
+float sp=F.B(P.xy/45.+T*.05);
+float pulse=.5+.5*sin(T*Rate);
+float3 c;
+if(part<.1){c=lerp(deep,pink,saturate(r*1.15))*(.65+.55*sp)+cyan*(canal*1.1+ring)+pink*fr*1.3;Op=lerp(.9,.3,fr*fr)*saturate(.55+.45*sp);}
+else if(part<.4){c=deep*.8+pink*.5*canal+cyan*.3*ring;Op=.5;}
+else if(part<.8){c=lerp(pink,deep,fl)*(1.1+.6*sin(fl*40.-T*2.));Op=.62*(1.-fl*.55);}
+else{c=lerp(cyan,pink,fl)*(.8+.5*sin(fl*60.-T*3.+ph));Op=.75*(1.-fl*.7);}
+return c*Glow*(1.+.3*pulse);
+"""
+JELLY_MOVE = r"""
+float pulse=sin(T*Rate),fl=VC.r,ph=VC.g*6.2832,part=VC.b;float3 o=0;
+if(part<.4){float b=fl/.35;o.xy=-P.xy*.075*pulse*b;o.z=35.*pulse*(1.-b);}
+else{float k=fl;o.x=sin(T*.9-k*6.+ph)*k*k*190.;o.y=cos(T*.7-k*5.+ph*1.3)*k*k*160.;o.z=-sin(T*Rate-k*2.5)*k*90.+35.*pulse;}
+return o;
+"""
+
+
+def jelly_mat(m):
+    m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_UNLIT); m.set_editor_property('blend_mode', unreal.BlendMode.BLEND_TRANSLUCENT); m.set_editor_property('two_sided', True)
+    vc = node(m, unreal.MaterialExpressionVertexColor); t = node(m, unreal.MaterialExpressionTime); lp = node(m, unreal.MaterialExpressionLocalPosition)
+    rate = node(m, unreal.MaterialExpressionScalarParameter, parameter_name='Rate', default_value=.9)
+    c = custom(m, JELLY, {'VC': vc, 'P': lp, 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'Cam': node(m, unreal.MaterialExpressionCameraVectorWS), 'T': t, 'Rate': rate,
+                          'Glow': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='Glow', default_value=2.2)}, extra=[('Op', F1)])
+    out(c, P.MP_EMISSIVE_COLOR); out(c, P.MP_OPACITY, 'Op')
+    out(custom(m, JELLY_MOVE, {'VC': vc, 'P': lp, 'T': t, 'Rate': rate}), P.MP_WORLD_POSITION_OFFSET)
+
+
+# The archway ruins' dressed stone (2026-11-23, the wonder pass): Poly Haven cliff_side (CC0, the Feywild's own stone), greyed,
+# projected from three sides at a stone's scale (rock_moss_set_01 and rock_wall_08 are model atlases with empty gaps: black), each block a little lighter or darker (vertex R), weathered darker low
+# down and in the joints, moss on the tops and the arch's back, lichen spots.
+ARCHSTONE = NOISE_G + r"""
+float3 n=normalize(N);float3 w=pow(abs(n),4.);w/=dot(w,1);float S=95.;
+float3 q=P+VC.r*731.;
+float3 c=Texture2DSample(D,DSampler,q.yz/S).rgb*w.x+Texture2DSample(D,DSampler,q.xz/S).rgb*w.y+Texture2DSample(D,DSampler,q.xy/S).rgb*w.z;
+float2 nx=Texture2DSample(NM,NMSampler,q.yz/S).rg*2-1,ny=Texture2DSample(NM,NMSampler,q.xz/S).rg*2-1,nz=Texture2DSample(NM,NMSampler,q.xy/S).rg*2-1;
+float3 dn=float3(0,nx.x,nx.y)*w.x+float3(ny.x,0,ny.y)*w.y+float3(nz.x,nz.y,0)*w.z;
+float g=dot(c,float3(.3,.59,.11));c=lerp(float3(g,g,g),c,.18)*float3(1.,1.,.97)*lerp(.75,1.2,VC.r);
+c*=lerp(.8,1.,smoothstep(0.,120.,P.z));
+float mk=smoothstep(.35,.8,n.z+(F.B(P.xy/40.+P.z/90.)-.5)*.8)+smoothstep(.75,.95,F.B(P.xz/25.+VC.r*9.))*.35*(1.-abs(n.z));
+mk=saturate(mk);
+float3 moss=lerp(float3(.035,.075,.02),float3(.16,.25,.06),F.N(P.xy/7.+P.z/11.));
+Base=lerp(c*1.9,moss,mk);Rough=lerp(.78,.95,mk);
+return normalize(n+dn*(1.-mk*.6));
+"""
+
+
+def archstone(m):
+    m.set_editor_property('tangent_space_normal', False)
+    # (in the stone's own frame, so a turned arch projects true: its normal taken to local space and the result brought back)
+    ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_INSTANCE)
+    link(node(m, unreal.MaterialExpressionVertexNormalWS), ln, '')
+    c = custom(m, ARCHSTONE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': ln, 'VC': node(m, unreal.MaterialExpressionVertexColor),
+                              'D': tobj(m, unreal.load_asset('/Game/Art/ChultGorge/T_cliff_side_diff_2k'), 'diffuse'), 'NM': tobj(m, unreal.load_asset('/Game/Art/ChultGorge/T_cliff_side_nor_dx_2k'), 'nor_dx')},
+               extra=[('Base', F3), ('Rough', F1)])
+    wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_INSTANCE, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    link(c, wn, '')
+    out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(wn, P.MP_NORMAL); out(const(m, .3), P.MP_SPECULAR)
+
+
+# The hag's cottage (2026-11-23): its thatch and its daub, Poly Haven thatch_roof_angled and worn_mossy_plasterwall (CC0;
+# Tools/Fetch-FeyHag.ps1), on the cottage's own UVs (1.5 m a repeat; the thatch's straws run down the slope). Vertex colour:
+# R the shade under the eaves, G where moss may grow on the thatch.
+HAG_TEX = {}
+
+
+def hag_texture(asset, role):
+    key = (asset, role)
+    if key in HAG_TEX: return HAG_TEX[key]
+    name = f'T_{asset}_{role}_2k'; path = f'{DEST}/Hag/{name}'
+    tex = unreal.load_asset(path)
+    if not tex:
+        ASSETS.make_directory(f'{DEST}/Hag'); t = unreal.AssetImportTask(); t.filename = str(Path(__file__).resolve().parents[1] / 'SourceAssets/Props/Feywild/Hag' / f'{asset}_{role}_2k.jpg')
+        t.destination_path = f'{DEST}/Hag'; t.destination_name = name   # (Path, not ROOT: ROOT is the roots' shader code by here)
+        t.automated = True; t.replace_existing = True; t.save = False; TOOLS.import_asset_tasks([t]); tex = unreal.load_asset(path)
+        tex.set_editor_property('srgb', role == 'diff')
+        tex.set_editor_property('compression_settings', unreal.TextureCompressionSettings.TC_NORMALMAP if role == 'nor_dx' else unreal.TextureCompressionSettings.TC_DEFAULT if role == 'diff' else unreal.TextureCompressionSettings.TC_MASKS)
+        ASSETS.save_loaded_asset(tex, only_if_is_dirty=False)
+    HAG_TEX[key] = tex; return tex
+
+
+HAGTHATCH = NOISE + r"""
+float3 c=Texture2DSample(D,DSampler,UV).rgb;float r=Texture2DSample(R,RSampler,UV).r;
+float2 nn=Texture2DSample(NM,NMSampler,UV).rg*2-1;
+float mn=F.B(UV*1.3+3.)*.85+F.N(UV*7.)*.3;
+float mk=saturate(smoothstep(.42,.82,mn)*VC.g*1.8);
+float3 moss=lerp(float3(.035,.07,.02),float3(.14,.21,.05),F.N(UV*13.));
+c=c*float3(1.18,1.02,.78)*1.25;
+c=lerp(c,c*.45,VC.r);
+Base=lerp(c,moss,mk);Rough=lerp(r,.95,mk);
+return normalize(float3(nn*(1.-mk*.6)*1.2,1.));
+"""
+
+HAGWALL = NOISE + r"""
+float3 c=Texture2DSample(D,DSampler,UV).rgb;float r=Texture2DSample(R,RSampler,UV).r;
+float2 nn=Texture2DSample(NM,NMSampler,UV).rg*2-1;
+c*=float3(1.02,.97,.86)*lerp(.85,1.08,F.B(UV*.7));
+Base=c;Rough=r;
+return normalize(float3(nn,1.));
+"""
+
+
+def hag_surface(m, code, asset):
+    c = custom(m, code, {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'VC': node(m, unreal.MaterialExpressionVertexColor),
+                         'D': tobj(m, hag_texture(asset, 'diff'), 'diffuse'), 'NM': tobj(m, hag_texture(asset, 'nor_dx'), 'nor_dx'), 'R': tobj(m, hag_texture(asset, 'rough'), 'arm')},
+               extra=[('Base', F3), ('Rough', F1)])
+    out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_NORMAL); out(const(m, .25), P.MP_SPECULAR)
+
+
 mats = {}
 for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeyCloud', cloud),
-                 ('M_FeyHedgeLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.78, 1.02, .52), None, .3, 0)), ('M_FeySign', sign), ('M_FeyHangMoss', hang), ('M_FeyBlock', block), ('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyPlank', plank), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
+                 ('M_FeyHedgeLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.78, 1.02, .52), None, .3, 0)), ('M_FeySign', sign), ('M_FeyHangMoss', hang), ('M_FeyHangMossPurple', lambda m: hang(m, True)), ('M_FeyJelly', jelly_mat), ('M_FeyArchStone', archstone), ('M_FeyHagThatch', lambda m: hag_surface(m, HAGTHATCH, 'thatch_roof_angled')), ('M_FeyHagWall', lambda m: hag_surface(m, HAGWALL, 'worn_mossy_plasterwall')), ('M_FeyBlock', block), ('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyPlank', plank), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
                  ('M_FeyLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.95, 1.02, .5), None, 2.2, 0, light=True)),
                  ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22.)),
                  ('M_FeyCelandine', lambda m: foliage(m, textures['celandine_01', 'diffuse'], textures['celandine_01', 'nor_dx'], textures['celandine_01', 'arm'], textures['celandine_01', 'alpha'], (1., 1., .8), None, .8, 18.)),
@@ -727,10 +864,14 @@ for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeyCloud', cl
 
 # ---------------------------------------------------------------- the kit
 if MESHES:
-    SLOTS = {'FeyBark': 'M_FeyBark', 'FeyLeaf': 'M_FeyLeaf', 'FeyPlant': 'M_FeyPlant', 'FeyFungus': 'M_FeyFungus', 'FeyFungusBig': 'M_FeyFungusBig', 'FeyBlade': 'M_FeyBlade', 'FeyBladeRed': 'M_FeyBladeRed', 'FeyPetal': 'M_FeyPetal', 'FeyPad': 'M_FeyPad', 'FeyFar': 'M_FeyFar', 'grass_medium_02': 'M_FeyGrass', 'celandine_01': 'M_FeyCelandine', 'moss_01': 'M_FeyMoss', 'FeyHangMoss': 'M_FeyHangMoss', 'FeyHedgeLeaf': 'M_FeyHedgeLeaf'}
+    SLOTS = {'FeyBark': 'M_FeyBark', 'FeyLeaf': 'M_FeyLeaf', 'FeyPlant': 'M_FeyPlant', 'FeyFungus': 'M_FeyFungus', 'FeyFungusBig': 'M_FeyFungusBig', 'FeyBlade': 'M_FeyBlade', 'FeyBladeRed': 'M_FeyBladeRed', 'FeyPetal': 'M_FeyPetal', 'FeyPad': 'M_FeyPad', 'FeyFar': 'M_FeyFar', 'grass_medium_02': 'M_FeyGrass', 'celandine_01': 'M_FeyCelandine', 'moss_01': 'M_FeyMoss', 'FeyHangMoss': 'M_FeyHangMoss', 'FeyHedgeLeaf': 'M_FeyHedgeLeaf',
+             'FeyStone': 'M_FeyStone', 'FeyArchStone': 'M_FeyArchStone', 'FeyFall': 'M_FeyFall', 'FeyJelly': 'M_FeyJelly', 'FeyHangMossPurple': 'M_FeyHangMossPurple',
+             'FeyHagThatch': 'M_FeyHagThatch', 'FeyHagWall': 'M_FeyHagWall', 'FeyPlank': 'M_FeyPlank'}   # (2026-11-23, the wonder pass)
     subsystem = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
     LODS = {'SM_FeyHedgeLeaves': [(1, 1.), (.4, .3), (.12, .1)], 'SM_FeyOakDeep0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOakDeep1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyCapViolet': [(1, 1.), (.3, .12)], 'SM_FeyCapBlue': [(1, 1.), (.3, .1)],
-            'SM_FeyCapAmber': [(1, 1.), (.5, .1)], 'SM_FeyFoxglove': [(1, 1.), (.35, .14)], 'SM_FeyBroadLeaf': [(1, 1.), (.4, .14)], 'SM_FeyCrimsonLeaf': [(1, 1.), (.4, .14)], 'SM_FeyLily': [(1, 1.), (.4, .1)], 'SM_FeyLilyPad': [(1, 1.), (.5, .035)], 'SM_FeyFarTree': [(1, 1.), (.45, .03)]}
+            'SM_FeyCapAmber': [(1, 1.), (.5, .1)], 'SM_FeyFoxglove': [(1, 1.), (.35, .14)], 'SM_FeyBroadLeaf': [(1, 1.), (.4, .14)], 'SM_FeyCrimsonLeaf': [(1, 1.), (.4, .14)], 'SM_FeyLily': [(1, 1.), (.4, .1)], 'SM_FeyLilyPad': [(1, 1.), (.5, .035)], 'SM_FeyFarTree': [(1, 1.), (.45, .03)],
+            'SM_FeyOakWisteria': [(1, 1.), (.4, .5), (.13, .22), (.04, .08)], 'SM_FeyOakPurpleMoss': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyArch0': [(1, 1.), (.35, .25), (.1, .08)], 'SM_FeyHagCottage': [(1, 1.), (.4, .3), (.12, .1)], 'SM_FeyArch1': [(1, 1.), (.35, .25), (.1, .08)],
+            'SM_FeyGiantToadstool': [(1, 1.), (.4, .2)], 'SM_FeyGiantBlue': [(1, 1.), (.4, .2)], 'SM_FeyGiantSpire': [(1, 1.), (.4, .2)], 'SM_FeyGiantLily': [(1, 1.), (.4, .15)]}
     derived = SOURCE / 'Derived'
     for rec in json.loads((derived / 'manifest.json').read_text(encoding='utf-8'))['assets']:
         file = derived / rec['file']
@@ -753,6 +894,7 @@ if MESHES:
             for percent, screen in LODS[file.stem]:
                 s = unreal.StaticMeshReductionSettings(); s.percent_triangles = percent; s.screen_size = screen; levels.append(s)
             opts.reduction_settings = levels; subsystem.set_lods(mesh, opts)
+        elif mesh.get_num_lods() > 1: subsystem.remove_lods(mesh)   # (2026-11-23: a reimport keeps old levels)
         ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)
         unreal.log(f'CHUCK_FEY_MESH {file.stem} triangles={rec["triangles"]} lods={mesh.get_num_lods()}')
 unreal.log('CHUCK_FEY_ASSETS_DONE')

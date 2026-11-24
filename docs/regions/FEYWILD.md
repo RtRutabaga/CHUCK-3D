@@ -375,9 +375,85 @@ The user: the gaps through the rock and the floating petals in the first canyon 
   - The route walker needed straight points through each crawl hole (a player lines up by eye).
   - Nothing has been played by hand.
 
+## Aiming orchids, the wonder pass, the hag's cottage and the Crossroads trio (2026-11-23)
+
+The user, with an image (`References/Feywild/crossroads-trio.png`): make the plants that shoot work like the spined devils
+and target Chuck; do the wonder pass (the giant flying jellyfish, the unique giant plants and the rest); build a hag's
+cottage in the Deepwood just off the trail, so he passes close to it; and make the image's three (a centaur carrying a
+satyr, a gnome on the satyr's shoulders) and have them mill around by the Crossroads' giant tree. Dialogue comes later,
+from the user. Free resources could be downloaded.
+
+- **Orchids aim** (`FeyLife.cpp`), as the spined devils do.
+  - Each sleeps facing its lane. It wakes when he is in front of it (up to about 100 degrees either side), in sight, and
+    within 1.25 times its lane's reach.
+  - Awake, its bulb turns to follow him. As it swells it takes aim at where he is (no lead) and spits there. Half its
+    spits go 30 to 95 cm wide.
+  - It does not spit at nothing: it stops when he goes.
+  - `=life` step 12: it aims off its lane and turns to him (`Life_OrchidAim`), then hits him in its lane.
+- **The wonder pass** (`Tools/build_feywild_kit.py`, `FeyMap.cpp`). The districts' pieces are on their own random stream,
+  so the rest of the planting is unchanged.
+  - Riverbank and Highmeadow: great bell flowers, up to 9 m, arching from one clump with lit amber bells.
+  - Orchard and Needle Garden: three flower spires, the tallest 5.4 m.
+  - Crossroads' edges and the redcaps' hollow: fly agarics with white warts, 3.3 m tall.
+  - Deepwood: stands of tall glowing blue caps with shelves.
+  - Lily Mere: a giant lily on a great pad on each of the two great pools.
+  - Highmeadow: the great wisteria, an oak hung all over with wisteria, replacing the plain stand-in.
+  - Oaks hung with purple moss by the mere's fen and at the Crossroads' edges (`M_FeyHangMossPurple`).
+  - Rounded archway ruins of grey dressed stone (`M_FeyArchStone`: Poly Haven cliff_side, greyed), with ivy and hanging
+    moss, mossed on top. They stand in the open districts; two whole arches span the orchard's road, walked under.
+  - Floating islands: rock cones with grassy tops, trees (one a wisteria), trailing roots and thin falls. There are seven,
+    over Highmeadow, the overlook, the mere and the river, bobbing and turning very slowly.
+  - The giant jellyfish (`M_FeyJelly`): 24 m across its bell, glowing violet and pink with cyan canals, see-through only at
+    its edge. It drifts round a nine-minute loop high over Highmeadow, the Crossroads and the mere, pulsing, tentacles
+    waving (in the material), with one soft light.
+  - Gentle motion: the kit's plants sway a few centimetres, more the higher a part stands; the fungi breathe. The map's
+    and life's own surfaces stay still.
+  - Mirror water at the lily-pad crossing: one cube capture from the great pool's middle when the mere stands, which its
+    water mirrors (`M_FeyWater` now takes Probe and Reach).
+  - Not built from the plan: the crows.
+- **A fix found on the way.** The materials projected from three sides (bark, roots, timber, stone, the marble satyrs)
+  took the normal in the whole component's frame but the position in each instance's own. Every turned instance (every
+  oak, every satyr) was projected askew. They now use the instance's frame. The arches showed it worst.
+- **The hag's cottage** (`hag_cottage` in `Tools/build_feywild_kit.py`; `FeyMap.cpp`, `FeyLife.cpp`).
+  - Where: just off the trail from the Crossroads into the Deepwood, on its outer side, its door facing the trail across
+    a small fenced garden.
+  - Ground and garden: its ground is levelled, and planting is kept off the house and garden.
+  - The house: a crooked timber frame with daub walls (Poly Haven worn_mossy_plasterwall, CC0) on a footing of mossy
+    stones, under a deep sagging thatch (Poly Haven thatch_roof_angled, CC0; `Tools/Fetch-FeyHag.ps1`) with a bound ridge.
+  - Chimney and door: a leaning stone chimney on one gable, and an arched plank door with iron straps and a ring.
+  - The front: leaded windows glowing amber, a stag's skull and antlers over the door, herbs and dried flowers hung from
+    the eave, a lantern, a broom, a barrel and bucket, and jars on the sill.
+  - The garden: pumpkins, a stick fence, and an iron cauldron of glowing green brew on three stones over a fire.
+  - Warm window and lantern lights; the cauldron's fire light, its crackle and bubbling, and smoke from the chimney
+    (`AChuckFlames`); collision on the house, chimney and cauldron.
+- **The Crossroads trio** (`Tools/build_fey_trio.py`, `Tools/build_fey_trio_anims.py`, `Tools/import_fey_trio.py`,
+  `FeyTrio.cpp`).
+  - How they are built: on the human kit (MPFB 2.0.17), with MakeHuman's expression units baked into the faces, strand
+    hair and beards, and the kit's clothes. The temple heroes' surfaces are used for their gear.
+  - The centaur: helmet and bracers, a bay horse's body from the hips back (signed distance fields), and a hair tail and
+    feathering. He wears a purple velvet blanket with a gilt border, a girth strap and saddlebags.
+  - The satyr: laughing. He has goat's legs on bones moved to a goat's (furred, with hooves), ram's horns and a chest
+    strap.
+  - The gnome: scowling and smirking, in a tall green felt hat, leather jerkin, breeches and boots.
+  - One 60-second loop for all three, authored together. The centaur stands, walks half round a circle 4 m across,
+    stands, walks back and stands. He walks a four-beat walk with planted hooves (IK), his body bobbing and his tail
+    switching.
+  - The satyr rides with his hands on the centaur's shoulders, laughing in bursts and looking about. The gnome sits on
+    the satyr's shoulders holding a horn and points: ahead while they walk, to the sides while they stand.
+  - In the game: three meshes at one place, played from one clock, on the Crossroads' ring road north-west of the tree.
+    A collision box follows the centaur's body (not while the route walker runs).
+- **Checked:** see `docs/agent-handoffs/CLAUDE.md` (November 24).
+- **Known flaws:**
+  - Animals' and riders' contact is by IK. The satyr's knees and the gnome's legs bend oddly from some angles.
+  - The horse is a smooth, stylised body: no muscle detail beyond its masses, its coat a suede.
+  - The flames and smoke of the cauldron and chimney did not show in the stills (the camp's do not either; not checked
+    in play).
+  - The great bell flowers have no collision.
+  - The islands' and the jellyfish's look from the far districts has not been judged.
+
 ## The wonder pass (planned 2026-11-22)
 
-The user's request: more immersive and visually stunning elements distinct to each district, and more movement for whimsy. To be built alongside stages 5 to 8, district by district, each piece judged in stills against the goal images. Not built yet.
+The user's request: more immersive and visually stunning elements distinct to each district, and more movement for whimsy. Built 2026-11-23 (above, except the crows), each piece judged in stills.
 
 | Element | Where | How (to keep it cheap) |
 |---|---|---|

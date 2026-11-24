@@ -1,0 +1,11 @@
+# The Crossroads trio by the great tree (2026-11-23). Tools/Take-Shots.ps1 Tools/shots/feywild-trio.txt -Extra '-ChuckFeyTrioHold=4'
+at FeyCrossroads
+origin feywild
+wait 14
+fov 50
+chuck chuckview -70900 300 120   -71200 -200 60
+shot front -70445 1033 170   -70289 1778 180
+shot satyr -70180 1380 260   -70300 1800 250
+shot side -70944 2237 190   -70289 1778 170
+shot gnome -70250 1450 300   -70320 1820 290
+shot wide -69400 600 450   -70125 1663 150

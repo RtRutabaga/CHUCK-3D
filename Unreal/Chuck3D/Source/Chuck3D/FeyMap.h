@@ -113,6 +113,10 @@ namespace FeyMap
     constexpr int32 Hoops = 5;
 }
 FVector FeySpotWorld(int32 Spot);
+/** (2026-11-23) The hag's cottage in the Deepwood: local X, Y of its middle, Z its yaw (its door, local +X, toward the trail). */
+FVector FeyHagCottage();
+/** Its ground there (local Z), and a point of it (local, from its own frame: +X the front, Y along it) on that ground. */
+FVector FeyHagPoint(const FVector& Own);
 /** Marks the spots within 4 m of a place (world) reached; forgets them all (a new game, the river again). */
 void FeyReachSpots(const FVector& World);
 void FeyForgetSpots();
@@ -158,6 +162,8 @@ private:
     float BuildSeconds = 0, PlanSeconds = 0, WorstStepMs = 0;
     UPROPERTY() TArray<UHierarchicalInstancedStaticMeshComponent*> Kits;
     UPROPERTY() TArray<UMaterialInterface*> Mats;
+    UPROPERTY() class USceneCaptureComponentCube* Mirror = nullptr;   // (2026-11-23) the Lily Mere's one capture for its water to mirror
+    UPROPERTY() class UTextureRenderTargetCube* MirrorTarget = nullptr;
     UPROPERTY() class AFeyLife* Life = nullptr;   // (2026-11-21) its flowers, pollen, orchids and moths, once it stands
 protected:
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -194,6 +200,7 @@ private:
     void BuildTower();
     void BuildStandIn();
     void BuildBrink();
+    void BuildWonders();   // (2026-11-23) the floating islands and the giant jellyfish, always there
     UProceduralMeshComponent* Emit(const TCHAR* Name, FMapSurf& S, UMaterialInterface* Material, bool bSolid, bool bShadow);
     UPROPERTY() TArray<AFeyDistrict*> Districts;
     UPROPERTY() TArray<UHierarchicalInstancedStaticMeshComponent*> BackTrees;   // the distance's trees on each district's ground
@@ -206,6 +213,16 @@ private:
     FVector LastSafe = FVector::ZeroVector;   // the last ground he stood on outside the deep water (world)
     int32 Drowned = 0;
     int32 VeilsOf = -1;   // (whose mist is up: the Deepwood's or, 2026-11-23, the maze's low fog)
+    UPROPERTY() TArray<class UStaticMeshComponent*> Isles;
+    TArray<FVector> IsleAt;
+    UPROPERTY() class UStaticMeshComponent* Jelly = nullptr;
+    UPROPERTY() class UPointLightComponent* JellyLight = nullptr;
+public:
+    /** (Tests and stills) the jellyfish's place (local) now. */
+    FVector GetJellyAt() const;
+    static FVector JellyAt(float Time);
+    static float JellyTime;   // (stills: >= 0 holds it at that time)
+private:
 public:
     int32 GetDrowned() const { return Drowned; }
 private:

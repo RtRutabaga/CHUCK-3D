@@ -39,7 +39,7 @@ namespace
         double Last = 0, PhaseStart = 0, LastGain = 0, Start = 0;
         float Best = 1e9f, Walked = 0; FVector Prev = FVector::ZeroVector;
         bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false, bCracks = false, bLife = false; uint64 Frame = 0;
-        int32 LifeFails = 0, Cigs0 = 0, Hits0 = 0, Hits1 = 0; float MinDist = 1e9f; float SpeedOut = 0, SpeedIn = 0; int32 SpeedOutN = 0, SpeedInN = 0;
+        int32 LifeFails = 0, Cigs0 = 0, Hits0 = 0, Hits1 = 0, OrchidSub = 0, Aimed0 = 0; float MinDist = 1e9f; float SpeedOut = 0, SpeedIn = 0; int32 SpeedOutN = 0, SpeedInN = 0;
         int32 CrackStep = 0, CrackLeaks = 0, CrackShots = 0; TArray<FLeak> Shown;
         float PkS0 = 0, PkRate = -1; double PkT0 = -1, PkLastJump = 0; int32 PkGrip = -1;   // (2026-11-23) the parkour checks
         FStat Chult, Fey[Districts + 1], Cross;
@@ -278,11 +278,25 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 Check(R->SpeedInN > 10 && R->SpeedOutN > 10 && In < Out * .65f, TEXT("pollen_slows"));
                 R->bPlaced = false; R->CrackStep = 12; R->PhaseStart = Now; return;
             }
-            case 12:   // an orchid's seed, standing in its lane
+            case 12:   // (2026-11-23) an orchid wakes, turns to him off its lane and aims; then a seed, standing in its lane
             {
                 const FFeyOrchid& O = Life->GetOrchids()[0];
-                if (!R->bPlaced) { Put(O.Pos + O.Dir * 450.f, -O.Dir); R->Hits0 = AFeyLife::OrchidHits; R->bPlaced = true; R->PhaseStart = Now; return; }
-                if (Since < 6.f) return;
+                const FVector Road(-O.Dir.Y, O.Dir.X, 0.f);
+                if (R->OrchidSub == 0)
+                {
+                    const FVector At = O.Pos + O.Dir * 450.f + Road * 380.f;
+                    if (!R->bPlaced) { AFeyLife::bOrchidSure = false; Put(At, O.Pos - At); R->Aimed0 = AFeyLife::OrchidAimed; R->bPlaced = true; R->PhaseStart = Now; return; }
+                    if (Since < 4.5f) return;
+                    const FVector To = (At - O.Pos).GetSafeNormal2D();
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_ORCHID_AIM aimed=%d look_dot=%.2f lane_dot=%.2f"), AFeyLife::OrchidAimed - R->Aimed0, FVector::DotProduct(O.Look.GetSafeNormal2D(), To), FVector::DotProduct(O.Dir, To));
+                    Check(AFeyLife::OrchidAimed > R->Aimed0, TEXT("orchid_aims_off_lane"));
+                    Check(FVector::DotProduct(O.Look.GetSafeNormal2D(), To) > .9f, TEXT("orchid_turns_to_him"));
+                    Shot(TEXT("OrchidAim")); R->OrchidSub = 1; R->bPlaced = false; R->PhaseStart = Now;
+                    return;
+                }
+                if (!R->bPlaced) { AFeyLife::bOrchidSure = true; Put(O.Pos + O.Dir * 450.f, -O.Dir); R->Hits0 = AFeyLife::OrchidHits; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 6.f && AFeyLife::OrchidHits == R->Hits0) return;
+                AFeyLife::bOrchidSure = false;
                 Check(AFeyLife::OrchidShots > 0 && AFeyLife::OrchidHits > R->Hits0, TEXT("orchid_hits"));
                 R->bPlaced = false; R->CrackStep = 13; R->PhaseStart = Now; return;
             }
