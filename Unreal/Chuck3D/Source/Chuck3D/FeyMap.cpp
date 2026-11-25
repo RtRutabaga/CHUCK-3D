@@ -2,6 +2,7 @@
 #include "Misc/ScopeExit.h"
 #include "FeyMesh.h"
 #include "FeyLife.h"
+#include "FeyTrio.h"
 #include "FeywildSetting.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
@@ -2364,6 +2365,7 @@ AFeyMap* AFeyMap::Ensure(UWorld* World)
     auto* Map = World->SpawnActor<AFeyMap>(FeywildOrigin(), FRotator::ZeroRotator, P);
     Map->Districts.SetNum(FeyMap::Districts); FeyForgetSpots();
     Map->BuildThresholds(); Map->BuildDistance(); Map->BuildTower(); Map->BuildStandIn(); Map->BuildBrink(); Map->BuildWonders();
+    Map->Missing += AFeyTrio::CountMissing();   // (2026-11-24: the package had been cooked without them)
     { float Jt; if (FParse::Value(FCommandLine::Get(), TEXT("-ChuckFeyJellyAt="), Jt)) JellyTime = Jt; }   // (stills: the jellyfish held where it is at that time)
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_BUILT seconds=%.2f triangles=%d missing=%d maze_cells=%d maze_way_m=%.0f maze_hedges=%d pads=%d signs=%d"), FPlatformTime::Seconds() - T0, Map->Triangles, Map->Missing,
         MazeCells(), MazeWay() / 100.f, MazeData().Hedges.Num(), MoatPads().Num(), SignPosts().Num());

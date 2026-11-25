@@ -32,6 +32,18 @@ AFeyTrio* AFeyTrio::Spawn(UWorld* World, const FVector& Ground, float Yaw)
     return World->SpawnActor<AFeyTrio>(Ground, FRotator(0, Yaw, 0), P);
 }
 
+int32 AFeyTrio::CountMissing()
+{
+    int32 N = 0;
+    for (const TCHAR* Name : Names)
+    {
+        N += !LoadObject<USkeletalMesh>(nullptr, *FString::Printf(TEXT("/Game/Characters/FeyTrio/%s/SK_%s.SK_%s"), Name, Name, Name));
+        N += !LoadObject<UAnimSequence>(nullptr, *FString::Printf(TEXT("/Game/Characters/FeyTrio/%s/Anim/AS_%s_Mill.AS_%s_Mill"), Name, Name, Name));
+    }
+    if (N) UE_LOG(LogTemp, Warning, TEXT("CHUCK_FEY_TRIO_MISSING assets=%d (not cooked?)"), N);
+    return N;
+}
+
 void AFeyTrio::BeginPlay()
 {
     Super::BeginPlay();

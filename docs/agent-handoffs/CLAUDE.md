@@ -2,6 +2,32 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 24 (fourth) — Feywild: the Crossroads trio was not in the package (Claude)
+
+- **Asked:** the user walked the whole ring path round the Crossroads tree in the launcher build and found no trio.
+- **Cause:** `/Game/Characters/FeyTrio` was never in `DirectoriesToAlwaysCook`. `AFeyTrio` loads its meshes and clips
+  by path, so nothing referenced them and the cook left them out.
+  - Every package since November 23 had no trio. The player's log has `CHUCK_FEY_TRIO_MISSING ... mesh=0 clip=0`.
+  - The stills were taken in the editor, and no verify step builds the Crossroads life.
+- **Source:** `main` at cfc3bcbf; this commit. The package's receipt names cfc3bcb.
+- **Changed:**
+  - `Config/DefaultGame.ini`: the FeyTrio folder is always cooked.
+  - `FeyTrio.h/.cpp`: new `AFeyTrio::CountMissing()`.
+  - `FeyMap.cpp`: adds that count to the Feywild map's `missing`, which the feyMap verify step requires to be 0. A
+    package without them now fails verification.
+- **Contract:** unchanged.
+- **Validation (actual):**
+  - Package FeyTrioCookCandidate: 50/50 steps, 182 passes, no retries
+    (`Local/verify-package-20261124-211943.log`). The feyMap step's `CHUCK_FEY_MAP_BUILT missing=0` includes the trio.
+  - Shot list `feywild-trio.txt` run in the packaged candidate: `CHUCK_FEY_TRIO_SPAWNED parts=3 grooms=9`; stills in
+    `Local/shots/feywild-trio-packaged`.
+  - Promoted as **FeywildTrioCook**; the candidate folder is removed.
+- **Known flaws:** as in the third entry below.
+- **Lesson:** a new `/Game/...` folder whose assets are only loaded by path needs a cook entry. When the user cannot
+  find something, read their own log first (`Builds/Windows/Chuck3D/Saved/Logs`).
+
+Next part of the work can be done here (the trio's dialogue once the user supplies it, or further trio polish).
+
 ## November 24 (third) — Feywild: the Crossroads trio, third round (Claude)
 
 - **Asked:**

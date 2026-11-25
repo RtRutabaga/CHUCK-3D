@@ -33,6 +33,9 @@ public:
     /** Tests: where the centaur's body is now (world), and how many parts loaded. */
     FVector GetBodyAt() const;
     int32 GetLoaded() const { return Loaded; }
+    /** How many of the trio's meshes and clips are not in this build (counted into the Feywild map's missing, so a package
+     *  cooked without /Game/Characters/FeyTrio fails its verification; 2026-11-24, the user found them gone). */
+    static int32 CountMissing();
     /** Stills: hold the loop at this time (s); < 0 runs. */
     static float HoldAt;
 protected:
