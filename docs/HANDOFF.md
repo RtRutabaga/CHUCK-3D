@@ -6,6 +6,14 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Feywild: the Crossroads trio, third round (November 24, Claude):**
+  - The horse is shorter behind the hips, with normal forelegs. Their pinch was a twist in the walk's IK.
+  - The centaur wears a leather Troy-style helmet without plume.
+  - Travellers' gear is lashed behind the satyr.
+  - The satyr's hands rest on the centaur's shoulders; he has matte cloven hooves, furred hips, and legs that hang naturally.
+  - See [regions/FEYWILD.md](regions/FEYWILD.md).
+  - Package verified 50/50 on a second full run; the first full run failed Phlegethos `lake_slabs` twice, and it passed
+    alone. Promoted as FeywildTrio3. Not played by hand.
 - **Feywild: the Crossroads trio, second round (November 24, Claude):**
   - The horse re-sculpted on a riding horse's lines (bay, black points); the satyr's legs round its barrel, the gnome
     piggyback on his shoulders; the centaur in a leather vest, the satyr in a velvet waistcoat, neckerchief, sash, wreath

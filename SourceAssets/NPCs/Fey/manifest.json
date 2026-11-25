@@ -335,7 +335,7 @@
   "FeySatyr": {
    "fbx": "FeySatyr/SK_FeySatyr.fbx",
    "height_cm": 172,
-   "tris": 93650,
+   "tris": 89252,
    "slots": {
     "Vest": {
      "type": "fabric",
@@ -463,19 +463,19 @@
      "tile_cm": 28.2,
      "gain": 10.699
     },
-    "Hero_hoof": {
+    "Hero_goat_hoof": {
      "type": "pbr",
-     "set": "fabric_leather_02",
+     "set": "scuba_suede",
      "folder": "SourceAssets/Surfaces/Heroes",
      "tint": [
-      0.028,
-      0.024,
-      0.02
+      0.075,
+      0.062,
+      0.05
      ],
-     "rough": 0.6,
+     "rough": 1.0,
      "metal": 0.0,
-     "tile_cm": 50.0,
-     "gain": 9.762
+     "tile_cm": 28.2,
+     "gain": 10.699
     },
     "GoatFur": {
      "type": "hair",
@@ -731,7 +731,7 @@
   "FeyCentaur": {
    "fbx": "FeyCentaur/SK_FeyCentaur.fbx",
    "height_cm": 186,
-   "tris": 117968,
+   "tris": 154030,
    "slots": {
     "Vest": {
      "type": "fabric",
@@ -778,27 +778,46 @@
      "tile_cm": 40.0,
      "gain": 26.931
     },
-    "Helmet": {
-     "type": "fabric",
-     "fabric": "metal_plate_02",
+    "Hero_helm": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
      "tint": [
       0.42,
-      0.28,
-      0.12
+      0.24,
+      0.11
      ],
-     "tile_cm": 200.0,
-     "gain": 14.226
+     "rough": 0.8,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
     },
-    "Trim": {
-     "type": "fabric",
-     "fabric": "metal_plate_02",
+    "Hero_leather_dk": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
      "tint": [
-      0.6,
-      0.42,
-      0.16
+      0.035,
+      0.024,
+      0.016
      ],
-     "tile_cm": 200.0,
-     "gain": 14.226
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Hero_bronze": {
+     "type": "pbr",
+     "set": "metal054a",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.72,
+      0.48,
+      0.2
+     ],
+     "rough": 0.9,
+     "metal": 1.0,
+     "tile_cm": 40.0
     },
     "Scalp": {
      "type": "stubble",
@@ -958,18 +977,119 @@
      "metal": 0.0,
      "tile_cm": 50.0,
      "gain": 9.762
+    },
+    "Hero_bedroll": {
+     "type": "pbr",
+     "set": "poly_wool_herringbone",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.26,
+      0.07,
+      0.035
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 27.3,
+     "gain": 5.524
+    },
+    "Hero_canvas": {
+     "type": "pbr",
+     "set": "hessian_230",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.42,
+      0.34,
+      0.21
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 26.8,
+     "gain": 4.918
+    },
+    "Hero_rope": {
+     "type": "pbr",
+     "set": "hessian_230",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.32,
+      0.25,
+      0.16
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 26.8,
+     "gain": 4.918
+    },
+    "Hero_steel_dark": {
+     "type": "pbr",
+     "set": "metal038",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.7,
+      0.7,
+      0.7
+     ],
+     "rough": 1.15,
+     "metal": 1.0,
+     "tile_cm": 50.0
+    },
+    "Hero_lamp": {
+     "type": "pbr",
+     "set": null,
+     "folder": null,
+     "tint": [
+      1.0,
+      0.7,
+      0.3
+     ],
+     "rough": 0.2,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "emissive": [
+      3.0,
+      1.6,
+      0.45
+     ]
+    },
+    "Hero_suede": {
+     "type": "pbr",
+     "set": "scuba_suede",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.11,
+      0.075,
+      0.045
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 28.2,
+     "gain": 10.699
+    },
+    "Hero_wood_dark": {
+     "type": "pbr",
+     "set": "rough_wood",
+     "folder": "SourceAssets/Surfaces/WeatheredTimber",
+     "tint": [
+      0.28,
+      0.2,
+      0.14
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 7.752
     }
    },
    "mouth_cm": [
-    17.0,
+    17.5,
     0.0,
-    166.2
+    170.7
    ],
    "grooms": {
     "Hair": {
      "abc": "FeyCentaur/GR_FeyCentaur_Hair.abc",
      "bone": "head",
-     "strands": 4432,
+     "strands": 2824,
      "colour": [
       0.11,
       0.07,
@@ -986,26 +1106,26 @@
      "specular": 0.5,
      "roots_cm": {
       "mean": [
-       2.12,
-       0.67,
-       175.54
+       0.92,
+       1.15,
+       178.09
       ],
       "min": [
-       -4.78,
-       -7.75,
-       164.73
+       -4.91,
+       -7.95,
+       169.2
       ],
       "max": [
-       14.57,
-       7.85,
-       183.72
+       14.97,
+       8.07,
+       188.51
       ]
      }
     },
     "Beard": {
      "abc": "FeyCentaur/GR_FeyCentaur_Beard.abc",
      "bone": "head",
-     "strands": 10120,
+     "strands": 9915,
      "colour": [
       0.1,
       0.065,
@@ -1022,26 +1142,26 @@
      "specular": 0.5,
      "roots_cm": {
       "mean": [
-       10.48,
-       0.01,
-       167.29
+       10.82,
+       0.03,
+       171.79
       ],
       "min": [
-       6.71,
-       -7.54,
-       162.42
+       6.89,
+       -7.75,
+       166.82
       ],
       "max": [
-       17.25,
-       7.54,
-       171.91
+       17.74,
+       7.74,
+       176.57
       ]
      }
     },
     "BeardJaw": {
      "abc": "FeyCentaur/GR_FeyCentaur_BeardJaw.abc",
      "bone": "jaw",
-     "strands": 23708,
+     "strands": 27310,
      "colour": [
       0.1,
       0.065,
@@ -1058,24 +1178,24 @@
      "specular": 0.5,
      "roots_cm": {
       "mean": [
-       13.66,
+       14.09,
        -0.07,
-       162.82
+       167.16
       ],
       "min": [
-       7.96,
-       -6.62,
-       160.64
+       8.17,
+       -6.8,
+       164.99
       ],
       "max": [
-       16.61,
-       6.73,
-       165.85
+       17.06,
+       6.92,
+       170.34
       ]
      }
     }
    },
-   "lift_cm": 45.3,
+   "lift_cm": 42.6,
    "bones": [
     "Root",
     "h_front",

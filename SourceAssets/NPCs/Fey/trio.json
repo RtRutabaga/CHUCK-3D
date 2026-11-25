@@ -22,9 +22,7 @@
     {"piece": "vest", "fabric": "fabric_leather_02", "folder": "SourceAssets/Surfaces/Heroes", "tint": [0.22, 0.12, 0.06], "bottom": 0.03, "open": 0.05, "lapel": 0.06, "armhole": 0.03},
     {"piece": "trim", "of": "vest", "slot": "VestTrim", "fabric": "metal_plate_02", "radius": 0.0045, "rolled": true, "tint": [0.55, 0.38, 0.15]},
     {"piece": "vambrace", "fabric": "brown_leather", "offset": 0.012, "tint": [0.07, 0.045, 0.028]},
-    {"piece": "belt", "fabric": "brown_leather", "offset": 0.03, "tint": [0.05, 0.032, 0.02], "z": -0.02},
-    {"piece": "helmet", "fabric": "metal_plate_02", "tint": [0.42, 0.28, 0.12], "nasal": true},
-    {"piece": "trim", "of": "helmet", "fabric": "metal_plate_02", "radius": 0.007, "rolled": true, "tint": [0.6, 0.42, 0.16]}
+    {"piece": "belt", "fabric": "brown_leather", "offset": 0.03, "tint": [0.05, 0.032, 0.02], "z": -0.02}
    ]
   },
   "FeySatyr": {

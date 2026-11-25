@@ -451,6 +451,68 @@ from the user. Free resources could be downloaded.
   - The great bell flowers have no collision.
   - The islands' and the jellyfish's look from the far districts has not been judged.
 
+## The Crossroads trio, third round (2026-11-24)
+
+The user: the satyr's arms should not pass through the centaur's clothes or body; the centaur's helmet more like
+Achilles' in Troy (2004), without feathers, in leather; the horse's proportions more accurate (it felt too long), the
+front legs without their narrow part; travellers' gear behind the satyr, so that the way they ride makes sense.
+
+- **The horse** (`Tools/build_fey_trio.py`):
+  - Shortened: everything behind the man's hips is drawn in along its length by 0.76 (`XS`): the trunk, the hind thighs,
+    the hind legs, the tail. From the point of shoulder to the point of buttock it is now about its height at the withers
+    (it was 1.3 times).
+  - The chest is a little narrower.
+  - Each foreleg is one loft down its height (`FORELEG`). The forearm is deep and muscled at the top, with the elbow's
+    point behind, and tapers evenly to a knee a little wider than the forearm above it, then the flat cannon. Before, it
+    was a tube with lumps on it, pinched above the knee. Black from just below the knee.
+  - The tail's root sits lower, with no nub over the croup.
+- **The helmet** (`troy_helmet`, made in the kit's hook so the strand hair is pressed under it; the kit's steel cap and
+  nasal are gone from `trio.json`):
+  - A Corinthian shape in moulded tan leather. The open T of the face, the brow arched over each eye down to a short
+    nasal, long cheek guards to the jaw, the ears covered, a neck guard flaring over the nape.
+  - A low keel ridge from brow to nape where the crest would stand (no plume). A rolled darker edge. Bronze studs along
+    the brow and down the cheek guards.
+  - Fitted by casting out from the middle of the head in every direction (past the ears), the radii smoothed and kept
+    clear of the skin.
+  - Without the kit's helmet the man measures 2.7 cm taller to his crown, so the lift is now 42.6 cm (`FeyTrio.h`).
+- **The gear** (`traveller_gear`), lashed behind the satyr's seat and riding the croup:
+  - A rolled red wool bedroll across the loin with two straps.
+  - A canvas pack on the croup with a leather flap, its straps and a coil of rope on top.
+  - Saddlebags on both flanks, with flaps and buckles.
+  - A pot hanging off the left bag and a lit lantern off the right. A waterskin.
+  - The satyr's shepherd's crook lashed on top of the load, rising behind.
+- **The satyr's hands** (`Tools/build_fey_trio_anims.py`):
+  - Flat on the centaur's shoulder caps. The wrist sits just behind the top of each shoulder and the knuckles on it, both
+    found on the centaur's skin and vest.
+  - The hand's roll is the one that lays the palm down with the curled fingers over the front of the shoulder.
+  - They are carried by the centaur's upper chest, not his collarbone, which rolls when he gestures.
+  - Before, the hand hung as it was, with its fingers in the vest; on the first try the probe hit his jaw and the hands
+    held his face.
+- **Then, from the user's stills** ("the front horse legs are super narrow at the top"; the satyr's feet should read as
+  goat hooves, not too glossy; his legs and hips should look normal for a goat-legged satyr riding a centaur):
+  - **The forelegs' pinch was the walk's IK, not the mesh.** Each leg's IK pole angle was a fixed -90°, which for the
+    forelegs is half a turn from their rest, so the forearm and cannon stood twisted about their length against the
+    shoulder: an hourglass under the chest in every frame. Each leg's pole angle is now fitted so that with its targets
+    at rest the leg is at rest (`CHUCK_TRIO_LEG_POLE`: front 90°, hind -80° and -100°, twist under 1.5°).
+  - The chest also narrows toward the breastbone between the forelegs. The forearms' tops are broader, flush with the
+    point of shoulder. The round triceps lumps that stood out over them are gone, and the breast muscles are smaller.
+  - **The satyr's hooves** are cloven: two toes with a cleft, a heel bulb, flat soles. They are a matte dark horn
+    (`goat_hoof`, suede-based) instead of the horse's glossy hoof.
+  - **His hips** are furred round the front up to the sash; a band of the man's skin had shown between the waist and the
+    goat. The thighs are slimmer.
+  - **His fur** lies along each leg and follows the bone. The cards had hung straight down from the standing pose and
+    stood out from his seated thighs like a skirt. They are shorter and fewer.
+  - **His legs as he rides:** the thigh forward and down over the barrel, the shank back from the knee, the long cannon
+    down, the hoof hanging under the knee. Before, the hoof reached forward to the horse's elbow.
+- **Checked:** see `docs/agent-handoffs/CLAUDE.md` (November 24, third entry).
+- **Known flaws:**
+  - `CHUCK_TRIO_CLEAR`:
+    - The satyr's fingertips go up to 1.7 cm into the centaur's shoulders as he sways (about 90 of 4246 arm and hand
+      verts).
+    - His legs: 10 verts up to 2.2 cm into the horse (it was 358, up to 4.3 cm).
+    - The gnome in the satyr: as in the second round.
+  - The chest from the front is still a smooth rounded mass.
+
 ## The Crossroads trio, second round (2026-11-24)
 
 The user: the gnome's legs over the satyr's shoulders in a normal piggyback; the satyr's legs round the horse's body

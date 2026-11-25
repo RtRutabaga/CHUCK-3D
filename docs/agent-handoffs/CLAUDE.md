@@ -2,6 +2,60 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 24 (third) — Feywild: the Crossroads trio, third round (Claude)
+
+- **Asked:**
+  - The satyr's arms not through the centaur's clothes or body.
+  - A leather helmet like Achilles' in Troy, without plume.
+  - A horse less long, the forelegs without their narrow part.
+  - Travellers' gear behind the satyr.
+  - Then, from the user's stills: normal horse forelegs (still narrow at the top); matte goat hooves; normal satyr hips
+    and legs.
+- **Source:** `main` at 0a863857; this commit. The package was built from the working tree on 0a86385, so its receipt
+  names 0a86385.
+- **Changed:** see `docs/regions/FEYWILD.md`, "The Crossroads trio, third round (2026-11-24)".
+  - `Tools/build_fey_trio.py`:
+    - The horse is shortened behind the hips (`XS` 0.76), with lofted forelegs (`FORELEG`) and a chest keel.
+    - The leather `troy_helmet` comes from the kit's hook.
+    - The `traveller_gear` load (bedroll, pack, saddlebags, pot, lantern, waterskin, crook).
+    - The satyr gets cloven matte hooves (`goat_hoof`), furred hips and fur along the limb.
+  - `Tools/build_fey_trio_anims.py`:
+    - Each leg's IK pole is fitted at rest (`CHUCK_TRIO_LEG_POLE`).
+    - The satyr's hands are flat on the centaur's shoulders, carried by `spine_03`.
+    - The satyr's leg scores hang the hoof under the knee.
+    - `CHUCK_TRIO_CLEAR` reports the arms.
+  - `SourceAssets/NPCs/Fey/trio.json`: the kit helmet is removed.
+  - `FeyTrio.h`: Lift is 42.6.
+  - Regenerated the trio's SK/AS/GR sources and `/Game/Characters/FeyTrio` assets. There are new `MI_FeyCentaur_Hero_*` MIs and
+    `MI_FeySatyr_Hero_goat_hoof`; `MI_FeyCentaur_Helmet` and `MI_FeyCentaur_Trim` are removed.
+- **Contract:** Chuck unchanged. The trio's skeletons are rebuilt; manifest `lift_cm` 42.6 matches `FeyTrio.h`. Objects
+  named `helmet*` are groom covers, as before.
+- **Validation (actual):**
+  - **Blender:**
+    - `CHUCK_TRIO_LEG_POLE`: front 90°, hind -80° and -100°, twist under 1.5°.
+    - `CHUCK_TRIO_CLEAR`:
+      - Satyr into horse: 10 verts, deepest 2.2 cm (it was 441, 5.0 cm).
+      - Satyr arms into centaur: about 90 of 4246, deepest 1.7 cm.
+      - Gnome into satyr: about 400–500 verts, deepest 7.4–8.4 cm (unchanged).
+  - **In-game stills:** `Local/shots/feywild-trio`, `Local/shots/feywild-trio-walk`.
+  - **Package FeyTrio3Candidate:**
+    - The first full verify failed one step. Phlegethos `lake_slabs` died after the second wall kick, both on the run
+      and on its retry (`Local/verify-phlegethos-20261124-164850.log`, `-174118.log`). The temple heroes passed on
+      their retry.
+    - The same step alone passed on the launcher package (`-175245.log`) and on the candidate (`-180350.log`).
+    - A second full run on the same candidate passed 50/50 steps, 182 passes, no retries
+      (`Local/verify-package-20261124-181409.log`).
+    - Promoted as **FeywildTrio3**; the candidate folder is removed.
+    - Not played by hand.
+- **Known flaws:**
+  - The penetration above.
+  - The chest seen from the front is a smooth rounded mass.
+  - `lake_slabs` failed twice late in one long run and passed in every other run. The cause was not found: watch it, and
+    fix it at its source if it comes back.
+  - The trio has no lines yet.
+
+Next part of the work can be done here (the trio's dialogue once the user supplies it, or further trio polish).
+
 ## November 24 (second) — Feywild: the Crossroads trio, second round (Claude)
 
 - **Asked:** the gnome's legs over the satyr's shoulders in a normal piggyback; the satyr's legs round the horse's body

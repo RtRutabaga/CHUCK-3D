@@ -16,8 +16,9 @@ looking about. Every motion is periodic in the loop, so it runs on without a sea
     by the distance walked, so the hooves stay planted while they bear him: each is planted where the body will be at the
     middle of its stance and swings forward in an arc to the next. Two-bone IK reaches each fetlock (the knee or the hock
     a hinge), the pastern points at the hoof; the body bobs and rolls with the steps; the tail sways.
-  * The satyr's Root follows the centaur's h_front bone (his pelvis on the saddle behind the man's hips), his hands reach
-    the centaur's shoulders by IK. His legs go round the barrel as a rider's do (2026-11-24): knee, hock, fetlock and hoof
+  * The satyr's Root follows the centaur's h_front bone (his pelvis on the saddle behind the man's hips), his hands flat
+    on the centaur's shoulder caps (2026-11-24, third round: found on the centaur's skin and vest, the roll that lays the
+    palm down, lifted clear; CHUCK_TRIO_CLEAR reports the arms against the centaur). His legs go round the barrel as a rider's do (2026-11-24): knee, hock, fetlock and hoof
     each placed by searching the directions that clear the horse's coat (the thigh pressing in no more than 2 cm), the
     thigh over the blanket's curve, the shank close down the flank; IK and tracking put the bones there.
   * The gnome rides the satyr's shoulders piggyback: his seat on the shoulders behind the neck (measured on the satyr's
@@ -179,6 +180,22 @@ for leg in LEGS:
     c = C.pose.bones[f'h_{leg}_pastern'].constraints.new('DAMPED_TRACK'); c.target = hf; c.track_axis = 'TRACK_Y'
 
 
+# Each leg's IK pole angle fitted so that with its targets at rest the leg is at rest (2026-11-24): a fixed -90 twisted
+# the forearm and cannon about their length against the shoulder, which pinched the top of the foreleg in game.
+for leg, (ft, hf, pole) in LEG_T.items():
+    L = LEGS[leg]; ft.location = L['fet']; hf.location = L['hoof']
+    pole.location = L['fet'] + V(0, 0, .5) + V(.7 if leg[0] == 'f' else -.7, 0, 0)
+    con = next(c for c in C.pose.bones[f'h_{leg}_cannon'].constraints if c.type == 'IK')
+    best = None
+    for a in range(-180, 180, 5):
+        con.pole_angle = math.radians(a); bpy.context.view_layer.update()
+        err = sum((C.pose.bones[b].matrix.to_quaternion().rotation_difference(C.data.bones[b].matrix_local.to_quaternion())).angle
+                  for b in (f'h_{leg}_lower', f'h_{leg}_cannon'))
+        if best is None or err < best[1]: best = (a, err)
+    con.pole_angle = math.radians(best[0])
+    print('CHUCK_TRIO_LEG_POLE', leg, best[0], 'twist_deg', round(math.degrees(best[1]), 1))
+
+
 # ------------------------------------------------------------------ the riders
 from mathutils.bvhtree import BVHTree
 
@@ -268,13 +285,13 @@ S_LEGS = {}
 for side, sgn in (('l', 1.), ('r', -1.)):
     hip = S_OFF @ rest(S, f'thigh_{side}')
     L1, L2, L3, L4 = (bone_len(S, f'{b}_{side}') for b in ('thigh', 'calf', 'foot', 'ball'))
-    d1, c1 = reach(HORSE, hip, L1, .105, .08, lambda d, c: d.z * 1.2 - d.x * .35 + abs(d.y) * .15, sgn, t0=.3, allow=.02, flip=H_FLIP)
+    d1, c1 = reach(HORSE, hip, L1, .095, .075, lambda d, c: d.z * 1.0 - d.x * .6 + abs(d.y) * .15, sgn, t0=.3, allow=.02, flip=H_FLIP)
     knee = hip + d1 * L1
-    d2, c2 = reach(HORSE, knee, L2, .075, .05, lambda d, c: d.z - d.x * .2 + 2.5 * max(0., c - .02), sgn, t0=.1, allow=.008, flip=H_FLIP)
+    d2, c2 = reach(HORSE, knee, L2, .075, .05, lambda d, c: d.z + d.x * .5 + 2.5 * max(0., c - .02), sgn, t0=.1, allow=.008, flip=H_FLIP)
     hock = knee + d2 * L2
-    d3, c3 = reach(HORSE, hock, L3, .04, .035, lambda d, c: d.z - d.x * .3 + 2.5 * max(0., c - .02), sgn, t0=.1, allow=.0, flip=H_FLIP)
+    d3, c3 = reach(HORSE, hock, L3, .04, .035, lambda d, c: d.z - d.x * .2 + 2.5 * max(0., c - .02), sgn, t0=.1, allow=.0, flip=H_FLIP)
     fet = hock + d3 * L3
-    d4, c4 = reach(HORSE, fet, L4, .035, .045, lambda d, c: d.z * .6 - d.x * .6 + 1.5 * max(0., c - .02), sgn, t0=.1, allow=.0, flip=H_FLIP)
+    d4, c4 = reach(HORSE, fet, L4, .035, .045, lambda d, c: d.z * .8 - d.x * .3 + 1.5 * max(0., c - .02), sgn, t0=.1, allow=.0, flip=H_FLIP)
     toe = fet + d4 * L4
     S_LEGS[side] = (hip, knee, hock, fet, toe)
     print('CHUCK_TRIO_SATYR_LEG', side, 'clear_cm', [round(c * 100, 1) for c in (c1, c2, c3, c4)], 'knee', tuple(round(x, 2) for x in knee), 'hoof', tuple(round(x, 2) for x in toe))
@@ -285,10 +302,6 @@ for side, sgn in (('l', 1.), ('r', -1.)):
     t_toe = empty(f's_toe_{side}', toe); on_bone(t_toe, C, 'h_front')
     for b, t in (('foot', t_fet), ('ball', t_toe)):
         c = S.pose.bones[f'{b}_{side}'].constraints.new('DAMPED_TRACK'); c.target = t; c.track_axis = 'TRACK_Y'
-    # his hands on the centaur's shoulders
-    hand = empty(f's_hand_{side}', rest(C, f'clavicle_{side}', True) + V(-.06, -.035 * sgn, .075)); on_bone(hand, C, f'clavicle_{side}')
-    elbow = empty(f's_elbow_{side}', SEAT + V(-.05, .55 * sgn, .25)); on_bone(elbow, C, 'h_front')
-    ik(S, f'lowerarm_{side}', hand, elbow)
 
 
 def fit_pole(rig, chain_bone, mid_bone, want):
@@ -307,9 +320,71 @@ for side in 'lr':
     a, e = fit_pole(S, f'calf_{side}', f'calf_{side}', S_LEGS[side][1])
     print('CHUCK_TRIO_SATYR_POLE', side, a, 'knee_err_cm', round(e * 100, 1))
 
+
+# His hands flat on the centaur's shoulders (2026-11-24, third round, the user: "the satyrs arms should not pass impossibly
+# through the centaur's clothes or body"). They were a wrist target near the collarbone with the hand left as it hung,
+# so the fingers went into the vest. Now: the wrist just behind the top of each shoulder, the knuckles on it, both found
+# on the centaur's skin and vest (rays down); the hand's roll chosen and the pair lifted until no part of the hand is in
+# him; the elbow out to the side.
+CUP_OBJS = [o for o in RIG['FeyCentaur'][1] if mat(o) in ('Skin', 'Vest', 'VestTrim', 'Belt')]
+CUP = tree_of(CUP_OBJS, skip_arms=True)
+C_FLIP = -1. if signed(CUP, rest(C, 'spine_03')) > 0 else 1.
+def down(x, y):   # (from under the chin: the head is not what his hands rest on)
+    z0 = rest(C, 'neck_01').z + .04
+    h = CUP.ray_cast(V(x, y, z0), V(0, 0, -1), 1.); return h[0] if h[0] is not None else V(x, y, z0 - .1)
+s_skin = [o for o in RIG['FeySatyr'][1] if o.data.materials and mat(o) == 'Skin'][0]
+_names = {g.index: g.name for g in s_skin.vertex_groups}
+HAND_V = {sd: [v.index for v in s_skin.data.vertices if sum(g.weight for g in v.groups if _names.get(g.group, '').endswith(f'_{sd}') and
+                                                          _names.get(g.group, '').startswith(ARM_BONES[2:])) > .5] for sd in 'lr'}
+TIP_V = {sd: [v.index for v in s_skin.data.vertices if sum(g.weight for g in v.groups if _names.get(g.group, '').startswith(('index_03', 'middle_03', 'ring_03', 'pinky_03'))
+                                                         and _names.get(g.group, '').endswith(f'_{sd}')) > .5] for sd in 'lr'}
+PALM_V = {sd: [v.index for v in s_skin.data.vertices if sum(g.weight for g in v.groups if _names.get(g.group, '') == f'hand_{sd}') > .5] for sd in 'lr'}
+ARM_V = {sd: [v.index for v in s_skin.data.vertices if sum(g.weight for g in v.groups if _names.get(g.group, '') in (f'upperarm_{sd}', f'lowerarm_{sd}')) > .5] for sd in 'lr'}
+def posed_points(o, idx):
+    dg = bpy.context.evaluated_depsgraph_get(); e = o.evaluated_get(dg); me = e.to_mesh(); W = o.matrix_world
+    pts = [W @ me.vertices[i].co for i in idx]; e.to_mesh_clear(); return pts
+def under(tree, p):
+    """How far p is under the surface above it, if it is inside (a ray up meets the surface from inside); else 0.
+    (The nearest face's normal misleads by a garment's edge: a point over the vest's armhole read as 7 cm in.)"""
+    h = tree.ray_cast(p, V(0, 0, 1), .5)
+    return h[3] if h[0] is not None and h[1].z > 0. else 0.
+def hand_depth(sd):
+    bpy.context.view_layer.update()
+    return -max(under(CUP, p) for p in posed_points(s_skin, HAND_V[sd]))
+HAND_T = {}
+for side, sgn in (('l', 1.), ('r', -1.)):
+    a_, b = rest(C, f'clavicle_{side}'), rest(C, f'clavicle_{side}', True)
+    q = V(b.x, b.y * 1.02, b.z)   # (the cap of the shoulder, over the joint: well out from the neck and the helmet)
+    Lh = bone_len(S, f'hand_{side}')
+    xw = q.x - .075; Pw, Pk = down(xw, q.y), down(xw + Lh, q.y)
+    wrist = empty(f's_hand_{side}', Pw + V(0, 0, .035)); knuck = empty(f's_knuck_{side}', Pk + V(0, 0, .022))
+    up = empty(f's_palm_up_{side}', Pk + V(0, 0, .4))
+    for e in (wrist, knuck, up): on_bone(e, C, 'spine_03')   # (not the collarbone: it rolls when he gestures)
+    elbow = empty(f's_elbow_{side}', SEAT + V(.02, .5 * sgn, .2)); on_bone(elbow, C, 'h_front')
+    ik(S, f'lowerarm_{side}', wrist, elbow)
+    c = S.pose.bones[f'hand_{side}'].constraints.new('DAMPED_TRACK'); c.target = knuck; c.track_axis = 'TRACK_Y'
+    lt = S.pose.bones[f'hand_{side}'].constraints.new('LOCKED_TRACK'); lt.target = up; lt.lock_axis = 'LOCK_Y'
+    best = None
+    fingers(S, side, ('index', 'middle', 'ring', 'pinky'), .55, 0, .25)   # (curled as they will be)
+    for ax in ('TRACK_X', 'TRACK_NEGATIVE_X', 'TRACK_Z', 'TRACK_NEGATIVE_Z'):   # (which way the back of the hand faces: up)
+        lt.track_axis = ax; dpt = hand_depth(side)
+        tips = posed_points(s_skin, TIP_V[side]); palm = posed_points(s_skin, PALM_V[side])
+        k = sum(p.z for p in tips) / len(tips) - sum(p.z for p in palm) / len(palm)   # (palm down: the fingers curl down over him)
+        if best is None or k < best[2]: best = (ax, dpt, k)
+    lt.track_axis = best[0]
+    for _ in range(4):   # lift him off until no part of the hand is inside (5 mm over the deepest)
+        dpt = hand_depth(side)
+        if dpt >= 0.: break
+        for e in (wrist, knuck, up): e.matrix_world = Matrix.Translation(V(0, 0, .004 - dpt)) @ e.matrix_world
+    for e in (wrist, knuck, up): e.matrix_world = Matrix.Translation(V(0, 0, .01)) @ e.matrix_world   # (the curled fingertips' room as he sways)
+    HAND_T[side] = (wrist, knuck, up)
+    print('CHUCK_TRIO_HAND_AT', side, 'clav', tuple(round(x, 2) for x in a_), tuple(round(x, 2) for x in b), 'q', tuple(round(x, 2) for x in q), 'Pw', tuple(round(x, 2) for x in Pw), 'Pk', tuple(round(x, 2) for x in Pk), 'hand', tuple(round(x, 2) for x in S.matrix_world @ S.pose.bones[f'hand_{side}'].head), 'neck', tuple(round(x, 2) for x in rest(C, 'neck_01')))
+    print('CHUCK_TRIO_SATYR_HAND', side, best[0], 'clear_cm', round(hand_depth(side) * 100, 1),
+          'arm_in_centaur', sum(under(CUP, p) > .01 for p in posed_points(s_skin, ARM_V[side])), 'of', len(ARM_V[side]))
+
 # The gnome on the satyr's shoulders, piggyback: his seat on the shoulders behind the neck, his thighs forward over
 # them, knees in front of the collarbones, his shins hanging down the satyr's chest; his left hand on the left horn.
-SATYR_BODY = [o for o in RIG['FeySatyr'][1] if o.data.materials and mat(o) not in ('GoatFur', 'Hero_horn', 'Hero_leaf', 'Hero_petal', 'Hero_bloom', 'Hero_reed', 'Lash', 'Brow', 'Eye', 'Hero_coat_dark', 'Hero_hoof')]
+SATYR_BODY = [o for o in RIG['FeySatyr'][1] if o.data.materials and mat(o) not in ('GoatFur', 'Hero_horn', 'Hero_leaf', 'Hero_petal', 'Hero_bloom', 'Hero_reed', 'Lash', 'Brow', 'Eye', 'Hero_coat_dark', 'Hero_hoof', 'Hero_goat_hoof')]
 SAT = tree_of([o for o in SATYR_BODY if mat(o) == 'Skin'], S_OFF, skip_arms=True)   # (the skin alone: a garment's inner face reads as inside)
 S_FLIP = -1. if signed(SAT, S_OFF @ rest(S, 'spine_02')) > 0 else 1.
 NECK = S_OFF @ rest(S, 'neck_01')
@@ -454,8 +529,11 @@ for t in (4., 14., 26., 38.):
     sat, _ = posed_tree([o for o in SATYR_BODY if mat(o) == 'Skin'])
     _, gl = posed_tree([o for o in RIG['FeyGnome'][1] if mat(o) in ('Trousers', 'Boots')])
     gd = [signed(sat, p, S_FLIP) for p in gl]
+    cup, _ = posed_tree(CUP_OBJS)
+    hd = [-under(cup, p) for sd_ in 'lr' for p in posed_points(s_skin, HAND_V[sd_] + ARM_V[sd_])]
     print('CHUCK_TRIO_CLEAR', f't={t:.0f}', 'satyr_in_horse', sum(d < -.02 for d in sd), f'deepest_cm={min(sd) * 100:.1f}',
-          'gnome_in_satyr', sum(d < -.02 for d in gd), f'deepest_cm={min(gd) * 100:.1f}', f'of={len(sd)},{len(gl)}')
+          'gnome_in_satyr', sum(d < -.02 for d in gd), f'deepest_cm={min(gd) * 100:.1f}',
+          'satyr_arms_in_centaur', sum(d < -.005 for d in hd), f'deepest_cm={min(hd) * 100:.1f}', f'of={len(sd)},{len(gl)},{len(hd)}')
 
 
 def export(name):
