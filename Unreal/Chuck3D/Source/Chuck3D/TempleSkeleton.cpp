@@ -393,7 +393,8 @@ void ATempleSkeleton::SetFeyFill(float Candelas)
         FillLight = NewObject<UPointLightComponent>(this, TEXT("RedcapFill"));
         FillLight->SetupAttachment(RootComponent);
         FillLight->SetRelativeLocation(FVector(160.f, 30.f, 120.f));   // (in its own scale: about 1 m ahead, a little above its head)
-        FillLight->SetLightColor(FLinearColor(1.f, .86f, .78f));
+        FillLight->SetLightColor(FLinearColor(1.f, .78f, .62f));   // (2026-11-25, the user: less whitewashed: warm, and diffuse only, so no white sheen over the cap and clothes)
+        FillLight->SpecularScale = 0.f;
         FillLight->SetIntensityUnits(ELightUnits::Candelas);
         FillLight->SetAttenuationRadius(500.f);
         FillLight->SetSourceRadius(40.f);

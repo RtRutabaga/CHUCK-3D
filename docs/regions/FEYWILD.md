@@ -462,7 +462,10 @@ The user's list, after the trio. Nothing here hurts him or changes the route; ea
   - Glowing caps brighten and the bell flowers' lamps swell (`M_FeyFungus`, `M_FeyFungusBig`, `M_FeyPlant`).
   - The graphics card does all of it.
 - **Signposts that change while he is not looking.** From Highmeadow on (Highmeadow and the maze), the map bakes only the posts. The arrows are separate boards that turn while they are out of his view, 2.5 to 32 m from him: about one turn every 3 s, and 40 % of turns point at him.
-- **Redcaps lit.** Each redcap has its own soft fill light (80 cd; 120 cd in the maze). The light is on lighting channel 2, which only the redcaps' bodies take, so nothing else is lit by it (Chuck's fur included).
+- **Redcaps lit.** Each redcap has its own soft fill light (40 cd; 60 cd in the maze). The light is on lighting channel 2, which only the redcaps' bodies take, so nothing else is lit by it (Chuck's fur included).
+  - 2026-11-25, the user: they looked whitewashed (a pale pink cap, chalky skin, silvery trousers).
+  - The fill is now diffuse only (specular scale 0), warmer (1, .78, .62) and half as bright.
+  - The cap reads blood red again and the clothes brown. They still stand out against the maze's dark hedges.
 - **Fairy rings.** One each in the riverbank, the orchard, the Deepwood and the Lily Mere:
   - 17 pale toadstools with smaller ones beside some, about 3.3 m across.
   - Placed on the first level, dry ground at least 7 m off the roads, searched outward from each chosen spot.

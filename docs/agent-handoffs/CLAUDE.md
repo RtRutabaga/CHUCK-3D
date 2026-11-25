@@ -2,6 +2,29 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 25 (second) — Feywild: redcaps less whitewashed (Claude)
+
+- **Asked:** make the redcaps look less whitewashed.
+- **Cause:** the fill light from the morning's entry. It was a bright white light close to the face, and its specular
+  laid a white sheen over the redcap. The blood-red cap read pale pink, the skin chalky and the trousers silvery.
+- **Source:** `main` at d93482a7; this commit. The package's receipt names d93482a.
+- **Changed:**
+  - `TempleSkeleton.cpp`: the fill is diffuse only (`SpecularScale = 0`) and warmer (1, .78, .62).
+  - `FeyLife.cpp`: the fill is 40 cd (was 80), and 60 cd in the maze (was 120).
+  - `docs/regions/FEYWILD.md`: notes the change.
+- **Contract:** unchanged.
+- **Validation (actual):**
+  - Editor life test from step 0: failures=0 (`Local/redcap-fill-life-full.log`).
+  - Stills: `Life_MazeRedcap` and `Life_RedcapClose` in `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/FeyMap/`.
+    The cap is red, the clothes brown and the skin natural, and they still stand out against the maze hedges.
+  - Package: 50/50 steps, 182 passes, no retries (`Local/verify-package-20261125-072822.log`).
+  - Promoted as **FeywildRedcapFill**; the candidate is removed.
+- **Known flaws:**
+  - Not seen by hand in the launcher build.
+  - Redcaps far from their fill (more than 5 m, scaled) depend on the scene light alone.
+
+Next part of the work can be done here (a hand playtest of the delights and any tuning; the trio's dialogue once the user supplies it).
+
 ## November 25 — Feywild: small delights, more creatures, plants that react to him (Claude)
 
 - **Asked:** twelve items.

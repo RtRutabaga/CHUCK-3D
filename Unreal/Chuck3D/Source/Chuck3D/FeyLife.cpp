@@ -917,14 +917,14 @@ void AFeyLife::SpawnRedcaps()
         Post.Feet = FeyWorld(FVector(R.X, R.Y, LandZ(District, R.X, R.Y)));
         const FVector2D Lc = P.Camp.IsZero() ? P.Patrol : P.Camp; const float Lr = P.Camp.IsZero() ? 1300.f : 1900.f;
         Post.Leash = FBox2D(Lc - FVector2D(Lr, Lr), Lc + FVector2D(Lr, Lr));
-        if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) { S->SetFeyFill(District == Maze ? 120.f : 80.f); Redcaps.Add(S); }
+        if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) { S->SetFeyFill(District == Maze ? 60.f : 40.f); Redcaps.Add(S); }
     }
     for (const FVector& R : P.Roamers)   // (2026-11-24; after the camp's, which the tests take first)
     {
         FTempleSkeletonPost Post; Post.Kind = 3; Post.Space = TEXT("feywild"); Post.Yaw = R.Z;
         Post.Feet = FeyWorld(FVector(R.X, R.Y, LandZ(District, R.X, R.Y)));
         Post.Leash = FBox2D(FVector2D(R.X, R.Y) - FVector2D(1350.f, 1350.f), FVector2D(R.X, R.Y) + FVector2D(1350.f, 1350.f));
-        if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) { S->SetFeyFill(80.f); Redcaps.Add(S); }
+        if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) { S->SetFeyFill(40.f); Redcaps.Add(S); }
     }
 }
 
