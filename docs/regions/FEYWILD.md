@@ -451,6 +451,67 @@ from the user. Free resources could be downloaded.
   - The great bell flowers have no collision.
   - The islands' and the jellyfish's look from the far districts has not been judged.
 
+## Small delights, more creatures and plants that react to him (2026-11-24)
+
+The user's list, after the trio. Nothing here hurts him or changes the route; each is a thing to find. Code: `FeyDelights.h/.cpp` (`AFeyDelights`, one per loaded district, made by its `AFeyLife` a part per frame and gone with it).
+
+- **Floating islands without trees.** `Tools/build_feywild_kit.py` builds `SM_FeyIsland0-2` with grass, rock, roots and falls only.
+- **Plants that react to him.** The materials read his place from `MPC_ChultFoliageFade`'s `Chuck`, which `AChultFoliageFade` now also sets in the Feywild (spawned by `AFeyMap::Ensure`). Within about 3 m, and only where the sway is on (instanced kit plants, switched off past 45 m as before):
+  - Grass parts (`M_FeyGrass`).
+  - The districts' ferns curl away. They have their own `M_FeyFern` (Chult's fern texture, Chult's see-through fade kept); Chult's ferns keep `M_ChultFern`.
+  - Glowing caps brighten and the bell flowers' lamps swell (`M_FeyFungus`, `M_FeyFungusBig`, `M_FeyPlant`).
+  - The graphics card does all of it.
+- **Signposts that change while he is not looking.** From Highmeadow on (Highmeadow and the maze), the map bakes only the posts. The arrows are separate boards that turn while they are out of his view, 2.5 to 32 m from him: about one turn every 3 s, and 40 % of turns point at him.
+- **Redcaps lit.** Each redcap has its own soft fill light (80 cd; 120 cd in the maze). The light is on lighting channel 2, which only the redcaps' bodies take, so nothing else is lit by it (Chuck's fur included).
+- **Fairy rings.** One each in the riverbank, the orchard, the Deepwood and the Lily Mere:
+  - 17 pale toadstools with smaller ones beside some, about 3.3 m across.
+  - Placed on the first level, dry ground at least 7 m off the roads, searched outward from each chosen spot.
+  - Inside, the music dips to 35 %, a faint bell sounds (synthesised; not again for 9 s) and green motes rise round him. Nothing else.
+- **Will-o'-wisps (the Moonmoth Fen).**
+  - Three soft lights, each with one unshadowed light.
+  - Each time he comes near the first, they drift on and settle further along, five places in all.
+  - They end over a hidden pool's shore with three cigarettes.
+  - The planting keeps their way open.
+- **Koi (the Lily Mere).** Eleven glowing fish (orange, white and orange, gold, pale blue) circle under the crossing's pads. They are additive cards on the water, drawn by `M_FeyKoi`. A landing within 5 m scatters them with a splash, and they drift back.
+- **More creatures.**
+  - Deepwood: two more thorn-mite nests, and two pairs of redcaps roaming out in the wood, each kept within 13.5 m of its own ground.
+  - Orchard: a second mite nest past the broad bed.
+  - Highmeadow: two more displacer beasts, each with its own round in the open meadow (south of the ring, and east of the rapids under the slope), and two hollow-log refuges each.
+- **Puffballs and seed heads.**
+  - Along every district's roads, a few metres off, in clumps of two to four.
+  - A scratch or a walk through one releases a cloud of gold spores, with motes in the same small effect system as the rings and a soft puff.
+  - They grow back after 50 s once he is 12 m away, and come back at once after a death.
+- **Swans below the Maze Overlook.** A line of seven, crossing north to south about 10 m under the brink over the maze's outer rings, slowly beating. They take about 110 s to cross, then come round again 45 s later.
+- **A rainbow in the Highmeadow rapids' spray.**
+  - At the foot of the cascade, a soft sheet of spray turned to the eye.
+  - A faint bow shows in it only where it lies 40 to 42.5° from the point opposite the sun, so only with the sun behind the viewer, and not closer than about 5 m.
+  - Small, and off the road's close path.
+- **Crows (the Deepwood).** Ten, perched on limbs, roots and the hag's ridge along the roads. They turn to watch him with small jerks.
+  - One takes off with a caw when he comes within about 4 m, or now and then on a whim, and flies to a free perch further off.
+  - The flight follows Chult's birds: flapping as it climbs, a glide, braking down.
+  - The caws are synthesised (`Tools/gen_fey_delights_sfx.py`, no recordings).
+
+**Checked (editor):**
+
+- `-ChuckFeyMapTest=life`: 0 failures from the start. New steps 66 to 80:
+  - ring entered with the music dipping;
+  - a puffball scratched, and one walked through;
+  - the wisps followed to the cigarettes (once put 4.5 m nearer after 8 s stuck at a pool's edge);
+  - the koi scattered by a landing;
+  - swans and rainbow built, and a sign turned while unseen;
+  - ten crows, one startled into flight;
+  - a maze redcap still.
+- Route walk (`-ChuckFeyMapTest`): 0 stuck and 0 void.
+  - Every district is at the 60 fps cap except the riverbank (17.65 ms) and the Deepwood (17.60 ms, against 17.61 ms before the crows).
+  - The worst threshold frame was 678 ms. The walk before this work had 563 ms, so that hitch predates it.
+- Stills: `Life_FairyRing`, `Life_Spores`, `Life_Wisps`, `Life_WispsEnd`, `Life_Koi`, `Life_Swans`, `Life_Rainbow`, `Life_RainbowAgainstSun`, `Life_Crow`, `Life_CrowFlight`, `Life_MazeRedcap`.
+
+**Not yet:**
+
+- No still shows the plants reacting (the motion is small and needs watching in play).
+- The new beasts' and roaming redcaps' ground has not been looked at by hand.
+- The swans are small at that distance.
+
 ## The Crossroads trio, third round (2026-11-24)
 
 The user: the satyr's arms should not pass through the centaur's clothes or body; the centaur's helmet more like
@@ -562,7 +623,7 @@ CC-BY behind an account; SMK's scans are a rider and heads), so the horse was sc
 
 ## The wonder pass (planned 2026-11-22)
 
-The user's request: more immersive and visually stunning elements distinct to each district, and more movement for whimsy. Built 2026-11-23 (above, except the crows), each piece judged in stills.
+The user's request: more immersive and visually stunning elements distinct to each district, and more movement for whimsy. Built 2026-11-23 (above, except the crows, which followed on 2026-11-24 with the small delights), each piece judged in stills.
 
 | Element | Where | How (to keep it cheap) |
 |---|---|---|

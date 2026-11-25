@@ -827,7 +827,8 @@ for index, broken in enumerate((False, True)):
     name = f'SM_FeyArch{index}'
     if wanted(name):
         kk = Kit(['FeyArchStone', 'FeyBlade', 'FeyHangMoss']); cc = Kit(['FeyArchStone']); arch(kk, cc, broken, 401 + index); write(kk, name, False); write(cc, name + 'Collision')
-for index, (seed, R, D, trees, falls) in enumerate(((501, 1500, 2300, 4, 2), (502, 900, 1500, 2, 1), (503, 600, 1100, 1, 1))):
+# (2026-11-24, the user: no trees on the floating islands) Grass, rock, roots and falls only.
+for index, (seed, R, D, trees, falls) in enumerate(((501, 1500, 2300, 0, 2), (502, 900, 1500, 0, 1), (503, 600, 1100, 0, 1))):
     build(f'SM_FeyIsland{index}', ['FeyStone', 'FeyPlant', 'FeyFall'], island, seed, R, D, trees, falls)
 build('SM_FeyJelly', ['FeyJelly'], jelly)
 if wanted('SM_FeyOakWisteria'):

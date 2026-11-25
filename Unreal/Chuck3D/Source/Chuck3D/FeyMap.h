@@ -72,6 +72,21 @@ namespace FeyMap
     const TArray<FVector2D>& RoadOf(int32 D, int32 T);
     const TArray<FVector2D>& SpurOf(int32 D);
     float LandZ(int32 D, float X, float Y);
+    /** (2026-11-24, for AFeyDelights) The Lily Mere's pads (X, Y, radius), the Maze Overlook, the Highmeadow rapids' middle and
+     *  water level at Y, whether (X, Y) is wet ground or water (no planting there), and the signposts: posts of district D
+     *  (the arrows (yaw, pitch) degrees), whether D's arrows turn while unseen (Highmeadow onward, where they already lie; the
+     *  map then bakes only those posts' poles), an arrow's height above its post's ground, its glyph seed, and one board. */
+    const TArray<FVector>& LilyPads();
+    FVector2D OverlookAt();
+    float RapidXAt(float Y);
+    float RapidWLAt(float Y);
+    bool InRiver(int32 D, float X, float Y);
+    struct FSignOut { FVector2D At = FVector2D::ZeroVector; TArray<FVector2D> Arrows; };
+    void SignPostsOf(int32 D, TArray<FSignOut>& Out);
+    bool SignsTurn(int32 D);
+    float SignArrowZ(int32 I);
+    float SignSeed(const FVector2D& At, int32 I);
+    void SignBoardSurf(FMapSurf& S, const FVector& At, float YawDeg, float PitchDeg, float Seed);
     /** (2026-11-22, stage 6) The maze for FeyLife: its shortcuts (hedge sections X, Y, half length, yaw; where its hit plant
      *  appears; how many cells it saves), dead ends, orchid lanes (X, Y, angle), the way through, its rings and the heart. */
     struct FMazeShortcut { TArray<FVector4> Hedges; FVector2D Plant = FVector2D::ZeroVector, Mid = FVector2D::ZeroVector; int32 Gain = 0; };

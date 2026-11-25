@@ -5,6 +5,7 @@
 // each district's checkpoint and takes a still there. -ChuckFeyMapTest=short walks only the shore to the orchard.
 #include "FeyMap.h"
 #include "FeyLife.h"
+#include "FeyDelights.h"
 #include "FeyCreatures.h"
 #include "TempleSkeleton.h"
 #include "Camera/CameraActor.h"
@@ -39,6 +40,7 @@ namespace
         double Last = 0, PhaseStart = 0, LastGain = 0, Start = 0;
         float Best = 1e9f, Walked = 0; FVector Prev = FVector::ZeroVector;
         bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false, bCracks = false, bLife = false; uint64 Frame = 0;
+        FVector PadAt = FVector::ZeroVector;   // (2026-11-24, the koi's pad)
         int32 LifeFails = 0, Cigs0 = 0, Hits0 = 0, Hits1 = 0, OrchidSub = 0, Aimed0 = 0; float MinDist = 1e9f; float SpeedOut = 0, SpeedIn = 0; int32 SpeedOutN = 0, SpeedInN = 0;
         int32 CrackStep = 0, CrackLeaks = 0, CrackShots = 0; TArray<FLeak> Shown;
         float PkS0 = 0, PkRate = -1; double PkT0 = -1, PkLastJump = 0; int32 PkGrip = -1;   // (2026-11-23) the parkour checks
@@ -205,6 +207,7 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         if (R->Phase == 2 && R->bLife)
         {
             auto LifeOf = [&](int32 D) -> AFeyLife* { for (const TWeakObjectPtr<AFeyLife>& P : AFeyLife::All()) if (P.IsValid() && P->GetDistrict() == D) return P.Get(); return nullptr; };
+            auto DelightsOf = [&](int32 D) -> AFeyDelights* { for (const TWeakObjectPtr<AFeyDelights>& P : AFeyDelights::All()) if (P.IsValid() && P->GetDistrict() == D) return P.Get(); return nullptr; };
             auto Put = [&](const FVector& L, const FVector& Face) { float Z = L.Z; GroundAt(L.X, L.Y, Z); Chuck->ResetAtLocation(FeyWorld(FVector(L.X, L.Y, Z + Stand + 4.f))); Chuck->SetActorRotation(FRotator(0, Face.Rotation().Yaw, 0)); Chuck->Recenter(); Chuck->SetSanity(AChuckCharacter::MaxSanity); };
             auto Drive = [&](const FVector& Dir) { const FVector Dw = Dir.GetSafeNormal2D(); Chuck->SetRunHeld(true); Chuck->SetTestStickWorld(Dw); Chuck->AddMovementInput(Dw, 1.f, true); };
             auto Check = [&](bool bOk, const TCHAR* What) { R->LifeFails += !bOk; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_CHECK %s ok=%d"), What, bOk); };
@@ -718,10 +721,185 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 if (Ph > .8f && Ph < .8f + FApp::GetDeltaTime() * 1.5f) Shot(V.Name);
                 return;
             }
+            // ---- (2026-11-24) the small delights (FeyDelights.h): each found and tried, with stills.
+            case 66: case 70: case 73: case 76:   // load the district for the next tries; wait for its delights
+            {
+                const int32 Dd = Step == 66 ? Riverbank : Step == 70 ? LilyMere : Step == 73 ? Highmeadow : Deepwood;
+                if (!R->bPlaced) { Uncam(); Map->LoadNow(Dd); Chuck->ResetAtLocation(FeyCheckpointWorld(Dd)); R->bPlaced = true; R->PhaseStart = Now; return; }
+                AFeyDelights* Dl = DelightsOf(Dd);
+                if ((!Dl || !Dl->IsBuilt()) && Since < 10.f) return;
+                Check(Dl && Dl->IsBuilt(), TEXT("delights_built"));
+                R->bPlaced = false; R->CrackStep = Dl ? Step + 1 : (Step == 66 ? 70 : Step == 70 ? 73 : Step == 73 ? 76 : 80); R->PhaseStart = Now; R->OrchidSub = 0; return;
+            }
+            case 67:   // a fairy ring: walked into, the music dips, a bell, motes
+            {
+                AFeyDelights* Dl = DelightsOf(Riverbank);
+                if (!Dl->GetRings().Num()) { Check(false, TEXT("ring_built")); R->CrackStep = 68; return; }
+                const AFeyDelights::FRing& Rg = Dl->GetRings()[0];
+                if (!R->bPlaced) { Put(Rg.C + FVector(Rg.R + 260.f, 0, 0), FVector(-1, 0, 0)); R->Hits0 = AFeyDelights::RingVisits; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 2.4f && FVector::Dist2D(FeyLocal(Chuck->GetActorLocation()), Rg.C) > 30.f) { Drive(Rg.C - FeyLocal(Chuck->GetActorLocation())); return; }
+                if (Since < 4.5f) { if (Since > 3.4f && !R->bShort) { Cam(Rg.C + FVector(420.f, 260.f, 230.f), Rg.C + FVector(0, 0, 30.f)); } if (Since > 4.2f && !R->bShort) { Shot(TEXT("FairyRing")); R->bShort = true; } return; }
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_RING visits=%d dip=%.2f"), AFeyDelights::RingVisits - R->Hits0, AFeyDelights::MusicDip);
+                Check(AFeyDelights::RingVisits > R->Hits0, TEXT("ring_entered"));
+                Check(AFeyDelights::MusicDip < .8f, TEXT("ring_music_dips"));
+                Uncam(); R->bShort = false; R->bPlaced = false; R->CrackStep = 68; R->PhaseStart = Now; return;
+            }
+            case 68:   // a puffball scratched, and one walked through: gold spores
+            {
+                AFeyDelights* Dl = DelightsOf(Riverbank);
+                if (Dl->GetPuffs().Num() < 2) { Check(false, TEXT("puffs_built")); R->CrackStep = 69; return; }
+                const FVector P0 = Dl->GetPuffs()[0].P;
+                if (!R->bPlaced) { Put(P0 + FVector(70.f, 0, 0), FVector(-1, 0, 0)); R->Hits0 = AFeyDelights::Bursts; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > .6f && R->OrchidSub == 0) { FeyScratch(Chuck, Chuck->GetActorLocation(), (FeyWorld(P0) - Chuck->GetActorLocation()).GetSafeNormal2D(), 120.f); R->OrchidSub = 1; }
+                if (Since > .7f && Since < 1.6f) Cam(P0 + FVector(260.f, 180.f, 120.f), P0 + FVector(0, 0, 40.f));
+                if (Since > 1.4f && !R->bShort) { Shot(TEXT("Spores")); R->bShort = true; }
+                if (Since < 2.f) return;
+                Check(AFeyDelights::Bursts > R->Hits0, TEXT("puff_scratched_bursts"));
+                Uncam(); R->bShort = false; R->bPlaced = false; R->CrackStep = 69; R->PhaseStart = Now; return;
+            }
+            case 69:
+            {
+                // (one standing, away from the first, which the scratch may have taken with its neighbours)
+                AFeyDelights* Dl = DelightsOf(Riverbank); int32 Pi = -1;
+                for (int32 I = 1; I < Dl->GetPuffs().Num() && Pi < 0; ++I) if (Dl->GetPuffs()[I].Gone < 0.f && FVector::Dist2D(Dl->GetPuffs()[I].P, Dl->GetPuffs()[0].P) > 400.f) Pi = I;
+                if (Pi < 0) { Check(false, TEXT("puff_to_walk")); R->bPlaced = false; R->CrackStep = 70; R->PhaseStart = Now; return; }
+                const FVector P1 = Dl->GetPuffs()[Pi].P;
+                if (!R->bPlaced) { Put(P1 + FVector(260.f, 0, 0), FVector(-1, 0, 0)); R->Hits0 = AFeyDelights::Bursts; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 3.f && AFeyDelights::Bursts == R->Hits0) { Drive(P1 - FeyLocal(Chuck->GetActorLocation())); return; }
+                Check(AFeyDelights::Bursts > R->Hits0, TEXT("puff_walked_bursts"));
+                R->bPlaced = false; R->CrackStep = 70; R->PhaseStart = Now; return;
+            }
+            case 71:   // the wisps: each time he nears the first, they drift on; at the end, cigarettes by the hidden pool
+            {
+                AFeyDelights* Dl = DelightsOf(LilyMere);
+                if (Dl->GetWisps().Num() != 3 || Dl->GetWispWay().Num() < 3) { Check(false, TEXT("wisps_built")); R->CrackStep = 72; return; }
+                if (!R->bPlaced) { const FVector W0 = Dl->GetWispWay()[0]; Put(W0 + FVector(900.f, -900.f, 0), FVector(-1, 1, 0)); R->Hits0 = AFeyDelights::WispMoves; R->Hits1 = 0; R->MinDist = 2.f; R->Cigs0 = Chuck->GetCigarettes(); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > 1.f && Since < 1.9f) { const FVector A = Dl->GetWisps()[0].At; Cam(A + FVector(500.f, -380.f, 140.f), A); }
+                if (Since > 1.5f && !R->bShort) { Shot(TEXT("Wisps")); R->bShort = true; }
+                if (Since < 2.f) return;
+                if (Since < 2.05f) Uncam();
+                // He follows the first light wherever it has got to.
+                const int32 Last = Dl->GetWispWay().Num() - 1;
+                if (Since < 50.f && (Dl->GetWispLead() < Last || Chuck->GetCigarettes() == R->Cigs0))
+                {
+                    const FVector Want = Dl->GetWispLead() < Last ? Dl->GetWisps()[0].At : Dl->GetWispWay().Last();
+                    const FVector L = FeyLocal(Chuck->GetActorLocation());
+                    if (FVector::Dist2D(L, Want) > 40.f) Drive(Want - L);
+                    // (stuck on a root or a pool's edge for 8 s: logged, and put a little nearer, as a player would go round)
+                    if (Dl->GetWispLead() != R->Hits1) { R->Hits1 = Dl->GetWispLead(); R->MinDist = Since; }
+                    else if (Since - R->MinDist > 8.f) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_WISPS_ASSIST lead=%d at=%.0f,%.0f"), R->Hits1, L.X, L.Y); Put(Want + (L - Want).GetSafeNormal2D() * 450.f, Want - L); R->MinDist = Since; }
+                    return;
+                }
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_WISPS moves=%d lead=%d cigarettes=%d"), AFeyDelights::WispMoves - R->Hits0, Dl->GetWispLead(), Chuck->GetCigarettes() - R->Cigs0);
+                Check(Dl->GetWispLead() == Last, TEXT("wisps_lead_on"));
+                Check(Chuck->GetCigarettes() > R->Cigs0, TEXT("wisps_cigarettes"));
+                { const FVector E = Dl->GetWispWay().Last(); Cam(E + FVector(380.f, 300.f, 190.f), E + FVector(0, 0, 60.f)); }
+                R->bShort = false; R->bPlaced = false; R->CrackStep = 72; R->PhaseStart = Now; return;
+            }
+            case 72:   // the koi: he lands on a pad near them and they scatter
+            {
+                AFeyDelights* Dl = DelightsOf(LilyMere);
+                if (Since > .5f && !R->bShort) { Shot(TEXT("WispsEnd")); R->bShort = true; }
+                if (Since < 1.f) return;
+                if (!Dl->GetKoi().Num()) { Check(false, TEXT("koi_built")); Uncam(); R->bShort = false; R->CrackStep = 73; return; }
+                const AFeyDelights::FKoi& K = Dl->GetKoi()[0];
+                if (!R->bPlaced)
+                {
+                    Uncam(); FVector Pad(K.Home, 0.f); float Bd = 1e9f;
+                    for (const FVector& Pd : FeyMap::LilyPads()) { const float Dp = FVector2D::Distance(FVector2D(Pd), K.At); if (Dp < Bd) { Bd = Dp; Pad = FVector(Pd.X, Pd.Y, 0.f); } }
+                    R->PadAt = Pad; Chuck->ResetAtLocation(FeyWorld(Pad + FVector(0, 0, 220.f))); R->Hits0 = AFeyDelights::KoiScatters; R->bPlaced = true; R->PhaseStart = Now; return;
+                }
+                if (Since > .9f && Since < 1.6f) Cam(R->PadAt + FVector(-450.f, 320.f, 420.f), R->PadAt);
+                if (Since > 1.4f && R->OrchidSub == 0) { Shot(TEXT("Koi")); R->OrchidSub = 1; }
+                if (Since < 2.5f) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_KOI koi=%d scattered=%d"), Dl->GetKoi().Num(), AFeyDelights::KoiScatters - R->Hits0);
+                Check(AFeyDelights::KoiScatters > R->Hits0, TEXT("koi_scatter"));
+                Uncam(); R->bShort = false; R->bPlaced = false; R->CrackStep = 73; R->PhaseStart = Now; return;
+            }
+            case 74:   // the swans below the overlook; the rainbow in the rapids' spray, with the sun behind and against it
+            {
+                AFeyDelights* Dl = DelightsOf(Highmeadow);
+                Check(Dl->GetSwanCount() == 7, TEXT("swans_built")); Check(!Dl->GetRainbow().IsZero(), TEXT("rainbow_built"));
+                // The middle swan straight out from the overlook: its time into the crossing.
+                const FVector2D O = FeyMap::OverlookAt(); const float Oz = LandZ(Highmeadow, O.X, O.Y);
+                float Best = 1e9f, Tb = 0.f; for (float T = 0.f; T < 130.f; T += .5f) { const float D = FMath::Abs(AFeyDelights::SwanAt(3, T).Y - O.Y + 1500.f); if (D < Best) { Best = D; Tb = T; } }
+                AFeyDelights::SwanHold = Tb;
+                const FVector Mid = AFeyDelights::SwanAt(3, Tb);
+                Cam(FVector(O.X - 150.f, O.Y - 200.f, Oz + 120.f), Mid);
+                R->CrackStep = 75; R->bShort = false; R->PhaseStart = Now; return;
+            }
+            case 75:
+            {
+                AFeyDelights* Dl = DelightsOf(Highmeadow);
+                if (Since > 1.2f && R->OrchidSub == 0) { Shot(TEXT("Swans")); R->OrchidSub = 1; }
+                if (Since > 1.5f && R->OrchidSub == 1)
+                {
+                    AFeyDelights::SwanHold = -1.f;
+                    // The sun behind the eye: the spray 41 degrees round from the point opposite the sun, 18 m off.
+                    const FVector A = FRotator(-10.f, 168.f, 0.f).Vector(), Ring = FRotator(0.f, 41.f, 0.f).RotateVector(FVector(A.X, A.Y, 0.f).GetSafeNormal());
+                    const FVector Sp = Dl->GetRainbow(); Cam(Sp - Ring * 1800.f + FVector(0, 0, 80.f), Sp); R->OrchidSub = 2;
+                }
+                if (Since > 2.6f && R->OrchidSub == 2) { Shot(TEXT("Rainbow")); R->OrchidSub = 3; }
+                if (Since > 2.9f && R->OrchidSub == 3) { const FVector A = FRotator(-10.f, 168.f, 0.f).Vector(), Sp = Dl->GetRainbow(); Cam(Sp + FVector(A.X, A.Y, 0.f).GetSafeNormal() * 1800.f + FVector(0, 0, 80.f), Sp); R->OrchidSub = 4; }
+                if (Since > 4.f && R->OrchidSub == 4) { Shot(TEXT("RainbowAgainstSun")); R->OrchidSub = 5; }
+                if (Since < 4.3f) return;
+                Uncam();
+                // A signpost turns while he looks away from it.
+                if (!Dl->GetSigns().Num()) { Check(false, TEXT("signs_turn_built")); R->CrackStep = 76; R->bPlaced = false; R->PhaseStart = Now; return; }
+                const FVector S0 = Dl->GetSigns()[0].At; Put(S0 + FVector(600.f, 0, 0), FVector(1, 0, 0)); R->Hits0 = AFeyDelights::SignTurns; R->CrackStep = 79; R->PhaseStart = Now; return;
+            }
+            case 79:
+            {
+                if (Since < 20.f && AFeyDelights::SignTurns == R->Hits0) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_SIGNS turns=%d after=%.1f"), AFeyDelights::SignTurns - R->Hits0, Since);
+                Check(AFeyDelights::SignTurns > R->Hits0, TEXT("sign_turns_unseen"));
+                R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 76; R->PhaseStart = Now; return;
+            }
+            case 77:   // the Deepwood's crows: perched and watching; one taking off when he comes close
+            {
+                AFeyDelights* Dl = DelightsOf(Deepwood);
+                if (!R->bPlaced) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_CROWS crows=%d"), Dl->GetCrows().Num()); Check(Dl->GetCrows().Num() >= 6, TEXT("crows_built")); }
+                if (!Dl->GetCrows().Num()) { R->CrackStep = 80; return; }
+                const FVector Cw = Dl->GetCrows()[0].At;
+                if (!R->bPlaced) { Put(Cw + FVector(900.f, 0, 0), FVector(-1, 0, 0)); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > 1.2f && Since < 2.1f) Cam(Cw + FVector(240.f, 160.f, 90.f), Cw + FVector(0, 0, 20.f));
+                if (Since > 1.8f && R->OrchidSub == 0) { Shot(TEXT("Crow")); R->OrchidSub = 1; }
+                if (Since < 2.2f) return;
+                Uncam();
+                R->Hits0 = AFeyDelights::CrowFlights; R->CrackStep = 78; R->bPlaced = false; R->PhaseStart = Now; return;
+            }
+            case 78:
+            {
+                // (a crow still on its perch: one may have flown off on a whim meanwhile)
+                AFeyDelights* Dl = DelightsOf(Deepwood);
+                if (!R->bPlaced) { R->Hits1 = 0; for (int32 I = 0; I < Dl->GetCrows().Num(); ++I) if (Dl->GetCrows()[I].Fly < 0.f) { R->Hits1 = I; break; } }
+                const FVector Cw = Dl->GetCrows()[R->Hits1].Perch;
+                if (!R->bPlaced) { Put(Cw + FVector(700.f, 0, 0), FVector(-1, 0, 0)); R->Hits0 = AFeyDelights::CrowFlights; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 6.f && AFeyDelights::CrowFlights == R->Hits0) { Drive(Cw - FeyLocal(Chuck->GetActorLocation())); return; }
+                // Its flight (or the give-up) began: a still of it in the air 0.8 s on.
+                if (R->OrchidSub == 1) { R->OrchidSub = 2; R->MinDist = Since; return; }
+                if (R->OrchidSub >= 2 && Since - R->MinDist < 1.2f) { const FVector A = Dl->GetCrows()[R->Hits1].At; Cam(A + FVector(500.f, 300.f, 150.f), A); if (Since - R->MinDist > .8f && R->OrchidSub == 2) { Shot(TEXT("CrowFlight")); R->OrchidSub = 3; } return; }
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_CROW_FLIGHT flights=%d"), AFeyDelights::CrowFlights - R->Hits0);
+                Check(AFeyDelights::CrowFlights > R->Hits0, TEXT("crow_takes_off"));
+                Uncam(); R->bPlaced = false; R->CrackStep = 80; R->PhaseStart = Now; return;
+            }
+            case 80:   // (2026-11-24, the user: the redcaps too dark, the maze's most) A maze redcap, lit by its own fill
+            {
+                if (!R->bPlaced) { Map->LoadNow(Maze); Chuck->ResetAtLocation(FeyCheckpointWorld(Maze)); R->bPlaced = true; R->PhaseStart = Now; return; }
+                AFeyLife* Ml = LifeOf(Maze);
+                if ((!Ml || !Ml->GetRedcaps().Num()) && Since < 10.f) return;
+                if (!Ml || !Ml->GetRedcaps().Num()) { Check(false, TEXT("maze_redcaps")); R->CrackStep = 81; return; }
+                const FVector Rc = FeyLocal(Ml->GetRedcaps()[0]->GetActorLocation());
+                if (R->OrchidSub < 10) { Ml->GetRedcaps()[0]->ResetToPost(); Cam(Rc + FVector(260.f, 120.f, 60.f), Rc + FVector(0, 0, 10.f)); R->OrchidSub = 10; R->PhaseStart = Now; return; }
+                if (Since > 1.f && R->OrchidSub == 10) { Shot(TEXT("MazeRedcap")); R->OrchidSub = 11; }
+                if (Since < 1.3f) return;
+                Uncam(); R->CrackStep = 81; R->PhaseStart = Now; return;
+            }
             default:
                 if (Since < 1.f) return;
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_TEST failures=%d toggles=%d orchid_shots=%d orchid_hits=%d moth_touches=%d mite_bites=%d mite_kills=%d beast_notices=%d lashes=%d lash_hits=%d paces=%d"), R->LifeFails, AFeyLife::FlowerToggles, AFeyLife::OrchidShots, AFeyLife::OrchidHits, AFeyLife::MothTouches,
                     AFeyMite::Bites, AFeyMite::Kills, AFeyDisplacer::Notices, AFeyDisplacer::Lashes, AFeyDisplacer::LashHits, AFeyDisplacer::Paces);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHTS_TEST rings=%d wisp_moves=%d koi_scatters=%d bursts=%d sign_turns=%d crow_flights=%d"), AFeyDelights::RingVisits, AFeyDelights::WispMoves, AFeyDelights::KoiScatters, AFeyDelights::Bursts, AFeyDelights::SignTurns, AFeyDelights::CrowFlights);
                 Done(R->LifeFails); return;
             }
         }

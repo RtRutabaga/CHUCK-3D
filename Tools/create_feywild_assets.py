@@ -287,15 +287,40 @@ def plank(m):
 # heads, a wisteria's racemes), a few centimetres; fungi breathe, their caps swelling and easing a little. Small, since
 # collision does not move with it.
 SWAY = 'float k=min(pow(max(P.z,0.)/250.,2.),4.)*3.;float a=T*.75+W.x*.004+W.y*.0031;return float3(sin(a)*k,cos(a*.83+1.)*k*.7,0)*Sway;'
+
+# (2026-11-24, the user: plants that react to Chuck) His position comes from the foliage fade's collection (AChultFoliageFade
+# sets it every frame, w his presence; MPC_ChultFoliageFade). Near him grass parts and ferns curl away (pushed out from him
+# and down, more toward their tips: H), glowing caps brighten, and the bell flowers' lamps swell and brighten. The graphics
+# card does it, and the offsets switch off with the sway at a distance (WorldPositionOffsetDisableDistance).
+FADE_MPC = '/Game/Art/ChultNature/MPC_ChultFoliageFade'
+
+
+def chuck(m):
+    n = node(m, unreal.MaterialExpressionCollectionParameter, parameter_name='Chuck')
+    n.set_editor_property('collection', unreal.load_asset(FADE_MPC))
+    return n
+
+
+# Push away from him within R (cm), and down by Dip, scaled by H (0 at the root, 1 at the tip). His capsule's middle is 35 cm
+# over his feet; only plants about his level answer.
+REACT = 'float3 d=W-C.xyz;d.z+=35.;float r=length(d.xy);float k=saturate(1.-r/R)*saturate(1.-abs(d.z)/170.)*C.w*saturate(H);k=k*k*(3.-2.*k);return float3(d.xy/max(r,1.)*k*Push,-k*Dip);'
+# How near him a point is (0 beyond R, 1 at him).
+NEAR = 'float3 d=W-C.xyz;d.z+=35.;float k=saturate(1.-length(d)/R)*C.w;return k*k*(3.-2.*k);'
 BREATHE = 'float s=sin(T*.55+W.x*.0021+W.y*.0017);float up=saturate(P.z/40.);return float3(P.xy*.012*s*up,P.z*.006*s);'
 
 
 def plant(m):
     m.set_editor_property('two_sided', True); m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
     vc = node(m, unreal.MaterialExpressionVertexColor)
-    c = custom(m, 'float3 L=pow(max(VC,.0001),1.9);Base=L;Sub=L*.65;return L*VA*VA*10.*Gain;', {'VC': vc, 'VA': (vc, 'A'), 'Gain': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='GlowGain', default_value=2.2)}, extra=[('Base', F3), ('Sub', F3)])
+    sw = node(m, unreal.MaterialExpressionScalarParameter, parameter_name='Sway', default_value=1.)
+    near = custom(m, NEAR, {'W': node(m, unreal.MaterialExpressionWorldPosition), 'C': chuck(m), 'R': const(m, 300.)}, F1)
+    c = custom(m, 'float3 L=pow(max(VC,.0001),1.9);Base=L;Sub=L*.65;return L*VA*VA*10.*Gain*(1.+Near*Sway*1.6);', {'VC': vc, 'VA': (vc, 'A'), 'Gain': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='GlowGain', default_value=2.2),
+               'Near': near, 'Sway': sw}, extra=[('Base', F3), ('Sub', F3)])
     out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_EMISSIVE_COLOR); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(const(m, .62), P.MP_ROUGHNESS); out(const(m, .25), P.MP_SPECULAR)
-    out(custom(m, SWAY, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'T': node(m, unreal.MaterialExpressionTime), 'Sway': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='Sway', default_value=1.)}), P.MP_WORLD_POSITION_OFFSET)
+    w = node(m, unreal.MaterialExpressionWorldPosition); lp = node(m, unreal.MaterialExpressionLocalPosition)
+    sway = custom(m, SWAY, {'P': lp, 'W': w, 'T': node(m, unreal.MaterialExpressionTime), 'Sway': const(m, 1.)})
+    out(custom(m, 'float3 d=W-C.xyz;d.z+=35.;float r=length(d.xy);float k=saturate(1.-length(d)/300.)*C.w;k=k*k*(3.-2.*k);return (S+N*(VA*VA*7.*k)+float3(d.xy/max(r,1.)*k*6.*saturate(P.z/120.),0))*Sway;',
+               {'S': sway, 'W': w, 'C': chuck(m), 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'VA': (vc, 'A'), 'P': lp, 'Sway': sw}), P.MP_WORLD_POSITION_OFFSET)
 
 
 # Fungi and bell flowers. UV.x runs round the part, UV.y says which part: 0 gills, 1 dome, 2 stem, 3 bell, 4 the bell's lit heart.
@@ -327,17 +352,20 @@ if(part<.5){
  rg=.42;em=(.3+.9*pow(t,1.6))*lerp(.7,1.1,smoothstep(.1,.7,vn))*lerp(.7,1.15,rib);tn.x=-sin(u*31.4159)*sign(cos(u*31.4159))*.35;
 }
 Base=c;Sub=c*.7;Rough=rg;TN=normalize(tn);
-return L*VA*VA*10.*Gain*em;
+return L*VA*VA*10.*Gain*em*(1.+Near*(part>2.5?2.6:1.5));
 '''
 
 
 def fungus(m, count):
     m.set_editor_property('two_sided', True); m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
     vc = node(m, unreal.MaterialExpressionVertexColor)
-    c = custom(m, FUNGUS, {'VC': vc, 'VA': (vc, 'A'), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Count': const(m, count), 'Gain': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='GlowGain', default_value=2.2)},
+    near = custom(m, NEAR, {'W': node(m, unreal.MaterialExpressionWorldPosition), 'C': chuck(m), 'R': const(m, 320.)}, F1)
+    c = custom(m, FUNGUS, {'VC': vc, 'VA': (vc, 'A'), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Count': const(m, count), 'Gain': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='GlowGain', default_value=2.2), 'Near': near},
                extra=[('Base', F3), ('Sub', F3), ('Rough', F1), ('TN', F3)])
     out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_EMISSIVE_COLOR); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_NORMAL, 'TN'); out(const(m, .38), P.MP_SPECULAR)
-    out(custom(m, BREATHE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'T': node(m, unreal.MaterialExpressionTime)}), P.MP_WORLD_POSITION_OFFSET)
+    w = node(m, unreal.MaterialExpressionWorldPosition); lp = node(m, unreal.MaterialExpressionLocalPosition)
+    out(custom(m, 'float part=floor(1.-UV.y);float3 d=W-C.xyz;d.z+=35.;float k=saturate(1.-length(d)/320.)*C.w;k=k*k*(3.-2.*k);return B+N*k*(part>2.5?9.:2.);',
+               {'B': custom(m, BREATHE, {'P': lp, 'W': w, 'T': node(m, unreal.MaterialExpressionTime)}), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'W': w, 'C': chuck(m), 'N': node(m, unreal.MaterialExpressionVertexNormalWS)}), P.MP_WORLD_POSITION_OFFSET)
 
 
 # Leaves. UV.x along the blade, UV.y across it.
@@ -465,7 +493,7 @@ return F.Fade(T/62.+P.z/1300.+Rnd+.35)*zone*saturate(l*3.)*l*(.6+.4*sin(T*.24+P.
 '''
 
 
-def foliage(m, diff, nrm, arm, alpha, tint, sub, amp, height, clip=.4, light=False):
+def foliage(m, diff, nrm, arm, alpha, tint, sub, amp, height, clip=.4, light=False, react=None):
     m.set_editor_property('blend_mode', unreal.BlendMode.BLEND_MASKED); m.set_editor_property('two_sided', True)
     m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE); m.set_editor_property('opacity_mask_clip_value', clip)
     tex = lambda t, typ: node(m, unreal.MaterialExpressionTextureSample, texture=t, sampler_type=typ)
@@ -477,7 +505,11 @@ def foliage(m, diff, nrm, arm, alpha, tint, sub, amp, height, clip=.4, light=Fal
         out(custom(m, LEAF_LIGHT, {'D': d, 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'P': node(m, unreal.MaterialExpressionLocalPosition), 'T': node(m, unreal.MaterialExpressionTime), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom)}), P.MP_EMISSIVE_COLOR)
     a = tex(arm, SAMPLER['arm']); out(a, P.MP_ROUGHNESS, 'G'); out(a, P.MP_AMBIENT_OCCLUSION, 'R'); out(tex(alpha, SAMPLER['alpha']), P.MP_OPACITY_MASK, 'R'); out(const(m, .35), P.MP_SPECULAR)
     h = custom(m, 'return P.z/Hh;' if height else 'return 1;', {'P': node(m, unreal.MaterialExpressionLocalPosition), 'Hh': const(m, height or 1.)}, F1)
-    out(custom(m, WIND, {'T': node(m, unreal.MaterialExpressionTime), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'Amp': const(m, amp), 'H': h}), P.MP_WORLD_POSITION_OFFSET)
+    wind = custom(m, WIND, {'T': node(m, unreal.MaterialExpressionTime), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'Amp': const(m, amp), 'H': h})
+    if react:   # (R, Push, Dip) in cm
+        r = custom(m, REACT, {'W': node(m, unreal.MaterialExpressionWorldPosition), 'C': chuck(m), 'H': h, 'R': const(m, react[0]), 'Push': const(m, react[1]), 'Dip': const(m, react[2])})
+        wind = custom(m, 'return A+B;', {'A': wind, 'B': r})
+    out(wind, P.MP_WORLD_POSITION_OFFSET)
 
 
 def nat(name): return unreal.load_asset(f'{NATURE}/{name}')
@@ -588,6 +620,51 @@ def mist(m):
                          'Seed': node(m, unreal.MaterialExpressionPerInstanceCustomData, data_index=1)}, extra=[('Op', F1)])
     fade = node(m, unreal.MaterialExpressionDepthFade, fade_distance_default=180.); link(c, fade, 'Opacity', 'Op')
     out(c, P.MP_EMISSIVE_COLOR); out(fade, P.MP_OPACITY)
+
+
+# (2026-11-24) A rainbow in the rapids' spray (AFeyDelights): a soft sheet of spray turned to the eye, faint. The bow is drawn
+# where the ray from the eye is 40 to 42.5 degrees from the point opposite the sun (Anti: the way the sunlight travels), red
+# outside and violet inside, as a real one, so it shows only with the sun behind the viewer. Gone close to the camera.
+RAINBOW = NOISE + r'''
+float2 c=UV-.5;float r=length(c*float2(1.,1.5))*2.;
+float n=F.B(UV*float2(4.,2.5)+float2(T*.04,-T*.3))*.65+F.B(UV*float2(11.,7.)+float2(-T*.07,-T*.6))*.35;
+float spray=smoothstep(1.,.3,r)*smoothstep(.3,.85,n)*lerp(1.,.35,UV.y);   // (thinning as it rises)
+float a=degrees(acos(clamp(dot(-normalize(Cam),normalize(Anti)),-1.,1.)));
+float band=smoothstep(39.4,40.4,a)*smoothstep(43.,42.2,a);
+float h=saturate((42.6-a)/2.8)*.78;
+float3 hue=saturate(abs(frac(h+float3(1.,2./3.,1./3.))*6.-3.)-1.);
+Op=spray*(.03+.17*band)*smoothstep(450.,1100.,D);   // (2026-11-24: faint; the first pass read as a painted column)
+return lerp(float3(.85,.9,.95),hue*1.15,band);
+'''
+
+
+def rainbow(m):
+    m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_UNLIT); m.set_editor_property('blend_mode', unreal.BlendMode.BLEND_TRANSLUCENT); m.set_editor_property('two_sided', True)
+    c = custom(m, RAINBOW, {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'T': node(m, unreal.MaterialExpressionTime), 'Cam': node(m, unreal.MaterialExpressionCameraVectorWS),
+                            'Anti': node(m, unreal.MaterialExpressionVectorParameter, parameter_name='Anti', default_value=unreal.LinearColor(-.96, .2, -.17, 0)), 'D': node(m, unreal.MaterialExpressionPixelDepth)}, extra=[('Op', F1)])
+    out(c, P.MP_EMISSIVE_COLOR); out(c, P.MP_OPACITY, 'Op')
+
+
+# (2026-11-24) Glowing koi under the Lily Mere's pads (AFeyDelights), drawn added onto the dark water on a flat card (the
+# engine's 1 m plane, scaled to the fish). The body and forked tail come from its local position, swimming with a wave down
+# to the tail. Custom data 0 is the pattern (0 orange, 1 white with orange, 2 gold, 3 pale blue), 1 its phase.
+KOI = r'''
+float x=(P.x+50.)/100.,y=P.y/50.;
+y-=sin(T*5.5+Ph-x*5.)*.22*(1.-x)*(1.-x);
+float bx=(x-.6)/.38,bw=sqrt(saturate(1.-bx*bx))*(.62-.1*x);
+float body=smoothstep(bw+.02,bw-.16,abs(y))*step(.2,x);
+float tw=saturate((.32-x)/.3),fin=smoothstep(.12,0.,abs(abs(y)-tw*.55))*tw*step(x,.34);
+float halo=exp(-3.*max(abs(y)-bw,0.)-6.*max(.22-x,0.))*.22*step(.05,x);
+float s=sin(x*17.+V*2.1)*sin(y*5.+V);
+float3 c=V<.5?float3(1.,.42,.08):V<1.5?lerp(float3(.95,.93,.9),float3(1.,.4,.08),step(.25,s)):V<2.5?float3(1.,.74,.2):float3(.7,.85,1.);
+return c*(max(body,fin*.8)*2.4+halo);
+'''
+
+
+def koi(m):
+    m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_UNLIT); m.set_editor_property('blend_mode', unreal.BlendMode.BLEND_ADDITIVE); m.set_editor_property('two_sided', True)
+    out(custom(m, KOI, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'T': node(m, unreal.MaterialExpressionTime), 'V': node(m, unreal.MaterialExpressionPerInstanceCustomData, data_index=0),
+                        'Ph': node(m, unreal.MaterialExpressionPerInstanceCustomData, data_index=1)}), P.MP_EMISSIVE_COLOR)
 
 
 # ---------------------------------------------------------------- the rough map's blockout (stage 3, 2026-11-19)
@@ -854,7 +931,11 @@ mats = {}
 for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeyCloud', cloud),
                  ('M_FeyHedgeLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.78, 1.02, .52), None, .3, 0)), ('M_FeySign', sign), ('M_FeyHangMoss', hang), ('M_FeyHangMossPurple', lambda m: hang(m, True)), ('M_FeyJelly', jelly_mat), ('M_FeyArchStone', archstone), ('M_FeyHagThatch', lambda m: hag_surface(m, HAGTHATCH, 'thatch_roof_angled')), ('M_FeyHagWall', lambda m: hag_surface(m, HAGWALL, 'worn_mossy_plasterwall')), ('M_FeyBlock', block), ('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyPlank', plank), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
                  ('M_FeyLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.95, 1.02, .5), None, 2.2, 0, light=True)),
-                 ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22.)),
+                 ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22., react=(80., 20., 9.))),
+                 # (2026-11-24) The Feywild's own fern: Chult's fern_02 as M_ChultFern draws it, its fronds curling away from him (with
+                 # Chult's see-through fade put back below). FeyMap.cpp sets it on the districts' ferns; Chult's keep M_ChultFern.
+                 ('M_FeyFern', lambda m: foliage(m, nat('T_fern_02_diff_2k'), nat('T_fern_02_nor_dx_2k'), nat('T_fern_02_arm_2k'), nat('T_fern_02_alpha_2k'), (.68, .74, .55), None, .9, 90., react=(130., 32., 22.))),
+                 ('M_FeyRainbow', rainbow), ('M_FeyKoi', koi),
                  ('M_FeyCelandine', lambda m: foliage(m, textures['celandine_01', 'diffuse'], textures['celandine_01', 'nor_dx'], textures['celandine_01', 'arm'], textures['celandine_01', 'alpha'], (1., 1., .8), None, .8, 18.)),
                  ('M_FeyFungus', lambda m: fungus(m, 30.)), ('M_FeyFungusBig', lambda m: fungus(m, 64.)),
                  ('M_FeyBlade', lambda m: blade_mat(m, (.34, .46, .12), 9.)), ('M_FeyBladeRed', lambda m: blade_mat(m, (.62, .035, .09), 8.)),
@@ -897,4 +978,8 @@ if MESHES:
         elif mesh.get_num_lods() > 1: subsystem.remove_lods(mesh)   # (2026-11-23: a reimport keeps old levels)
         ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)
         unreal.log(f'CHUCK_FEY_MESH {file.stem} triangles={rec["triangles"]} lods={mesh.get_num_lods()}')
+# The fern's see-through fade, as M_ChultFern has it (Tools/chult_foliage_fade.py).
+if not ONLY or 'M_FeyFern' in ONLY:
+    fade_src = Path(__file__).with_name('chult_foliage_fade.py'); fade = {'__file__': str(fade_src), '__name__': 'chult_foliage_fade'}
+    exec(compile(fade_src.read_text(encoding='utf-8'), str(fade_src), 'exec'), fade); fade['apply'](unreal.load_asset(f'{DEST}/M_FeyFern'))
 unreal.log('CHUCK_FEY_ASSETS_DONE')

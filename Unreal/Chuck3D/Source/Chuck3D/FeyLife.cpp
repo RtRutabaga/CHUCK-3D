@@ -1,5 +1,6 @@
 // The Feywild's mechanics and small living hazards, stage 5 part one (Claude, 2026-11-21). See FeyLife.h.
 #include "FeyLife.h"
+#include "FeyDelights.h"
 #include "FeyTrio.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "FeyMap.h"
@@ -53,6 +54,9 @@ namespace
         TArray<FVector> Mites, Redcaps, Round, Logs; TArray<FFeyRefuge> Refuges; TArray<FFeyPadRise> Rises;
         FVector2D Camp = FVector2D::ZeroVector, CampOut = FVector2D::ZeroVector; FVector Cache = FVector::ZeroVector, Islet = FVector::ZeroVector;
         FVector2D Patrol = FVector2D::ZeroVector; TArray<FVector2D> Statues;   // (stage 6: the maze's redcaps keep near Patrol; statues that turn)
+        // (2026-11-24, the user: more redcaps in the Deepwood, more displacer beasts, more mites) Redcaps that roam the wood in
+        // pairs, each kept near its own spot (X, Y, yaw); more beasts, each with its own round (the refuges are shared).
+        TArray<FVector> Roamers; TArray<TArray<FVector>> MoreRounds;
     };
     FVector2D Perp(const FVector2D& D) { return FVector2D(-D.Y, D.X); }
     const FPlace& Placed(int32 D)
@@ -87,6 +91,10 @@ namespace
             {   // (part two) Thorn mites after the pollen's lesson, by the way out to the root tunnel.
                 FPlace& P = Out[Orchard];
                 for (const FVector& M : {FVector(-44200.f, 3300.f, 200.f), FVector(-44600.f, 3700.f, 160.f), FVector(-44000.f, 3900.f, 230.f)}) P.Mites.Add(M);
+                // (2026-11-24) A second nest off the orchard's first road, past the broad bed, a few metres to its side.
+                const TArray<FVector2D>& R = RoadOf(Orchard, 0); const int32 K = FMath::Clamp(R.Num() - 3, 0, R.Num() - 2);
+                const FVector2D Tn = (R[K + 1] - R[K]).GetSafeNormal(), Q = FMath::Lerp(R[K], R[K + 1], .5f) + Perp(Tn) * 420.f;
+                for (const FVector& M : {FVector(0.f, 0.f, 20.f), FVector(-380.f, 260.f, 140.f), FVector(330.f, 300.f, 260.f)}) P.Mites.Add(FVector(Q.X + M.X, Q.Y + M.Y, M.Z));
             }
             {   // (part two) The Lily Mere: on the land inside the deep water, a flower whose scratch raises two pads to an islet
                 // (FeyMap.cpp's moat: centre (-73500, 15000), deep from 1500 to 2650 out). Cigarettes on the islet.
@@ -100,7 +108,12 @@ namespace
             {   // (part two) The Deepwood: mites by two of its paths; Redcap Hollow's camp.
                 FPlace& P = Out[Deepwood];
                 for (const FVector& M : {FVector(-67100.f, -24300.f, 0.f), FVector(-66800.f, -24600.f, 90.f), FVector(-67400.f, -24650.f, 200.f),
-                                         FVector(-82600.f, -27400.f, 30.f), FVector(-82300.f, -27800.f, 250.f), FVector(-82900.f, -27900.f, 120.f)}) P.Mites.Add(M);
+                                         FVector(-82600.f, -27400.f, 30.f), FVector(-82300.f, -27800.f, 250.f), FVector(-82900.f, -27900.f, 120.f),
+                                         // (2026-11-24) two more nests, deeper in
+                                         FVector(-77000.f, -35800.f, 40.f), FVector(-77350.f, -35500.f, 170.f), FVector(-76700.f, -35450.f, 280.f),
+                                         FVector(-87600.f, -24800.f, 300.f), FVector(-87250.f, -25150.f, 60.f), FVector(-87900.f, -25200.f, 150.f)}) P.Mites.Add(M);
+                // (2026-11-24) Two pairs of redcaps out in the wood, each near its own ground.
+                for (const FVector& Rr : {FVector(-71500.f, -34000.f, 30.f), FVector(-71250.f, -33750.f, 210.f), FVector(-85500.f, -25800.f, 120.f), FVector(-85800.f, -26050.f, 300.f)}) P.Roamers.Add(Rr);
                 const TArray<FVector2D>& Sp = SpurOf(Deepwood); P.Camp = Sp.Last(); P.CampOut = (Sp[Sp.Num() - 2] - P.Camp).GetSafeNormal();
                 const FVector2D Dp = P.CampOut, Pp = Perp(Dp);
                 for (int32 K = -1; K <= 1; ++K) { const FVector2D R = P.Camp - Dp * 240.f + Pp * (K * 215.f); P.Redcaps.Add(FVector(R.X, R.Y, FMath::RadiansToDegrees(FMath::Atan2(P.Camp.Y - R.Y, P.Camp.X - R.X)))); }
@@ -111,8 +124,16 @@ namespace
             {   // (part two) Highmeadow: the displacer beast's round across the way to the maze and the overlook's spur; hollow logs
                 // beside the road and the spur; pollen on the road to the stair.
                 FPlace& P = Out[Highmeadow];
-                for (const FVector& L : {FVector(-104639.f, 3865.f, 161.6f), FVector(-109800.f, 4670.f, 180.f), FVector(-104157.f, 7303.f, 129.8f), FVector(-108782.f, 11034.f, 149.3f)})
+                for (const FVector& L : {FVector(-104639.f, 3865.f, 161.6f), FVector(-109800.f, 4670.f, 180.f), FVector(-104157.f, 7303.f, 129.8f), FVector(-108782.f, 11034.f, 149.3f),
+                                         // (2026-11-24) the two more beasts' meadows' logs
+                                         FVector(-98200.f, -3000.f, 35.f), FVector(-100300.f, -5200.f, 120.f), FVector(-89700.f, 10200.f, 70.f), FVector(-91600.f, 12100.f, 160.f)})
                 { P.Logs.Add(L); FFeyRefuge Rf; Rf.C = FVector2D(L.X, L.Y); Rf.R = 270.f; P.Refuges.Add(Rf); P.Clear.Add(FVector(L.X, L.Y, 420.f)); }
+                // (2026-11-24) Two more beasts in the open meadow: south of the ring, and east of the rapids under the slope.
+                for (const FVector2D& C : {FVector2D(-99300.f, -4100.f), FVector2D(-90600.f, 11100.f)})
+                {
+                    TArray<FVector>& Rd = P.MoreRounds.AddDefaulted_GetRef();
+                    for (int32 K = 0; K < 5; ++K) { const float A = FMath::DegreesToRadians(K * 72.f + 15.f), Rr = K % 2 ? 2100.f : 2600.f; const FVector2D Q = C + FVector2D(FMath::Cos(A), FMath::Sin(A)) * Rr; Rd.Add(FVector(Q.X, Q.Y, LandZ(Highmeadow, Q.X, Q.Y))); }
+                }
                 for (const FVector2D& Q : {FVector2D(-105500.f, 8600.f), FVector2D(-107500.f, 12600.f), FVector2D(-110800.f, 10600.f), FVector2D(-110200.f, 7600.f), FVector2D(-107200.f, 6900.f)})
                     P.Round.Add(FVector(Q.X, Q.Y, LandZ(Highmeadow, Q.X, Q.Y)));
                 FFeyPollen Pb; Pb.C = FVector2D(-107800.f, 5000.f); Pb.R = FVector2D(260.f, 380.f); Pb.Yaw = 180.f; P.Pollen.Add(Pb); P.Clear.Add(FVector(Pb.C.X, Pb.C.Y, 440.f));
@@ -371,7 +392,7 @@ bool AFeyLife::bOrchidSure = false;
 const TArray<TWeakObjectPtr<AFeyLife>>& AFeyLife::All() { return GLife; }
 const TArray<FVector>& FeyLifeClearings()
 {
-    static const TArray<FVector> S = []() { TArray<FVector> Out; for (int32 D = 0; D < Districts; ++D) Out.Append(Placed(D).Clear); return Out; }();
+    static const TArray<FVector> S = []() { TArray<FVector> Out; for (int32 D = 0; D < Districts; ++D) Out.Append(Placed(D).Clear); Out.Append(AFeyDelights::Clearings()); return Out; }();
     return S;
 }
 
@@ -388,6 +409,7 @@ void AFeyLife::EndPlay(const EEndPlayReason::Type Reason)
     for (AActor* A : Mites) if (IsValid(A)) A->Destroy();
     for (AActor* A : Redcaps) if (IsValid(A)) A->Destroy();
     if (IsValid(Beast)) Beast->Destroy();
+    for (AActor* A : MoreBeasts) if (IsValid(A)) A->Destroy();
     Super::EndPlay(Reason);
 }
 
@@ -545,10 +567,18 @@ void AFeyLife::Build(int32 D)
         for (const FVector& M : P.Mites) if (AFeyMite* Mt = GetWorld()->SpawnActor<AFeyMite>(FeyWorld(FVector(M.X, M.Y, LandZ(D, M.X, M.Y))), FRotator::ZeroRotator, Sp)) { Mt->Init(FVector(M.X, M.Y, LandZ(D, M.X, M.Y)), M.Z); Mites.Add(Mt); }
         SpawnRedcaps();
         if (P.Round.Num()) if ((Beast = GetWorld()->SpawnActor<AFeyDisplacer>(FeyWorld(P.Round[0]), FRotator::ZeroRotator, Sp)) != nullptr) Beast->Init(P.Round, Refuges);
+        for (const TArray<FVector>& Rd : P.MoreRounds) if (AFeyDisplacer* B = GetWorld()->SpawnActor<AFeyDisplacer>(FeyWorld(Rd[0]), FRotator::ZeroRotator, Sp)) { B->Init(Rd, Refuges); MoreBeasts.Add(B); }
     }
     if (auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0))) Respawns = Chuck->GetRespawns();
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BUILT district=%s flowers=%d vines=%d pollen=%d orchids=%d moths=%d mites=%d redcaps=%d beast=%d refuges=%d pads=%d"), FeyMap::District(D).Name, Flowers.Num(), Vines.Num(), Pollen.Num(), Orchids.Num(), Moths.Num(),
         Mites.Num(), Redcaps.Num(), Beast != nullptr, Refuges.Num(), PadRises.Num() ? PadRises[0].Pads.Num() : 0);
+    if (MoreBeasts.Num()) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_MORE_BEASTS district=%s beasts=%d"), FeyMap::District(D).Name, MoreBeasts.Num());
+    });
+    // (2026-11-24) The district's small delights (fairy rings, wisps, koi, puffballs, swans, rainbow, crows, turning signs).
+    Pending.Add([this, D]()
+    {
+        FActorSpawnParameters Sp; Sp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        if (AFeyDelights* De = GetWorld()->SpawnActor<AFeyDelights>(GetActorLocation(), GetActorRotation(), Sp)) { De->Build(D); Spawned.Add(De); }
     });
 }
 
@@ -576,6 +606,7 @@ void AFeyLife::ResetAll()
     Seeds.Reset();
     for (AFeyMite* M : Mites) if (IsValid(M)) M->ResetMite();
     if (IsValid(Beast)) Beast->ResetBeast();
+    for (AFeyDisplacer* B : MoreBeasts) if (IsValid(B)) B->ResetBeast();
     for (AActor* A : Redcaps) if (IsValid(A)) A->Destroy();
     Redcaps.Reset(); SpawnRedcaps();
 }
@@ -879,14 +910,21 @@ FVector AFeyLife::GetCamp() const { const FVector2D C = Placed(District).Camp; r
 void AFeyLife::SpawnRedcaps()
 {
     const FPlace& P = Placed(District);
-    if (bCalm || P.Redcaps.IsEmpty()) return;
+    if (bCalm) return;
     for (const FVector& R : P.Redcaps)
     {
         FTempleSkeletonPost Post; Post.Kind = 3; Post.Space = TEXT("feywild"); Post.Yaw = R.Z;
         Post.Feet = FeyWorld(FVector(R.X, R.Y, LandZ(District, R.X, R.Y)));
         const FVector2D Lc = P.Camp.IsZero() ? P.Patrol : P.Camp; const float Lr = P.Camp.IsZero() ? 1300.f : 1900.f;
         Post.Leash = FBox2D(Lc - FVector2D(Lr, Lr), Lc + FVector2D(Lr, Lr));
-        if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) Redcaps.Add(S);
+        if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) { S->SetFeyFill(District == Maze ? 120.f : 80.f); Redcaps.Add(S); }
+    }
+    for (const FVector& R : P.Roamers)   // (2026-11-24; after the camp's, which the tests take first)
+    {
+        FTempleSkeletonPost Post; Post.Kind = 3; Post.Space = TEXT("feywild"); Post.Yaw = R.Z;
+        Post.Feet = FeyWorld(FVector(R.X, R.Y, LandZ(District, R.X, R.Y)));
+        Post.Leash = FBox2D(FVector2D(R.X, R.Y) - FVector2D(1350.f, 1350.f), FVector2D(R.X, R.Y) + FVector2D(1350.f, 1350.f));
+        if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) { S->SetFeyFill(80.f); Redcaps.Add(S); }
     }
 }
 
@@ -1212,5 +1250,6 @@ bool FeyScratch(AChuckCharacter* Chuck, const FVector& Location, const FVector& 
     if (!Chuck || !InFeyMap(Location)) return false;
     bool bAny = FeyCreaturesScratch(Location, Ahead, Reach);
     for (const TWeakObjectPtr<AFeyLife>& P : GLife) if (P.IsValid()) bAny |= P->TryScratch(Location, Ahead, Reach);
+    for (const TWeakObjectPtr<AFeyDelights>& P : AFeyDelights::All()) if (P.IsValid()) bAny |= P->TryScratch(Location, Ahead, Reach);   // (puffballs, seed heads)
     return bAny;
 }

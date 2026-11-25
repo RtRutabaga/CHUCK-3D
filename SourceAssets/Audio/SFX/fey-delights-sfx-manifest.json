@@ -1,0 +1,25 @@
+{
+ "sources": "synthesised by Tools/gen_fey_delights_sfx.py (no recordings)",
+ "sounds": {
+  "SFX_FeyFairyBell_00": {
+   "seconds": 3.2,
+   "loop": false,
+   "sha256": "cd67c89049f334596fc0efbb56be1397fde617814736f3f95d0251a5d545756f"
+  },
+  "SFX_FeyCrowCaw_00": {
+   "seconds": 1.29,
+   "loop": false,
+   "sha256": "e95ef73a094a10f197c41f21317e6452ad4f5f7b840f62ee5aa56fceae7ddf1f"
+  },
+  "SFX_FeyCrowCaw_01": {
+   "seconds": 1.76,
+   "loop": false,
+   "sha256": "2edb7cbe6efb9dfa559766f64de8b08703fdd2ddf6dbb3435bf3e0ac69187e07"
+  },
+  "SFX_FeySporePuff_00": {
+   "seconds": 0.7,
+   "loop": false,
+   "sha256": "154698a394b183474d5b39874c36a233ee1fb07c9f7dd41026e5cf645c63b6ee"
+  }
+ }
+}

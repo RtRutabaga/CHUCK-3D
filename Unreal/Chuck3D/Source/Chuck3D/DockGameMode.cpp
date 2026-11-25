@@ -39,6 +39,7 @@
 #include "DockSubtitles.h"
 #include "NPCVoiceData.h"
 #include "Components/SkinnedMeshComponent.h"
+#include "FeyDelights.h"
 
 #include "Components/AudioComponent.h"
 #include "Sound/SoundWave.h"
@@ -1558,7 +1559,7 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     const AShipStorm* Storm=AShipStorm::Get(GetWorld());
     const float StormDuck=Storm ? 1.f-.45f*Storm->GetWind() : 1.f, StormTrackDuck=1.f;   // (the storm's own tracks are not ducked under it: 2026-11-05)
     for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks)
-        if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck*(StormTracks.Contains(Track) ? StormTrackDuck : StormDuck)*(Track==ConcertinaTrack ? ConcertinaNear : 1.f));
+        if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck*AFeyDelights::MusicDip*(StormTracks.Contains(Track) ? StormTrackDuck : StormDuck)*(Track==ConcertinaTrack ? ConcertinaNear : 1.f));   // (MusicDip: in a Feywild fairy ring, 2026-11-24)
 }
 
 void ADockGameMode::TickChuckPortrait(float DeltaSeconds)

@@ -384,6 +384,26 @@ FVector ATempleSkeleton::StrikingTip(EAttack A) const
     return Tip + (Tip - Parent).GetSafeNormal() * S.TipAhead;
 }
 
+void ATempleSkeleton::SetFeyFill(float Candelas)
+{
+    if (!IsRedcap()) return;
+    GetMesh()->SetLightingChannels(true, false, true);
+    if (!FillLight)
+    {
+        FillLight = NewObject<UPointLightComponent>(this, TEXT("RedcapFill"));
+        FillLight->SetupAttachment(RootComponent);
+        FillLight->SetRelativeLocation(FVector(160.f, 30.f, 120.f));   // (in its own scale: about 1 m ahead, a little above its head)
+        FillLight->SetLightColor(FLinearColor(1.f, .86f, .78f));
+        FillLight->SetIntensityUnits(ELightUnits::Candelas);
+        FillLight->SetAttenuationRadius(500.f);
+        FillLight->SetSourceRadius(40.f);
+        FillLight->SetCastShadows(false);
+        FillLight->SetLightingChannels(false, false, true);
+        FillLight->RegisterComponent();
+    }
+    FillLight->SetIntensity(Candelas);
+}
+
 void ATempleSkeleton::ResetToPost()
 {
     SetActorLocation(Post.Feet + FVector(0, 0, HalfHeightNow() + 2), false, nullptr, ETeleportType::TeleportPhysics);

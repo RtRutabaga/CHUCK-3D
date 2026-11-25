@@ -58,6 +58,9 @@ public:
     void TakeSlash(const FVector& Swing);
     /** Tests: back to its post as it began (lying or standing), unhurt. */
     void ResetToPost();
+    /** (2026-11-24, the user: the redcaps too dark, the maze's above all) A redcap's soft fill, Candelas, from in front and above,
+     *  on lighting channel 2 only (its body alone takes it; nothing else, Chuck's fur included, is lit by it). */
+    void SetFeyFill(float Candelas);
     /** Tests: the next attack is this one whatever the distance (None: chosen by distance). */
     void ForceAttack(EAttack Kind) { Forced = Kind; }
     /** Tests: held where it is (its pose kept, no notice, no attack), so a trial can watch one at a time. */

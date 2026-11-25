@@ -1,4 +1,5 @@
 #include "FeyMap.h"
+#include "ChultFoliageFade.h"
 #include "Misc/ScopeExit.h"
 #include "FeyMesh.h"
 #include "FeyLife.h"
@@ -1228,6 +1229,16 @@ void FeyForgetSpots() { for (bool& R : Reached) R = false; }
 
 bool FeyMap::IsPad(float X, float Y) { for (const FVector& P : MoatPads()) if (FVector2D::DistSquared(FVector2D(X, Y), FVector2D(P)) < FMath::Square(P.Z)) return true; return false; }
 bool FeyMap::InDeepWater(float X, float Y) { return MoatK(X, Y) > .5f; }
+const TArray<FVector>& FeyMap::LilyPads() { return MoatPads(); }
+FVector2D FeyMap::OverlookAt() { return Overlook; }
+float FeyMap::RapidXAt(float Y) { return RapidX(Y); }
+float FeyMap::RapidWLAt(float Y) { return RapidWL(Y); }
+bool FeyMap::InRiver(int32 D, float X, float Y) { float Wet; Land(D, X, Y, nullptr, &Wet); return Wet > .3f; }
+void FeyMap::SignPostsOf(int32 D, TArray<FSignOut>& Out) { for (const FSignPost& Sp : SignPosts()) if (Sp.D == D) Out.Add({Sp.At, Sp.Arrows}); }
+bool FeyMap::SignsTurn(int32 D) { return D == Highmeadow || D == Maze; }
+float FeyMap::SignArrowZ(int32 I) { return 140.f - 19.f * (I % 4) - (I >= 4 ? 9.f : 0.f); }
+float FeyMap::SignSeed(const FVector2D& At, int32 I) { return float(((I + 1) * 7919 + int32(At.X)) % 997) / 997.f; }
+void FeyMap::SignBoardSurf(FMapSurf& S, const FVector& At, float YawDeg, float PitchDeg, float Seed) { SignBoard(S, At, YawDeg, PitchDeg, Seed); }
 int32 FeyMap::MazeCells() { return MazeData().Cells; }
 const TArray<FeyMap::FMazeShortcut>& FeyMap::MazeShortcuts() { return MazeData().Shortcuts; }
 const TArray<FVector2D>& FeyMap::MazeDeadEnds() { return MazeData().DeadEnds; }
@@ -1731,8 +1742,9 @@ namespace
                 if (Sp.D != D) continue;
                 const float Z = Land(D, Sp.At.X, Sp.At.Y);
                 Sg.Box(FVector(Sp.At.X, Sp.At.Y, Z + 72.f), FVector(5.f, 5.f, 85.f), Sp.Arrows.Num() ? Sp.Arrows[0].X : 0.f, FColor(40, 0, 0, 255));
+                if (SignsTurn(D)) continue;   // (2026-11-24: from Highmeadow on, AFeyDelights carries the arrows, which turn while unseen)
                 for (int32 I = 0; I < Sp.Arrows.Num(); ++I)
-                    SignBoard(Sg, FVector(Sp.At.X, Sp.At.Y, Z + 140.f - 19.f * (I % 4) - (I >= 4 ? 9.f : 0.f)), Sp.Arrows[I].X, Sp.Arrows[I].Y, float(((I + 1) * 7919 + int32(Sp.At.X)) % 997) / 997.f);
+                    SignBoard(Sg, FVector(Sp.At.X, Sp.At.Y, Z + SignArrowZ(I)), Sp.Arrows[I].X, Sp.Arrows[I].Y, SignSeed(Sp.At, I));
             }
             for (int32 I = Plan.Surfs.Num() - 1; I >= 0; --I) if (Plan.Surfs[I].V.IsEmpty()) Plan.Surfs.RemoveAt(I);
         }
@@ -2223,6 +2235,10 @@ bool AFeyDistrict::Step(double BudgetMs)
             H->SetCollisionEnabled(K.bSolid ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
             if (K.bSolid) H->SetCollisionProfileName(TEXT("BlockAll"));
             H->SetHiddenInGame(K.bInvisible); H->bAutoRebuildTreeOnInstanceChanges = false;
+            // (2026-11-24) The districts' ferns curl away from him (M_FeyFern); Chult's keep M_ChultFern.
+            if (Kits.Num() >= KFern0 && Kits.Num() <= KFern0 + 3 && Mesh)
+                if (UMaterialInterface* Fern = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Feywild/M_FeyFern.M_FeyFern")))
+                    for (int32 Sl = 0; Sl < Mesh->GetStaticMaterials().Num(); ++Sl) H->SetMaterial(Sl, Fern);
 
             // (2026-11-21) The Deepwood's glowing caps, shelves and bark veins brighter than elsewhere (their own instances).
             const int32 Ki = Kits.Num();
@@ -2365,6 +2381,7 @@ AFeyMap* AFeyMap::Ensure(UWorld* World)
     auto* Map = World->SpawnActor<AFeyMap>(FeywildOrigin(), FRotator::ZeroRotator, P);
     Map->Districts.SetNum(FeyMap::Districts); FeyForgetSpots();
     Map->BuildThresholds(); Map->BuildDistance(); Map->BuildTower(); Map->BuildStandIn(); Map->BuildBrink(); Map->BuildWonders();
+    AChultFoliageFade::Spawn(World);   // (2026-11-24) his place for the plants that react to him (MPC_ChultFoliageFade's Chuck)
     Map->Missing += AFeyTrio::CountMissing();   // (2026-11-24: the package had been cooked without them)
     { float Jt; if (FParse::Value(FCommandLine::Get(), TEXT("-ChuckFeyJellyAt="), Jt)) JellyTime = Jt; }   // (stills: the jellyfish held where it is at that time)
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_BUILT seconds=%.2f triangles=%d missing=%d maze_cells=%d maze_way_m=%.0f maze_hedges=%d pads=%d signs=%d"), FPlatformTime::Seconds() - T0, Map->Triangles, Map->Missing,

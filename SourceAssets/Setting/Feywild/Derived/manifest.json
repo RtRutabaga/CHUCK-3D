@@ -444,54 +444,6 @@
    "sha256": "53E3C99BB5F7899363EB91891A3A8DDF78900C1691F414674D1412975BC68F9B"
   },
   {
-   "file": "SM_FeyIsland0.fbx",
-   "source": "modelled",
-   "triangles": 4348,
-   "dimensions_cm": [
-    3348.398,
-    3347.375,
-    4558.34
-   ],
-   "slots": [
-    "FeyStone",
-    "FeyPlant",
-    "FeyFall"
-   ],
-   "sha256": "6B0B4F650E8A52308C6E371650D83299592ABE7A9C77140BCA2B09A0B7B9A945"
-  },
-  {
-   "file": "SM_FeyIsland1.fbx",
-   "source": "modelled",
-   "triangles": 3830,
-   "dimensions_cm": [
-    2101.861,
-    2283.782,
-    4527.34
-   ],
-   "slots": [
-    "FeyStone",
-    "FeyPlant",
-    "FeyFall"
-   ],
-   "sha256": "3168220A0FE75B48ECC144E9BF160663E5206258049EC916F4BED7C460C5F1C2"
-  },
-  {
-   "file": "SM_FeyIsland2.fbx",
-   "source": "modelled",
-   "triangles": 3595,
-   "dimensions_cm": [
-    1378.913,
-    1510.143,
-    3940.294
-   ],
-   "slots": [
-    "FeyStone",
-    "FeyPlant",
-    "FeyFall"
-   ],
-   "sha256": "9328391A0DB319B0E6F4C53F7E4755D549F7E23C735964FC33507C180D326CEF"
-  },
-  {
    "file": "SM_FeyJelly.fbx",
    "source": "modelled",
    "triangles": 12096,
@@ -644,6 +596,54 @@
     "FeyBlade"
    ],
    "sha256": "C2A983E6CA1AA26A4A480914B6C7253262696C63FFEF253B99FD806B27DCE665"
+  },
+  {
+   "file": "SM_FeyIsland0.fbx",
+   "source": "modelled",
+   "triangles": 3408,
+   "dimensions_cm": [
+    3861.741,
+    3347.375,
+    3484.94
+   ],
+   "slots": [
+    "FeyStone",
+    "FeyPlant",
+    "FeyFall"
+   ],
+   "sha256": "570441F4EB663984EA62879145E016273D3D9E92C137B750D46BE83CDF666BFB"
+  },
+  {
+   "file": "SM_FeyIsland1.fbx",
+   "source": "modelled",
+   "triangles": 3360,
+   "dimensions_cm": [
+    2101.861,
+    2213.671,
+    2864.442
+   ],
+   "slots": [
+    "FeyStone",
+    "FeyPlant",
+    "FeyFall"
+   ],
+   "sha256": "9FB2D2F8E897641A35E70651691FA4972335FCA9E5057659B503E13F07670D32"
+  },
+  {
+   "file": "SM_FeyIsland2.fbx",
+   "source": "modelled",
+   "triangles": 3360,
+   "dimensions_cm": [
+    1558.853,
+    1511.652,
+    3178.175
+   ],
+   "slots": [
+    "FeyStone",
+    "FeyPlant",
+    "FeyFall"
+   ],
+   "sha256": "913FFBCB7B27474EEEA5D2EA2E19BA6AFE9751B3A37E42D54AFC46AE1A61A35B"
   }
  ]
 }

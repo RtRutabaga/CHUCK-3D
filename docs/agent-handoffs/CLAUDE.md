@@ -2,6 +2,89 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 25 — Feywild: small delights, more creatures, plants that react to him (Claude)
+
+- **Asked:** twelve items.
+  - No trees on the floating islands.
+  - Plants that react to Chuck.
+  - Signposts that turn while unseen, from Highmeadow on.
+  - Brighter redcaps, above all in the maze.
+  - Fairy rings.
+  - Will-o'-wisps in the Moonmoth Fen.
+  - Glowing koi in the mere.
+  - More redcaps, displacer beasts and mites.
+  - Puffballs and seed heads that release gold spores.
+  - A line of swans below the overlook.
+  - A faint rainbow in the waterfall mist.
+  - Deepwood crows, with the Deepwood's frame time measured afterwards.
+- **Source:** `main` at f6bd742b; this commit. The package was built from the working tree on f6bd742, so its receipt
+  names f6bd742.
+- **Changed:**
+  - `Tools/build_feywild_kit.py`: the islands are built with no trees. Rebuilt `SM_FeyIsland0-2`: Derived FBX,
+    manifest and uassets.
+  - `Tools/create_feywild_assets.py`:
+    - Chuck's position comes from the MPC (`Chuck` xyz, w = presence) and drives REACT/NEAR in `M_FeyPlant`,
+      `M_FeyFungus`, `M_FeyFungusBig` and `M_FeyGrass`.
+    - Caps brighten, bell lamps swell and grass parts; the effect fades off with distance like the sway.
+    - New `M_FeyFern` (curls away), `M_FeyRainbow` and `M_FeyKoi`.
+  - `Tools/gen_fey_delights_sfx.py` (new): synthesises the bell, two crow caws and the spore puff. No recordings or
+    downloads.
+  - `Tools/import_fey_sfx.py`: reads that manifest. Four new `SFX_Fey*` sound assets.
+  - `FeyDelights.h/.cpp` (new): `AFeyDelights`. It builds one part per frame, per district:
+    - Fairy rings on a flat-ground search; stepping inside dips the music (`MusicDip`), rings a bell and raises motes.
+    - 23 to 37 puffs and seed heads per district; a scratch or a walk-through releases spores on the existing sprite
+      system.
+    - 3 wisps leading to a hidden pool.
+    - 11 koi under the lily pads that scatter when he lands nearby.
+    - 7 swans crossing below the overlook.
+    - The sun-side rainbow.
+    - 10 Deepwood crows; the odd one flies with a call.
+    - Signposts in Highmeadow and the Maze whose arrows turn while unseen.
+  - `FeyMap.h/.cpp`:
+    - New exports: `LilyPads`, `OverlookAt`, `RapidXAt/WLAt`, `InRiver`, `SignPostsOf`, `SignsTurn`, `SignArrowZ`,
+      `SignSeed` and `SignBoardSurf`.
+    - Turning signs are not baked with their arrows.
+    - Ferns get `M_FeyFern`.
+    - `AChultFoliageFade::Spawn` runs in `Ensure`, so the MPC is fed in the Feywild.
+  - `FeyLife.h/.cpp`:
+    - A second Orchard mite nest.
+    - 6 more Deepwood mites (12 in all).
+    - 4 Deepwood roaming redcaps, leashed at 1350 (7 in all).
+    - 4 more Highmeadow logs and refuges, with 2 more displacer beasts on their own rounds (`MoreBeasts`).
+    - The delights are spawned with the life.
+    - Scratch and clearings include them.
+  - `TempleSkeleton.h/.cpp`: `SetFeyFill` gives redcaps a lighting-channel-2 fill light (Maze 120 cd, elsewhere 80).
+  - `DockGameMode.cpp`: the music volume is multiplied by `AFeyDelights::MusicDip`.
+  - `FeyMapTest.cpp`: life steps 66 to 80 cover the delights. There is a `CHUCK_FEY_DELIGHTS_TEST` summary line.
+  - `docs/regions/FEYWILD.md`: a new section.
+- **Contract:** no rig, clip or character change. New FeyMap exports (additive) and `ATempleSkeleton::SetFeyFill`,
+  which only redcaps call.
+- **Validation (actual):**
+  - Editor life test from step 0: failures=0 (`Local/fey-delights-life-full.log`).
+  - Editor full route walk, 20 min: 0 failures, stuck 0, void 0 (`Local/fey-delights-route.log`). Frame times
+    compared with the wonder-pass walk:
+    - Deepwood 17.60 ms against 17.61 before the crows.
+    - Riverbank 17.65 ms against 17.56.
+    - Other districts about 16.7 ms.
+    - Worst threshold frame 678 ms against 563 before. That hitch predates this work.
+  - Package FeyDelightsCandidate: 50/50 steps, 182 passes, no retries (`Local/verify-package-20261125-000851.log`).
+    - The packaged feyLife step (`Local/verify-fey-life-20261125-012137.log`) built every district's delights with
+      missing=0.
+    - Its counters: `rings=1 wisp_moves=4 koi_scatters=5 bursts=4 sign_turns=8 crow_flights=1`.
+    - The new materials and sounds are cooked (under `/Game/Art`).
+  - Promoted as **FeywildDelights**; the candidate folder is removed.
+  - Editor stills in `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/FeyMap/`: `Life_FairyRing`, `Spores`, `Wisps`,
+    `WispsEnd`, `Koi`, `Swans`, `Rainbow`, `RainbowAgainstSun`, `Crow`, `CrowFlight` and `MazeRedcap`.
+- **Known flaws:**
+  - The plants' reaction is not caught in a still; only the build and material compile were checked.
+  - The wisp test sometimes needs its assist (he is put 450 cm nearer after 8 s without progress).
+  - The swans are small at the overlook's distance.
+  - The 563 to 678 ms threshold hitch predates this work.
+  - The ground under the new beasts' and roaming redcaps' rounds was not checked by hand.
+  - Not played by hand.
+
+Next part of the work can be done here (a hand playtest of the delights and any tuning; the trio's dialogue once the user supplies it).
+
 ## November 24 (fourth) — Feywild: the Crossroads trio was not in the package (Claude)
 
 - **Asked:** the user walked the whole ring path round the Crossroads tree in the launcher build and found no trio.

@@ -153,6 +153,7 @@ private:
     UPROPERTY() TArray<AFeyMite*> Mites;
     UPROPERTY() TArray<ATempleSkeleton*> Redcaps;
     UPROPERTY() AFeyDisplacer* Beast = nullptr;
+    UPROPERTY() TArray<AFeyDisplacer*> MoreBeasts;   // (2026-11-24) Highmeadow's other beasts
     UPROPERTY() UPointLightComponent* FireLight = nullptr;
     UPROPERTY() UPointLightComponent* HagLight = nullptr;
     // (2026-11-22) Its sounds (Tools/build_fey_sfx.py, CC0 recordings): one-shots and the loops (moths' wings, the camp).
