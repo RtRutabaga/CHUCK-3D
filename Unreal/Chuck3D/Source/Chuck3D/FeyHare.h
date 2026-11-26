@@ -21,10 +21,11 @@ class AChuckCharacter;
 //    (BoundSpeed; the displacer beasts chase at 250), Jump a long leap, Roll or the talk key again slides him off and it
 //    stays, calm. Pollen halves it.
 //  - It keeps to its own district's open ground: about 8 m from a threshold's mouth it slows and turns aside, and
-//    pressing on makes it thump a hind foot and turn away. From the overlook's brink and on the way down to the maze it
-//    rears and throws him, then bolts home; so too in deep water or the river, and when an orchid's seed or a lantern
-//    moth hits him (a displacer's lash does not: he stays on). He lands in his CrashLand, no Sanity lost. Nothing saved:
-//    a death or a checkpoint start puts every hare back at home, unridden.
+//    pressing on makes it thump a hind foot and turn away; so too at Highmeadow's western brink (the overlook's drop to the
+//    maze) and at deep water (a stream it wades). (2026-11-26, the user: bucks only where the game needs them) It rears
+//    and throws him only if it is on its way out of its district all the same (on a threshold's way, off its land), then
+//    bolts home; he lands in his CrashLand, no Sanity lost. Bites, seeds and moths do not throw him. Nothing saved: a
+//    death or a checkpoint start puts every hare back at home, unridden.
 UCLASS()
 class CHUCK3D_API AFeyHare : public ACharacter
 {
@@ -87,7 +88,7 @@ public:
     static constexpr float Leash = 2500.f;
     static constexpr float ShyRange = 600.f;
     static constexpr float RefuseRange = 800.f;    // from a threshold's mouth
-    static constexpr float ThrowRange = 1400.f;    // from the overlook, or the way down to the maze
+    static constexpr float BrinkRange = 1700.f;    // from Highmeadow's western edge (the overlook's drop)
     static constexpr float HalfHeight = 40.f;
     static constexpr float Radius = 30.f;
     static constexpr float SeatZ = 7.5f;          // his mesh's origin below the saddle (Tools/build_chuck_v1.py RIDE_SEAT_Z)
@@ -101,7 +102,7 @@ private:
     UPROPERTY() TArray<USoundBase*> Sounds;   // thump, bound, squeal (sets: SoundSets)
     TArray<FIntPoint> SoundSets;
     TWeakObjectPtr<AChuckCharacter> Rider;
-    int32 District = -1, Index = 0, RiderBites = 0, LashSeen = 0, OrchidSeen = 0, MothSeen = 0;
+    int32 District = -1, Index = 0;
     EState State = EState::Graze;
     FVector Home = FVector::ZeroVector, Goal = FVector::ZeroVector, Seat = FVector::ZeroVector;
     FQuat SeatQuat = FQuat::Identity;

@@ -2,6 +2,64 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 26 — Feywild: the hare's legs, entrance herds, throws only when leaving (Claude)
+
+- **Asked:**
+  - The legs look wrong, the forelegs especially: look up real hare anatomy and adjust.
+  - Add more hares near where the player enters each region.
+  - Throw him only where the game needs it, such as leaving the region.
+- **Source:** `main` at 11d0aa5e; this commit. The package's receipt names 11d0aa5, because the work was not yet
+  committed.
+- **Done:** see [regions/FEYWILD-HARE.md](../regions/FEYWILD-HARE.md), "Second pass".
+  - **The legs.** `AFeyHare::BeginPlay` tested each limb bone's local translation to find its child, and those
+    translations carry the import's 1/100 scale. So no limb bone found a child, and every segment was aimed as if it
+    pointed forward.
+    - Children are now found by component-space distance.
+    - Graze and sit-up poses were tuned to real hare anatomy (the research is cited in the session).
+    - The forelegs now stand straight under the shoulders.
+    - Grazing is on straight forelegs, with the neck reaching down.
+    - Sitting up, the forelegs hang down against the chest.
+    - In the bound, the hind feet swing forward past the forefeet.
+  - **Entrance herds.** `AFeyLife::SpawnHares` adds a herd 27 m inside each way in along the route, unless one is within
+    40 m.
+    - Highmeadow now has 8 hares, the Crossroads 4.
+    - The orchard and the Lily Mere get theirs at their ways in.
+  - **Throws.**
+    - `InThrowZone` covers only being off its land or on a threshold's way.
+    - `RefuseDir` refuses every mouth, including the way to the maze, and also Highmeadow's western brink
+      (`BrinkRange` 1700) and deep water ahead.
+    - Bites, seeds and moths no longer throw him, and streams are waded.
+    - Deep water slides him off without a throw.
+- **Changed:** `FeyHare.h/.cpp`, `FeyLife.cpp`, `FeyMapTest.cpp`, `docs/regions/FEYWILD-HARE.md`.
+- **Tests:**
+  - New `hare_near_entrance` (in step 82) and `hare_refuses_brink` (new step 93).
+  - `hare_throws_leaving` replaces `hare_throws_maze`: the hare is put on the maze stair.
+  - `hare_refuses` now requires no throw.
+  - `hares_crossroads` needs at least 4 hares.
+  - A test-only `CHUCK_FEY_HARE_FORE` log of the joints in the pose review.
+- **Contract:** unchanged. The rig is untouched, and Chuck's code was not touched this pass.
+- **Validation (actual):**
+  - Editor hare steps from 92: failures=0 (`Local/hare2-life-1.log`, `Local/hare2-life-2.log`).
+    - Entrance distances: 22.6 m and 26.4 m.
+    - Brink: refused 16.7 m from the edge with no throw.
+    - Refusal at the mouth: closest 7.7 m.
+    - Throw on the maze stair: why=leaving; CrashLand, Sanity unchanged, the hare bolted.
+  - Package: Verify-Package 50/50 with no retries, 182 passes (`Local/verify-package-20261126-105547.log`,
+    `Local/hare2-package.log`). Promoted as FeywildHareLegs. The previous package is kept; FeywildFlaws was pruned.
+- **Evidence:** `Local/hare2-poses-1.png`, `Local/hare2-poses-2.png`, `Local/hare2-ride-sheet.png`;
+  `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/FeyMap/Life_Hare*.png`.
+- **Known flaws:**
+  - Not played by hand after the fixes.
+  - The forelegs are thin where the mesh's elbow folds.
+  - The bound still was occluded by a tree again.
+  - The Lily Mere and orchard entrance herds were not shot or measured. Their placement logs are in the package's life
+    log.
+  - Deep-water refusal and slide-off are untested.
+  - The older flaws stand: logs stop the hare dead, and the camera can dip under logs.
+- **Binary/LFS:** none.
+- **Launcher:** current. It runs this package.
+- **Next owner:** Next part of the work can be done here (a hand playtest of the ride and any tuning it calls for).
+
 ## November 25 (fourth) — Feywild: the great hare (Claude)
 
 - **Asked:** merge `origin/claude/clever-feynman-s6sycn` (the plan), then build the great hare with the plan's own

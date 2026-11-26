@@ -969,13 +969,13 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 AFeyLife* Cl = LifeOf(FeyMap::Crossroads);
                 const int32 N = Cl ? Cl->GetHares().Num() : 0;
                 if (N < 2 && Since < 12.f) return;
-                if (R->OrchidSub == 0) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_CROSSROADS hares=%d"), N); Check(N == 2, TEXT("hares_crossroads")); R->OrchidSub = 1; R->MinDist = Since; }
+                if (R->OrchidSub == 0) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_CROSSROADS hares=%d"), N); Check(N >= 4, TEXT("hares_crossroads")); R->OrchidSub = 1; R->MinDist = Since; }
                 if (N >= 1) { const FVector L = FeyLocal(Cl->GetHares()[0]->GetActorLocation()); Cam(L + FVector(260.f, 200.f, 90.f), L + FVector(0, 0, 30.f)); }
                 if (R->OrchidSub == 1 && Since - R->MinDist > 1.5f) { Shot(TEXT("HareCrossroads")); R->OrchidSub = 2; }
                 if (Since - R->MinDist < 1.8f) return;
                 Uncam(); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 82; R->PhaseStart = Now; return;
             }
-            case 82: case 83: case 84: case 85: case 86: case 87: case 88: case 89: case 90: case 91:
+            case 82: case 83: case 84: case 85: case 86: case 87: case 88: case 89: case 90: case 91: case 93:
             {
                 if (Step == 82 && !R->bPlaced) { Map->LoadNow(Highmeadow); Chuck->ResetAtLocation(FeyCheckpointWorld(Highmeadow)); AFeyHare::bTestStick = false; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return; }
                 AFeyLife* Hl = LifeOf(Highmeadow);
@@ -988,7 +988,20 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 switch (Step)
                 {
                 case 82:
-                    if (R->OrchidSub == 0) { Check(Hares.Num() >= 4, TEXT("hares_spawned")); R->OrchidSub = 1; R->MinDist = Since; }
+                    if (R->OrchidSub == 0)
+                    {
+                        Check(Hares.Num() >= 4, TEXT("hares_spawned"));
+                        // (2026-11-26) a herd just inside each way in from the Crossroads and the Deepwood
+                        for (int32 Th = 0; Th < Thresholds; ++Th)
+                        {
+                            const FThreshold& Wy = Threshold(Th);
+                            if (Wy.B != Highmeadow || (Wy.A != FeyMap::Crossroads && Wy.A != FeyMap::Deepwood)) continue;
+                            float Near = 1e9f; for (int32 I = 0; I < Hares.Num(); ++I) Near = FMath::Min(Near, static_cast<float>(FVector2D::Distance(FVector2D(FeyLocal(Hares[I]->GetHome())), Wy.PB)));
+                            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_ENTRANCE from=%s nearest=%.0f hares=%d"), FeyMap::District(Wy.A).Name, Near, Hares.Num());
+                            Check(Near < 4500.f, TEXT("hare_near_entrance"));
+                        }
+                        R->OrchidSub = 1; R->MinDist = Since;
+                    }
                     Behind(Hares[0], 260.f, 40.f);
                     if (Since - R->MinDist > 2.5f && R->OrchidSub == 1) { Shot(TEXT("HareGraze")); R->OrchidSub = 2; }
                     if (Since - R->MinDist < 3.f) return;
@@ -1071,35 +1084,53 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     AFeyHare* H = Chuck->GetRideMount(); if (!H) { Check(false, TEXT("hare_refuses")); R->CrackStep = 89; return; }
                     FVector2D Mouth = FVector2D::ZeroVector; for (int32 Th = 0; Th < Thresholds; ++Th) if (Threshold(Th).A == FeyMap::Crossroads && Threshold(Th).B == Highmeadow) Mouth = Threshold(Th).PB;
                     const FVector Start = FVector(Mouth + FVector2D(-1500.f, 300.f), 0.f);
-                    if (!R->bPlaced) { if (Since < .6f) { Chuck->SetTestStickWorld(FVector::ZeroVector); return; } float Z = 0; GroundAt(Start.X, Start.Y, Z); H->SetActorLocationAndRotation(FeyWorld(FVector(Start.X, Start.Y, Z + AFeyHare::HalfHeight + 4.f)), (FVector(Mouth, 0.f) - Start).Rotation(), false, nullptr, ETeleportType::TeleportPhysics); R->Hits0 = AFeyHare::Refusals; R->MinDist = 1e9f; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return; }
+                    if (!R->bPlaced) { if (Since < .6f) { Chuck->SetTestStickWorld(FVector::ZeroVector); return; } float Z = 0; GroundAt(Start.X, Start.Y, Z); H->SetActorLocationAndRotation(FeyWorld(FVector(Start.X, Start.Y, Z + AFeyHare::HalfHeight + 4.f)), (FVector(Mouth, 0.f) - Start).Rotation(), false, nullptr, ETeleportType::TeleportPhysics); R->Hits0 = AFeyHare::Refusals; R->Hits1 = AFeyHare::Throws; R->MinDist = 1e9f; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return; }
                     const FVector L = FeyLocal(H->GetActorLocation());
                     R->MinDist = FMath::Min(R->MinDist, FVector2D::Distance(FVector2D(L), Mouth));
                     if (Since < 5.f) { Drive(FVector(Mouth, 0.f) - L); Cam(L + FVector(-300.f, -380.f, 160.f), L + FVector(0, 0, 40.f)); if (R->OrchidSub == 0 && H->GetState() == AFeyHare::EState::Refuse) { Shot(TEXT("HareRefuse")); R->OrchidSub = 1; } return; }
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_REFUSE refusals=%d closest=%.0f riding=%d"), AFeyHare::Refusals - R->Hits0, R->MinDist, Chuck->IsRiding() ? 1 : 0);
-                    Check(AFeyHare::Refusals > R->Hits0 && R->MinDist > 450.f && Chuck->IsRiding(), TEXT("hare_refuses"));
-                    Uncam(); Chuck->SetTestStickWorld(FVector::ZeroVector); R->bPlaced = false; R->CrackStep = 88; R->PhaseStart = Now; return;
+                    Check(AFeyHare::Refusals > R->Hits0 && R->MinDist > 450.f && Chuck->IsRiding() && AFeyHare::Throws == R->Hits1, TEXT("hare_refuses"));
+                    Uncam(); Chuck->SetTestStickWorld(FVector::ZeroVector); R->bPlaced = false; R->CrackStep = 93; R->PhaseStart = Now; return;
                 }
-                case 88:   // on toward the overlook (the way to the maze): it rears and throws him; no Sanity lost; it bolts home
+                case 93:   // (2026-11-26) at a run toward the overlook's brink: it refuses (thump, turn away), never over, never a throw
                 {
-                    AFeyHare* H = Chuck->GetRideMount();
+                    AFeyHare* H = Chuck->GetRideMount(); if (!H) { Check(false, TEXT("hare_refuses_brink")); R->CrackStep = 89; return; }
                     const FVector2D Ov = OverlookAt();
                     if (!R->bPlaced)
                     {
-                        if (!H) { Check(false, TEXT("hare_throws_maze")); R->CrackStep = 89; return; }
                         if (Since < .6f) { Chuck->SetTestStickWorld(FVector::ZeroVector); return; }
-                        const FVector2D Dir = (FVector2D(FeyMap::District(Highmeadow).Hub) - Ov).GetSafeNormal();
-                        const FVector Start(Ov + Dir * (AFeyHare::ThrowRange + 900.f), 0.f);
+                        const FVector2D Start = Ov + FVector2D(3200.f, -600.f);
                         float Z = 0; GroundAt(Start.X, Start.Y, Z);
-                        H->SetActorLocationAndRotation(FeyWorld(FVector(Start.X, Start.Y, Z + AFeyHare::HalfHeight + 4.f)), FVector(-Dir, 0.f).Rotation(), false, nullptr, ETeleportType::TeleportPhysics);
-                        R->Hits0 = AFeyHare::Throws; R->Hits1 = Chuck->GetCrashLands(); R->Aimed0 = Chuck->GetSanity(); R->PadAt = FVector(Start); R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return;
+                        H->SetActorLocationAndRotation(FeyWorld(FVector(Start.X, Start.Y, Z + AFeyHare::HalfHeight + 4.f)), FRotator(0, 180.f, 0), false, nullptr, ETeleportType::TeleportPhysics);
+                        R->Hits0 = AFeyHare::Refusals; R->Hits1 = AFeyHare::Throws; R->MinDist = 1e9f; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return;
                     }
+                    const FVector L = FeyLocal(H->GetActorLocation());
+                    R->MinDist = FMath::Min(R->MinDist, static_cast<float>(L.X - FeyMap::District(Highmeadow).X0));
+                    if (Since < 6.f) { Chuck->SetRunHeld(true); Drive(FVector(-1.f, 0.f, 0.f)); Cam(L + FVector(250.f, -420.f, 170.f), L + FVector(0, 0, 50.f)); if (R->OrchidSub == 0 && H->GetState() == AFeyHare::EState::Refuse) { Shot(TEXT("HareBrink")); R->OrchidSub = 1; } return; }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_BRINK refusals=%d throws=%d from_edge=%.0f riding=%d"), AFeyHare::Refusals - R->Hits0, AFeyHare::Throws - R->Hits1, R->MinDist, Chuck->IsRiding() ? 1 : 0);
+                    Check(AFeyHare::Refusals > R->Hits0 && AFeyHare::Throws == R->Hits1 && Chuck->IsRiding() && R->MinDist > 600.f, TEXT("hare_refuses_brink"));
+                    Uncam(); Chuck->SetTestStickWorld(FVector::ZeroVector); Chuck->SetRunHeld(false); R->bPlaced = false; R->CrackStep = 88; R->PhaseStart = Now; return;
+                }
+                case 88:   // put on the way down to the maze itself (its refusals keep it from there in play): it rears and throws him; no Sanity lost; it bolts home
+                {
+                    AFeyHare* H = Chuck->GetRideMount();
+                    int32 Way = -1; for (int32 Th = 0; Th < Thresholds; ++Th) if (Threshold(Th).A == Highmeadow && Threshold(Th).B == FeyMap::Maze) Way = Th;
+                    if (!R->bPlaced)
+                    {
+                        if (!H || Way < 0) { Check(false, TEXT("hare_throws_leaving")); R->CrackStep = 89; return; }
+                        if (Since < .6f) { Chuck->SetTestStickWorld(FVector::ZeroVector); return; }
+                        const FVector Start = ThresholdAtT(Way, .12f), Next = ThresholdAtT(Way, .2f);
+                        H->SetActorLocationAndRotation(FeyWorld(Start + FVector(0, 0, AFeyHare::HalfHeight + 4.f)), (Next - Start).GetSafeNormal2D().Rotation(), false, nullptr, ETeleportType::TeleportPhysics);
+                        R->Hits0 = AFeyHare::Throws; R->Hits1 = Chuck->GetCrashLands(); R->Aimed0 = Chuck->GetSanity(); R->PadAt = Start; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return;
+                    }
+                    const FVector Ov = Way >= 0 ? ThresholdAtT(Way, .5f) : FVector::ZeroVector;
                     AFeyHare* Thrower = nullptr; for (AFeyHare* Q : Hares) if (Q->GetState() == AFeyHare::EState::Rear || Q->GetState() == AFeyHare::EState::Bolt) Thrower = Q;
-                    if (H) { const FVector L = FeyLocal(H->GetActorLocation()); Drive(FVector(Ov, 0.f) - L); Cam(L + FVector(250.f, -420.f, 170.f), L + FVector(0, 0, 50.f)); if (R->OrchidSub == 0 && H->GetState() == AFeyHare::EState::Rear) { Shot(TEXT("HareRear")); R->OrchidSub = 1; } }
+                    if (H) { const FVector L = FeyLocal(H->GetActorLocation()); Drive(Ov - L); Cam(L + FVector(250.f, -420.f, 170.f), L + FVector(0, 0, 50.f)); if (R->OrchidSub == 0 && H->GetState() == AFeyHare::EState::Rear) { Shot(TEXT("HareRear")); R->OrchidSub = 1; } }
                     else if (R->OrchidSub < 2) { const FVector L = FeyLocal(Chuck->GetActorLocation()); Cam(L + FVector(250.f, -420.f, 170.f), L); if (Chuck->GetCrashLands() > R->Hits1) { Shot(TEXT("HareThrown")); R->OrchidSub = 2; } }
                     if (Since < 9.f && (Chuck->IsRiding() || Chuck->IsThrown())) return;
                     if (Since < 9.f && R->OrchidSub < 2) return;
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_THROW throws=%d why=%s crash=%d sanity=%d->%d thrower=%s"), AFeyHare::Throws - R->Hits0, *AFeyHare::LastThrow, Chuck->GetCrashLands() - R->Hits1, R->Aimed0, Chuck->GetSanity(), Thrower ? Thrower->GetStateName() : TEXT("none"));
-                    Check(AFeyHare::Throws > R->Hits0 && AFeyHare::LastThrow == TEXT("maze"), TEXT("hare_throws_maze"));
+                    Check(AFeyHare::Throws > R->Hits0 && AFeyHare::LastThrow == TEXT("leaving"), TEXT("hare_throws_leaving"));
                     Check(Chuck->GetCrashLands() > R->Hits1, TEXT("hare_throw_crashland"));
                     Check(Chuck->GetSanity() == R->Aimed0, TEXT("hare_throw_no_sanity"));
                     Check(Thrower && Thrower->GetState() == AFeyHare::EState::Bolt, TEXT("hare_bolts"));

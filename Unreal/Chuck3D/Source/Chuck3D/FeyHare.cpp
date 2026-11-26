@@ -102,10 +102,16 @@ void AFeyHare::BeginPlay()
         // transforms carry a mirroring scale, and composing rotations through them sent the limbs astray.
         RestT = Rest; RestHead.SetNum(N); RestDir.SetNum(N); Head.SetNum(N); Turned.Init(FQuat::Identity, N); BoneLen.SetNum(N);
         TArray<int32> ChildIdx; ChildIdx.Init(INDEX_NONE, N);
-        for (int32 B = 0; B < N; ++B) if (Parent[B] >= 0 && Local[B].GetTranslation().Size() > .5f) ChildIdx[Parent[B]] = B;
+        for (int32 B = 0; B < N; ++B) RestHead[B] = Rest[B].GetTranslation();
+        // (2026-11-26) By component-space distance: the local translations carry the import's 1/100 scale, so a test on
+        // them found no child for any limb bone, and every leg was aimed as if it pointed forward (the forelegs folded up
+        // into the chest).
+        for (int32 B = 0; B < N; ++B) if (Parent[B] >= 0 && FVector::Dist(RestHead[B], RestHead[Parent[B]]) > .5f) ChildIdx[Parent[B]] = B;
         auto Prefer = [&](int32 B, int32 C) { if (B != INDEX_NONE && C != INDEX_NONE) ChildIdx[B] = C; };
         Prefer(Bone[BSpine], Bone[BChest]); Prefer(Bone[BChest], Bone[BNeck]); Prefer(Bone[BNeck], Bone[BHead]);
-        for (int32 B = 0; B < N; ++B) RestHead[B] = Rest[B].GetTranslation();
+        Prefer(Bone[BFUpL], Bone[BFLoL]); Prefer(Bone[BFLoL], Bone[BFPawL]); Prefer(Bone[BFUpR], Bone[BFLoR]); Prefer(Bone[BFLoR], Bone[BFPawR]);
+        Prefer(Bone[BThighL], Bone[BShinL]); Prefer(Bone[BShinL], Bone[BFootL]); Prefer(Bone[BFootL], Bone[BToeL]);
+        Prefer(Bone[BThighR], Bone[BShinR]); Prefer(Bone[BShinR], Bone[BFootR]); Prefer(Bone[BFootR], Bone[BToeR]);
         for (int32 B = 0; B < N; ++B) { RestDir[B] = ChildIdx[B] != INDEX_NONE ? RestHead[ChildIdx[B]] - RestHead[B] : FVector(10.f, 0, 0); }
         // (the end bones: toward the paw's and the toe's tips, Tools/build_fey_hare.py BONES)
         for (int32 B : {Bone[BFPawL], Bone[BFPawR]}) if (B != INDEX_NONE) RestDir[B] = FVector(8.f, 0, -5.5f);
@@ -191,42 +197,40 @@ bool AFeyHare::OpenGround(const FVector& World) const
 
 bool AFeyHare::InThrowZone(const FVector& World) const
 {
+    // (2026-11-26, the user: bucks only where the game needs them) Only on its way out of its district: off its land, or on
+    // a threshold's way. Its refusals keep it from getting there; this is the last resort.
     const FVector L = FeyLocal(World);
-    if (FeyMap::InDeepWater(L.X, L.Y) || FeyMap::InRiver(District, L.X, L.Y)) return true;
-    if (District == FeyMap::Highmeadow)
-    {
-        if (FVector2D::Distance(FeyMap::OverlookAt(), FVector2D(L)) < ThrowRange) return true;
-        for (int32 Th = 0; Th < FeyMap::Thresholds; ++Th)
-        {
-            const FeyMap::FThreshold& W = FeyMap::Threshold(Th);
-            if (W.A == FeyMap::Highmeadow && W.B == FeyMap::Maze && FVector2D::Distance(W.PA, FVector2D(L)) < ThrowRange) return true;
-        }
-    }
-    float T; const int32 Th = FeyMap::ThresholdAt(L, T);
-    return Th >= 0 && FeyMap::Threshold(Th).B == FeyMap::Maze;
+    if (FeyMap::DistrictAt(L.X, L.Y) != District) return true;
+    float T; return FeyMap::ThresholdAt(L, T) >= 0;
 }
 
 bool AFeyHare::RefuseDir(const FVector& World, FVector& Dir) const
 {
-    // Near a threshold's mouth on its own side, it will not go on toward it: the way toward the mouth is taken out.
+    // Near a threshold's mouth on its own side (the way down to the maze too), it will not go on toward it: the way toward
+    // the mouth is taken out.
     const FVector2D L(FeyLocal(World));
     bool bRefused = false;
     for (int32 Th = 0; Th < FeyMap::Thresholds; ++Th)
     {
         const FeyMap::FThreshold& W = FeyMap::Threshold(Th);
-        if (W.A == FeyMap::Highmeadow && W.B == FeyMap::Maze) continue;   // (that way it throws him instead)
         const FVector2D* Mouth = W.A == District ? &W.PA : W.B == District ? &W.PB : nullptr;
         if (!Mouth) continue;
         const FVector2D To = *Mouth - L; const float D = To.Size();
         if (D > RefuseRange) continue;
         const FVector N(To.X / D, To.Y / D, 0.f);
         const float Toward = FVector::DotProduct(Dir, N);
-        if (Toward > 0.f) { Dir -= N * Toward * (D < RefuseRange * .75f ? 1.25f : 1.f); bRefused = Toward > .35f; }
+        if (Toward > 0.f) { Dir -= N * Toward * (D < RefuseRange * .75f ? 1.25f : 1.f); bRefused |= Toward > .35f; }
     }
-    // ...and never leaves its district's land.
+    // Highmeadow's western brink (the overlook's drop to the maze): it will not go over.
+    if (District == FeyMap::Highmeadow)
+    {
+        const float Edge = FeyMap::District(District).X0 + BrinkRange;
+        if (L.X < Edge && Dir.X < 0.f) { const float Toward = static_cast<float>(-Dir.X); Dir.X += Toward * (L.X < Edge - 400.f ? 1.25f : 1.f); bRefused |= Toward > .35f; }
+    }
+    // ...never leaves its district's land, and will not go into deep water (a stream it wades).
     const FVector Ahead = World + Dir.GetSafeNormal2D() * 300.f;
     const FVector La = FeyLocal(Ahead);
-    if (FeyMap::DistrictAt(La.X, La.Y) != District) { Dir = -Dir * .2f; bRefused = true; }
+    if (FeyMap::DistrictAt(La.X, La.Y) != District || FeyMap::InDeepWater(La.X, La.Y)) { Dir = -Dir * .2f; bRefused = true; }
     return bRefused;
 }
 
@@ -300,8 +304,6 @@ bool AFeyHare::Mount(AChuckCharacter* Chuck)
     Rider = Chuck;
     MoveIgnoreActorAdd(Chuck);
     if (!Chuck->BeginRide(this)) { Rider.Reset(); MoveIgnoreActorRemove(Chuck); return false; }
-    RiderBites = Chuck->GetBitesTaken();
-    LashSeen = AFeyDisplacer::LashHits; OrchidSeen = AFeyLife::OrchidHits; MothSeen = AFeyLife::MothTouches;
     SetState(EState::Ridden);
     ++Mounts;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_MOUNT hare=%d district=%s at=%s"), Index, FeyMap::District(District).Name, *FeyLocal(GetActorLocation()).ToCompactString());
@@ -440,17 +442,10 @@ void AFeyHare::Ride(float Dt)
     if (!Chuck) { SetState(EState::Alert, 2.f); return; }
     if (Chuck->IsRideMounting()) { Steer(FVector::ZeroVector, 0.f); return; }
     const FVector At = GetActorLocation();
-    // What throws him: the way down to the maze, deep water, an orchid's seed or a moth's touch (a displacer's lash does
-    // not: it costs him Sanity and he stays on).
-    if (Chuck->GetBitesTaken() != RiderBites)
-    {
-        RiderBites = Chuck->GetBitesTaken();
-        const bool bLash = AFeyDisplacer::LashHits != LashSeen;
-        if (!bLash && (AFeyLife::OrchidHits != OrchidSeen || AFeyLife::MothTouches != MothSeen)) { Throw(AFeyLife::OrchidHits != OrchidSeen ? TEXT("seed") : TEXT("moth")); }
-    }
-    LashSeen = AFeyDisplacer::LashHits; OrchidSeen = AFeyLife::OrchidHits; MothSeen = AFeyLife::MothTouches;
-    if (State == EState::Rear) return;
-    if (InThrowZone(At)) { const FVector L = FeyLocal(At); Throw(FeyMap::InDeepWater(L.X, L.Y) || FeyMap::InRiver(District, L.X, L.Y) ? TEXT("water") : TEXT("maze")); return; }
+    // (2026-11-26, the user: bucks only where the game needs them) Bites, seeds and moths no longer throw him; he stays on.
+    // Only its way out of the district does (InThrowZone), and deep water slides him off.
+    if (InThrowZone(At)) { Throw(TEXT("leaving")); return; }
+    { const FVector L = FeyLocal(At); if (FeyMap::InDeepWater(L.X, L.Y)) { Dismount(); return; } }
     if (State == EState::Refuse)
     {
         // A thump of a hind foot, and it turns away from where it would not go.
@@ -557,8 +552,8 @@ void AFeyHare::Pose(float Dt)
     const float W = 2.f * PI * Phase;
     // The body: its bob and pitch in the bound, crouched when still, grazing nose down, sitting up, rearing.
     const float Bob = A * (4.5f * FMath::Cos(2.f * PI * (Phase - .85f)) + 1.8f * FMath::Cos(4.f * PI * (Phase - .33f))) + (1 - A) * Gait * 2.f * FMath::Abs(FMath::Sin(W));
-    const float BodyPitch = -6.f * A * FMath::Cos(2.f * PI * (Phase - .1f)) - 5.f * GrazeW + 48.f * SitW * (1.f - RearW) + 66.f * RearW + Slope + 6.f * AirW * (1.f - A);
-    const float Drop = 7.f * Crouch + 4.f * GrazeW;
+    const float BodyPitch = -6.f * A * FMath::Cos(2.f * PI * (Phase - .1f)) - 1.f * GrazeW + 3.f * Crouch * (1.f - SitW) + 48.f * SitW * (1.f - RearW) + 66.f * RearW + Slope + 6.f * AirW * (1.f - A);
+    const float Drop = 3.f * Crouch + 1.f * GrazeW;   // (2026-11-26: a hare grazes on straight forelegs; the crouch is in its hind legs)
     const float Flex = A * 13.f * FMath::Cos(2.f * PI * (Phase - .45f)) - 10.f * AirW + 6.f * Crouch;
     const FVector Pivot = FVector(-26.f, 0, 22.f) * FMath::Max(SitW, RearW) + FVector(-4.f, 0, 60.f) * (1.f - FMath::Max(SitW, RearW));
     const FQuat BodyQ = PitchQ(BodyPitch) * RollQ(Lean);
@@ -593,9 +588,9 @@ void AFeyHare::Pose(float Dt)
         else { Turned[B] = FQuat::Identity; Head[B] = RestHead[B]; }
         auto Turn = [&](const FQuat& Q) { Turned[B] = (Q * Turned[B]).GetNormalized(); };
         if (B == Bone[BSpine]) { Turned[B] = BodyQ * Turned[B]; Head[B] = BodyQ.RotateVector(Head[B]) + BodyT; }
-        else if (B == Bone[BChest]) Turn(PitchQ(-Flex * .6f - 6.f * GrazeW));
+        else if (B == Bone[BChest]) Turn(PitchQ(-Flex * .6f - 2.f * GrazeW));
         else if (B == Bone[BHips]) Turn(PitchQ(Flex * .7f + 18.f * SitW * (1.f - RearW)));
-        else if (B == Bone[BNeck]) Turn(PitchQ(-48.f * GrazeW + 8.f * SitW - 10.f * A + 8.f * RearW) * YawQ(EarTurn * .3f * (1.f - GrazeW)));
+        else if (B == Bone[BNeck]) Turn(PitchQ(-58.f * GrazeW + 8.f * SitW - 10.f * A + 8.f * RearW) * YawQ(EarTurn * .3f * (1.f - GrazeW)));
         else if (B == Bone[BHead]) Turn(PitchQ(-22.f * GrazeW + 3.f * GrazeW * Nib - 40.f * SitW * (1.f - RearW) - 50.f * RearW + 8.f * A - BodyPitch * .5f * (1.f - GrazeW) + 1.f * FMath::Sin(Clock * 37.f) * (1 - A)));
         else if (B == Bone[BEar1L] || B == Bone[BEar1R]) { const float S = B == Bone[BEar1L] ? 1.f : -1.f; Turn(PitchQ(62.f * EarBack + 12.f * GrazeW) * RollQ(S * (8.f * GrazeW + 10.f * EarBack)) * YawQ(EarTurn * S)); }
         else if (B == Bone[BEar2L] || B == Bone[BEar2R]) Turn(PitchQ(10.f * EarBack + 6.f * A * FMath::Sin(W * 2.f)));
@@ -610,11 +605,11 @@ void AFeyHare::Pose(float Dt)
             FVector Toe = FootGoal[I];
             // Sitting up or rearing, the forefeet come off the ground and hang (they paw at the air rearing).
             const float Up = FMath::Max(SitW, RearW);
-            const FVector Hang = Root + BodyQ.RotateVector(FVector(8.f + 6.f * RearW * FMath::Sin(Clock * 14.f + I * 2.f), 0.f, -26.f + 4.f * RearW * FMath::Cos(Clock * 14.f + I * 2.f)));
+            const FVector Hang = Root + FVector(4.f + 14.f * RearW + 6.f * RearW * FMath::Sin(Clock * 14.f + I * 2.f), 0.f, -30.f + 10.f * RearW + 4.f * RearW * FMath::Cos(Clock * 14.f + I * 2.f));   // (straight down from the shoulder sitting up; pawing forward rearing)
             const float PawA = FMath::DegreesToRadians(HeelLift[I]);
             FVector Wrist = Toe - FVector(FMath::Cos(PawA), 0.f, -FMath::Sin(PawA)) * 9.6f;
             Wrist = FMath::Lerp(Wrist, Hang, Up);
-            const FVector K = Knee(Root, Wrist, La, Lb, BodyQ.RotateVector(FVector(-1.f, 0.f, .15f)));
+            const FVector K = Knee(Root, Wrist, La, Lb, FMath::Lerp(BodyQ.RotateVector(FVector(-1.f, 0.f, .15f)), FVector(-1.f, 0.f, .1f), Up));
             Aim(B, K - Root);
         }
         else if (B == Bone[BFLoL] || B == Bone[BFLoR])
@@ -623,7 +618,7 @@ void AFeyHare::Pose(float Dt)
             const float Up = FMath::Max(SitW, RearW);
             const float PawA = FMath::DegreesToRadians(HeelLift[I]);
             const FVector Root = Head[Bone[I ? BFUpR : BFUpL]];
-            const FVector Hang = Root + BodyQ.RotateVector(FVector(8.f + 6.f * RearW * FMath::Sin(Clock * 14.f + I * 2.f), 0.f, -26.f + 4.f * RearW * FMath::Cos(Clock * 14.f + I * 2.f)));
+            const FVector Hang = Root + FVector(4.f + 14.f * RearW + 6.f * RearW * FMath::Sin(Clock * 14.f + I * 2.f), 0.f, -30.f + 10.f * RearW + 4.f * RearW * FMath::Cos(Clock * 14.f + I * 2.f));   // (straight down from the shoulder sitting up; pawing forward rearing)
             const FVector Wrist = FMath::Lerp(FootGoal[I] - FVector(FMath::Cos(PawA), 0.f, -FMath::Sin(PawA)) * 9.6f, Hang, Up);
             Aim(B, Wrist - Head[B]);
         }
@@ -668,6 +663,10 @@ void AFeyHare::Pose(float Dt)
         Body->SetBoneTransformByName(Names[B], Space[B], EBoneSpaces::ComponentSpace);
     }
     Body->MarkRefreshTransformDirty();
+    if (bHeld && FMath::Frac(Clock) < Dt)
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_FORE state=%s goal=%s shoulder=%s elbow=%s wrist=%s pawtip=%s | hip=%s knee=%s hock=%s"), GetStateName(), *FootGoal[0].ToCompactString(),
+               *Head[Bone[BFUpL]].ToCompactString(), *Head[Bone[BFLoL]].ToCompactString(), *Head[Bone[BFPawL]].ToCompactString(), *(Head[Bone[BFPawL]] + Turned[Bone[BFPawL]].RotateVector(RestDir[Bone[BFPawL]])).ToCompactString(),
+               *Head[Bone[BThighL]].ToCompactString(), *Head[Bone[BShinL]].ToCompactString(), *Head[Bone[BFootL]].ToCompactString());
     // His seat on its back (world), turned with its body.
     const FTransform C = Body->GetComponentTransform();
     Seat = C.TransformPosition(Head[Bone[BSaddle]]);

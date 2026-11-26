@@ -612,6 +612,31 @@ void AFeyLife::SpawnHares()
     case LilyMere: Want = {FVector2D(-63000.f, 34000.f)}; break;
     default: return;
     }
+    // (2026-11-26, the user: a mount soon after he comes in) A herd more just inside each way he arrives by on the way
+    // through (the Riverbank into the orchard, the orchard into the Crossroads, the Crossroads into the Lily Mere and
+    // Highmeadow, the Deepwood into Highmeadow): 27 m in from the mouth, 7 m beside the way in, unless a herd is already near.
+    const int32 HomeHerds = Want.Num();
+    {
+        TArray<int32> From;
+        switch (District)
+        {
+        case Highmeadow: From = {FeyMap::Crossroads, FeyMap::Deepwood}; break;
+        case FeyMap::Crossroads: From = {Orchard}; break;
+        case Orchard: From = {FeyMap::Riverbank}; break;
+        case LilyMere: From = {FeyMap::Crossroads}; break;
+        default: break;
+        }
+        for (int32 Th = 0; Th < FeyMap::Thresholds; ++Th)
+        {
+            const FeyMap::FThreshold& W = FeyMap::Threshold(Th);
+            const bool bA = W.A == District && From.Contains(W.B), bB = W.B == District && From.Contains(W.A);
+            if (!bA && !bB) continue;
+            const FVector2D Mouth = bA ? W.PA : W.PB, In = (Mouth - (bA ? W.PB : W.PA)).GetSafeNormal(), Side(-In.Y, In.X);
+            const FVector2D Q = Mouth + In * 2700.f + Side * 700.f;
+            bool bNear = false; for (const FVector2D& O : Want) bNear |= FVector2D::Distance(O, Q) < 4000.f;
+            if (!bNear) Want.Add(Q);
+        }
+    }
     const FDistrict& Ds = FeyMap::District(District);
     int32 Why[8] = {};   // (rejections: bounds, water/slope, threshold, orchid, pollen, overlook/clearing, prop over it, room)
     auto Good = [&](const FVector2D& Q) -> bool
@@ -630,7 +655,7 @@ void AFeyLife::SpawnHares()
         }
         for (const FFeyOrchid& O : Orchids) if (FVector2D::Distance(FVector2D(O.Pos), Q) < O.Range + 800.f) { ++Why[3]; return false; }
         for (const FFeyPollen& Pb : Pollen) if (FVector2D::Distance(Pb.C, Q) < FMath::Max(Pb.R.X, Pb.R.Y) + 300.f) { ++Why[4]; return false; }
-        if (District == Highmeadow && FVector2D::Distance(FeyMap::OverlookAt(), Q) < AFeyHare::ThrowRange + 2500.f) { ++Why[5]; return false; }
+        if (District == Highmeadow && FVector2D::Distance(FeyMap::OverlookAt(), Q) < 3900.f) { ++Why[5]; return false; }
         for (const FVector& C : FeyLifeClearings()) if (FVector2D::Distance(FVector2D(C.X, C.Y), Q) < C.Z + 250.f) { ++Why[5]; return false; }
         // Nothing standing on it: the land itself under a trace from above, and room at a hare's height.
         const float Z = LandZ(District, Q.X, Q.Y);
@@ -650,14 +675,14 @@ void AFeyLife::SpawnHares()
     for (int32 Hd = 0; Hd < Want.Num(); ++Hd)
     {
         FVector2D Home = Want[Hd]; bool bFound = false;
-        for (int32 Ring = 0; Ring <= 8 && !bFound; ++Ring)
+        for (int32 Ring = 0; Ring <= (Hd < HomeHerds ? 8 : 5) && !bFound; ++Ring)
             for (int32 K = 0; K < FMath::Max(1, Ring * 6) && !bFound; ++K)
             {
                 const float Ang = 2.f * PI * K / FMath::Max(1, Ring * 6) + Ring * .7f;
                 const FVector2D Q = Want[Hd] + FVector2D(FMath::Cos(Ang), FMath::Sin(Ang)) * (Ring * 450.f);
                 if (Good(Q)) { Home = Q; bFound = true; }
             }
-        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_HERD district=%s herd=%d home=%.0f,%.0f found=%d moved=%.0f rejected=%d/%d/%d/%d/%d/%d/%d/%d"), Ds.Name, Hd, Home.X, Home.Y, bFound ? 1 : 0, FVector2D::Distance(Home, Want[Hd]), Why[0], Why[1], Why[2], Why[3], Why[4], Why[5], Why[6], Why[7]);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_HERD district=%s herd=%d entrance=%d home=%.0f,%.0f found=%d moved=%.0f rejected=%d/%d/%d/%d/%d/%d/%d/%d"), Ds.Name, Hd, Hd >= HomeHerds ? 1 : 0, Home.X, Home.Y, bFound ? 1 : 0, FVector2D::Distance(Home, Want[Hd]), Why[0], Why[1], Why[2], Why[3], Why[4], Why[5], Why[6], Why[7]);
         FMemory::Memzero(Why);
         if (!bFound) continue;
         for (int32 K = 0; K < 2; ++K)

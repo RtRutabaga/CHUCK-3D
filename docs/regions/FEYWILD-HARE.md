@@ -157,3 +157,47 @@ the coats a mix across each herd, from moss-grey to dusk-gold.
   - Displacer lashes are told apart from seeds and moths by the counters (`LashHits`).
   - The plan's thorns throw does not apply: no hare reaches thorns (there are none in its districts).
   - Redcap Hollow is the Deepwood's, where no hare goes.
+
+## Second pass (2026-11-26, after the user's play)
+
+The user found the forelegs wrong, too few hares where they come in, and many throws without a clear cause.
+
+- **Legs.** The leg solver found no child joint for any limb bone. The import's 1/100 scale on local translations hid
+  them below the cutoff, so every segment was aimed as if it pointed forward.
+  - The forelegs folded up into the chest. The hind legs were right only by chance, with the hock trailing far behind.
+  - Children are now found by component-space distance (`AFeyHare::BeginPlay`).
+  - The poses follow a real hare:
+    - **Forelegs:** slim, nearly straight under the shoulder, with the elbow back.
+    - **Hind legs:** the long foot runs to a raised heel. In the bound the hind feet swing forward past the forefeet
+      (the hare's overreach in the gallop).
+    - **Grazing:** on straight forelegs, with the crouch in the hind legs and the neck reaching down.
+    - **Sitting up:** the forelegs hang straight down against the chest.
+  - Evidence: `Local/hare2-poses-1.png` (all poses) and `Local/hare2-poses-2.png` (graze, sit, hop, bound, rear after
+    tuning).
+- **Hares at the ways in.** One more herd of two just inside each way the player arrives by on the route through:
+  - the Riverbank into the orchard;
+  - the orchard into the Crossroads (the second mouth already had the Crossroads herd within 40 m);
+  - the Crossroads into the Lily Mere (two mouths) and into Highmeadow;
+  - the Deepwood into Highmeadow.
+
+  Each herd is placed 27 m in from the mouth and 7 m beside the way in. Its home search is limited to 5 rings
+  (about 22 m).
+  - Measured in Highmeadow: the nearest hare is 22.6 m from the Crossroads mouth and 26.4 m from the Deepwood mouth
+    (test `hare_near_entrance`). Highmeadow has 8 hares, the Crossroads 4.
+- **Throws only where the game needs them.** The causes of the throws he saw:
+  - the overlook and the way down to the maze, each counted from 14 m away;
+  - any wade through Highmeadow's stream;
+  - any orchid seed or moth hit.
+
+  Now:
+  - The hare refuses (thump, turn away) at every threshold mouth, including the way down to the maze. It also refuses
+    within 17 m of Highmeadow's western brink (the overlook's drop) and at deep water.
+  - It wades streams.
+  - Bites, seeds and moths never throw him.
+  - It throws him only if it is on its way out of its district all the same (on a threshold's way, or off its land).
+    Deep water slides him off without a throw.
+  - Tests:
+    - `hare_refuses_brink` (new step 93): ridden at a run toward the overlook, it refused 16.7 m from the edge with no
+      throw.
+    - `hare_refuses`: it now also requires no throw.
+    - `hare_throws_leaving` (step 88, replacing `hare_throws_maze`): put on the maze stair itself, it throws him.
