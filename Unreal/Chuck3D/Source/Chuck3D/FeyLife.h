@@ -96,6 +96,7 @@ public:
     const TArray<AFeyMite*>& GetMites() const { return Mites; }
     const TArray<ATempleSkeleton*>& GetRedcaps() const { return Redcaps; }
     AFeyDisplacer* GetBeast() const { return Beast; }
+    const TArray<class AFeyHare*>& GetHares() const { return Hares; }
     /** His scratch from Location (world) toward Ahead, within Reach: a flower in reach starts to change. */
     bool TryScratch(const FVector& Location, const FVector& Ahead, float Reach);
     /** On the ground in a pollen bed (local)? */
@@ -158,6 +159,8 @@ private:
     UPROPERTY() TArray<ATempleSkeleton*> Redcaps;
     UPROPERTY() AFeyDisplacer* Beast = nullptr;
     UPROPERTY() TArray<AFeyDisplacer*> MoreBeasts;   // (2026-11-24) Highmeadow's other beasts
+    UPROPERTY() TArray<class AFeyHare*> Hares;        // (2026-11-25) the great hares' herds (FeyHare.h)
+    void SpawnHares();
     UPROPERTY() UPointLightComponent* FireLight = nullptr;
     UPROPERTY() UPointLightComponent* HagLight = nullptr;
     // (2026-11-22) Its sounds (Tools/build_fey_sfx.py, CC0 recordings): one-shots and the loops (moths' wings, the camp).

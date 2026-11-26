@@ -2010,6 +2010,63 @@
     "foot_R": []
    },
    "notes": "Back first into a wall: flattened, the head whipping back into it and forward; limp down it (the runtime lowers him over slide_s); seated and slumped against it; forward onto his paws and up by 2.5 s."
+  },
+  {
+   "name": "RideSit",
+   "file": "Animations/AS_Chuck_RideSit.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 59,
+   "frame_count": 60,
+   "duration_s": 2.0,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.1961,
+   "seat_z": 7.5,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Astride the great hare behind its shoulders, leaning forward, forepaws in its scruff, legs down its flanks, tail over its rump; looking about. The runtime puts his origin seat_z below the saddle."
+  },
+  {
+   "name": "RideBound",
+   "file": "Animations/AS_Chuck_RideBound.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 23,
+   "frame_count": 24,
+   "duration_s": 0.8,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.1125,
+   "seat_z": 7.5,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "One cycle of the hare's bound (played at its phase, over RideSit by its speed): tossed at each landing, crouched lower, ears back, tail streaming, head steady."
+  },
+  {
+   "name": "Mount",
+   "file": "Animations/AS_Chuck_Mount.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 24,
+   "frame_count": 25,
+   "duration_s": 0.8,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.113,
+   "seat_z": 7.5,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "From standing at the hare's left side to the seat (RideSit's first frame) in 0.8 s: crouch, reach up its side, pull, the right leg over. The runtime carries him up in an arc."
   }
  ]
 }

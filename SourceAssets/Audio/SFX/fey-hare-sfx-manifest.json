@@ -1,0 +1,50 @@
+{
+ "sources": "Feywild/Source/manifest.json: bsb_1376 (Bunny hutch), bsb_0137 (Feet in leaves); CC0. The squeal is synthesised.",
+ "sounds": {
+  "SFX_FeyHareThump_00": {
+   "seconds": 0.25,
+   "loop": false,
+   "sha256": "06c56a16b8c7ca855e6a215062b17711cd4dbb38cf365a671ec39e0fcad53908"
+  },
+  "SFX_FeyHareThump_01": {
+   "seconds": 0.25,
+   "loop": false,
+   "sha256": "125d669a2ad90dc5e142f781e91b35924b9329806884f45c71d92e6e2024516e"
+  },
+  "SFX_FeyHareThump_02": {
+   "seconds": 0.25,
+   "loop": false,
+   "sha256": "de421ddf8794b52d46afe41b537ee6041431f37c9a0ad2cc6231658d91ce8a87"
+  },
+  "SFX_FeyHareBound_00": {
+   "seconds": 0.32,
+   "loop": false,
+   "sha256": "b61f788a6d3ca36834bd82af368013d88a53eaf3233bf3ca63033305e12f284a"
+  },
+  "SFX_FeyHareBound_01": {
+   "seconds": 0.32,
+   "loop": false,
+   "sha256": "6daa67d8865f119dc5142e5f00dfe64facf36a170b7e4e8b614a48918f7b9e19"
+  },
+  "SFX_FeyHareBound_02": {
+   "seconds": 0.32,
+   "loop": false,
+   "sha256": "5b022168a21c055e3bd034bbdcf05bfd34eea8dfe8979a13a817e21dd9354f88"
+  },
+  "SFX_FeyHareBound_03": {
+   "seconds": 0.32,
+   "loop": false,
+   "sha256": "1f3f36aad49e9a64bf0e5ea68f9a31b4808746437db7400e2b0d6d6956c3fa50"
+  },
+  "SFX_FeyHareSqueal_00": {
+   "seconds": 0.34,
+   "loop": false,
+   "sha256": "1daf4d95a3dac1166b71e5f876eb039731a3fe8e802136358e2b2b951bf752f7"
+  },
+  "SFX_FeyHareSqueal_01": {
+   "seconds": 0.42,
+   "loop": false,
+   "sha256": "d03c8a92e64e87f62cac17f468923518ed3e3171feec6fec363537a1410cb789"
+  }
+ }
+}

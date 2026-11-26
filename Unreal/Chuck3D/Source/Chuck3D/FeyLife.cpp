@@ -2,6 +2,8 @@
 #include "FeyLife.h"
 #include "FeyDelights.h"
 #include "FeyTrio.h"
+#include "FeyHare.h"
+#include "Engine/OverlapResult.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "FeyMap.h"
 #include "FeyMesh.h"
@@ -418,6 +420,7 @@ void AFeyLife::EndPlay(const EEndPlayReason::Type Reason)
     for (AActor* A : Redcaps) if (IsValid(A)) A->Destroy();
     if (IsValid(Beast)) Beast->Destroy();
     for (AActor* A : MoreBeasts) if (IsValid(A)) A->Destroy();
+    for (AActor* A : Hares) if (IsValid(A)) A->Destroy();
     Super::EndPlay(Reason);
 }
 
@@ -578,6 +581,7 @@ void AFeyLife::Build(int32 D)
         SpawnRedcaps();
         if (P.Round.Num()) if ((Beast = GetWorld()->SpawnActor<AFeyDisplacer>(FeyWorld(P.Round[0]), FRotator::ZeroRotator, Sp)) != nullptr) Beast->Init(P.Round, Refuges);
         for (const TArray<FVector>& Rd : P.MoreRounds) if (AFeyDisplacer* B = GetWorld()->SpawnActor<AFeyDisplacer>(FeyWorld(Rd[0]), FRotator::ZeroRotator, Sp)) { B->Init(Rd, Refuges); MoreBeasts.Add(B); }
+        SpawnHares();
     }
     if (auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0))) Respawns = Chuck->GetRespawns();
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BUILT district=%s flowers=%d vines=%d pollen=%d orchids=%d moths=%d mites=%d redcaps=%d beast=%d refuges=%d pads=%d"), FeyMap::District(D).Name, Flowers.Num(), Vines.Num(), Pollen.Num(), Orchids.Num(), Moths.Num(),
@@ -591,6 +595,81 @@ void AFeyLife::Build(int32 D)
         FActorSpawnParameters Sp; Sp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
         if (AFeyDelights* De = GetWorld()->SpawnActor<AFeyDelights>(GetActorLocation(), GetActorRotation(), Sp)) { De->Build(D); Spawned.Add(De); }
     });
+}
+
+void AFeyLife::SpawnHares()
+{
+    // (2026-11-25, docs/regions/FEYWILD-HARE.md) The great hares: two herds of two in Highmeadow, two in the Crossroads, the
+    // orchard and the Lily Mere; none in the riverbank, the Deepwood or the maze. Each herd's home is found near where it is
+    // meant to be: open, level, dry ground, clear of the thresholds' mouths, the orchids' lanes, the overlook and the places
+    // kept clear for things (FeyLifeClearings), with nothing standing on it.
+    TArray<FVector2D> Want;
+    switch (District)
+    {
+    case Highmeadow: Want = {FVector2D(-100500.f, 7000.f), FVector2D(-95000.f, 1500.f)}; break;
+    case FeyMap::Crossroads: Want = {FVector2D(-62500.f, -5000.f)}; break;
+    case Orchard: Want = {FVector2D(-31500.f, 8000.f)}; break;
+    case LilyMere: Want = {FVector2D(-63000.f, 34000.f)}; break;
+    default: return;
+    }
+    const FDistrict& Ds = FeyMap::District(District);
+    int32 Why[8] = {};   // (rejections: bounds, water/slope, threshold, orchid, pollen, overlook/clearing, prop over it, room)
+    auto Good = [&](const FVector2D& Q) -> bool
+    {
+        if (Q.X < Ds.X0 + 600.f || Q.X > Ds.X1 - 600.f || Q.Y < Ds.Y0 + 600.f || Q.Y > Ds.Y1 - 600.f) { ++Why[0]; return false; }
+        for (const FVector2D& O : {FVector2D(0, 0), FVector2D(300, 0), FVector2D(-300, 0), FVector2D(0, 300), FVector2D(0, -300)})
+        {
+            const FVector2D R = Q + O;
+            if (FeyMap::DistrictAt(R.X, R.Y) != District || FeyMap::InDeepWater(R.X, R.Y) || FeyMap::InRiver(District, R.X, R.Y)) { ++Why[1]; return false; }
+            if (FMath::Abs(LandZ(District, R.X, R.Y) - LandZ(District, Q.X, Q.Y)) > 45.f) { ++Why[1]; return false; }
+        }
+        for (int32 Th = 0; Th < FeyMap::Thresholds; ++Th)
+        {
+            const FeyMap::FThreshold& W = FeyMap::Threshold(Th);
+            if ((W.A == District && FVector2D::Distance(W.PA, Q) < 2200.f) || (W.B == District && FVector2D::Distance(W.PB, Q) < 2200.f)) { ++Why[2]; return false; }
+        }
+        for (const FFeyOrchid& O : Orchids) if (FVector2D::Distance(FVector2D(O.Pos), Q) < O.Range + 800.f) { ++Why[3]; return false; }
+        for (const FFeyPollen& Pb : Pollen) if (FVector2D::Distance(Pb.C, Q) < FMath::Max(Pb.R.X, Pb.R.Y) + 300.f) { ++Why[4]; return false; }
+        if (District == Highmeadow && FVector2D::Distance(FeyMap::OverlookAt(), Q) < AFeyHare::ThrowRange + 2500.f) { ++Why[5]; return false; }
+        for (const FVector& C : FeyLifeClearings()) if (FVector2D::Distance(FVector2D(C.X, C.Y), Q) < C.Z + 250.f) { ++Why[5]; return false; }
+        // Nothing standing on it: the land itself under a trace from above, and room at a hare's height.
+        const float Z = LandZ(District, Q.X, Q.Y);
+        FHitResult Hit; FCollisionQueryParams Qp(SCENE_QUERY_STAT(FeyHareHome), false, this);
+        if (GetWorld()->LineTraceSingleByChannel(Hit, FeyWorld(FVector(Q.X, Q.Y, Z + 600.f)), FeyWorld(FVector(Q.X, Q.Y, Z - 100.f)), ECC_Visibility, Qp) && FeyLocal(Hit.ImpactPoint).Z > Z + 40.f) { ++Why[6]; return false; }
+        // (a capsule standing clear of the ground: its foot 30 cm up, so the land itself does not count)
+        TArray<FOverlapResult> Over;
+        if (GetWorld()->OverlapMultiByChannel(Over, FeyWorld(FVector(Q.X, Q.Y, Z + 135.f)), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(80.f, 100.f), Qp))
+        {
+            if (Why[7]++ < 3 && Over.Num()) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_HOME_BLOCK at=%.0f,%.0f by=%s"), Q.X, Q.Y, *GetNameSafe(Over[0].GetComponent()));
+            return false;
+        }
+        return true;
+    };
+    FActorSpawnParameters Sp; Sp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+    int32 Index = 0;
+    for (int32 Hd = 0; Hd < Want.Num(); ++Hd)
+    {
+        FVector2D Home = Want[Hd]; bool bFound = false;
+        for (int32 Ring = 0; Ring <= 8 && !bFound; ++Ring)
+            for (int32 K = 0; K < FMath::Max(1, Ring * 6) && !bFound; ++K)
+            {
+                const float Ang = 2.f * PI * K / FMath::Max(1, Ring * 6) + Ring * .7f;
+                const FVector2D Q = Want[Hd] + FVector2D(FMath::Cos(Ang), FMath::Sin(Ang)) * (Ring * 450.f);
+                if (Good(Q)) { Home = Q; bFound = true; }
+            }
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_HERD district=%s herd=%d home=%.0f,%.0f found=%d moved=%.0f rejected=%d/%d/%d/%d/%d/%d/%d/%d"), Ds.Name, Hd, Home.X, Home.Y, bFound ? 1 : 0, FVector2D::Distance(Home, Want[Hd]), Why[0], Why[1], Why[2], Why[3], Why[4], Why[5], Why[6], Why[7]);
+        FMemory::Memzero(Why);
+        if (!bFound) continue;
+        for (int32 K = 0; K < 2; ++K)
+        {
+            const FVector2D At = Home + FVector2D(K ? 160.f : -150.f, K ? -120.f : 140.f);
+            const FVector World = FeyWorld(FVector(At.X, At.Y, LandZ(District, At.X, At.Y)));
+            const float Yaw = 40.f + 137.f * Index;
+            if (AFeyHare* H = GetWorld()->SpawnActor<AFeyHare>(World + FVector(0, 0, AFeyHare::HalfHeight + 2.f), FRotator(0, Yaw, 0), Sp)) { H->Init(District, World, Yaw, Index); Hares.Add(H); }
+            ++Index;
+        }
+    }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARES district=%s hares=%d"), Ds.Name, Hares.Num());
 }
 
 void AFeyLife::ShowFlower(int32 I)
@@ -618,6 +697,7 @@ void AFeyLife::ResetAll()
     for (AFeyMite* M : Mites) if (IsValid(M)) M->ResetMite();
     if (IsValid(Beast)) Beast->ResetBeast();
     for (AFeyDisplacer* B : MoreBeasts) if (IsValid(B)) B->ResetBeast();
+    for (AFeyHare* H : Hares) if (IsValid(H)) H->ResetHare();
     for (AActor* A : Redcaps) if (IsValid(A)) A->Destroy();
     Redcaps.Reset(); SpawnRedcaps();
 }

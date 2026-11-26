@@ -1,6 +1,6 @@
 # The Feywild: the great hare (plan)
 
-**Status: planned 2026-11-26, awaiting the user's approval. Nothing is built.** A rideable mount for the Feywild only, asked for by the user because of the region's size. Part of [FEYWILD.md](FEYWILD.md); written separately so as not to collide with work on that file.
+**Status: approved by the user 2026-11-25 with the plan's recommendations for its open questions; built 2026-11-25 (see [What was built](#what-was-built-2026-11-25) at the end).** A rideable mount for the Feywild only, asked for by the user because of the region's size. Part of [FEYWILD.md](FEYWILD.md); written separately so as not to collide with work on that file.
 
 ## The idea
 
@@ -101,8 +101,59 @@ Each herd is built with its district (`AFeyLife`, a part per frame) and gone wit
 - **Rider contact.** As with the trio, his paws and legs against its coat need a clearance check.
 - **Camera** at the bound in tight places, such as the orchard's rows.
 
-## Open for the user
+## Open for the user (answered 2026-11-25: "go with its recommendations")
 
 - The bound's speed (550 cm/s planned) and whether the leap should be longer.
 - Whether one hare should also graze in the Riverbank, away from the arrival.
 - The coat colour: moss-grey, dusk-gold or a mix across the herd.
+
+The answers taken: the bound at 550 cm/s and the leap as planned (about 3.5 m, 70 cm high); no hare in the Riverbank;
+the coats a mix across each herd, from moss-grey to dusk-gold.
+
+## What was built (2026-11-25)
+
+- **The hare:** `Tools/build_fey_hare.py` (Blender 4.5.14, the creatures' SDF kit): about 1.2 m from nose to scut, its
+  back about 80 cm up, on a skeleton of its own (spine, chest, neck, head, two-bone ears, hips, scut, three-bone
+  forelegs, four-bone hind legs, and a `saddle` bone with no weights). Coat by vertex colour: tawny agouti back, warmer
+  flanks, pale belly, ginger chest, black ear tips, white scut black on top, amber eyes, pale-gold flecks, seven seed
+  heads in the fur. `Tools/import_fey_hare.py` makes `/Game/Art/Feywild/Creatures/Hare/SK_FeyHare` and `M_FeyHareFur`:
+  the displacer's CC0 fur (ambientCG Fabric084) projected in the rest pose over the vertex colours, a `Tint` per hare.
+  (To rebuild the material, delete its `.uasset` first: clearing a loaded material's graph crashes UE 5.7.)
+- **Its motion:** `FeyHare.h/.cpp` (`AFeyHare`, a character with a poseable mesh). The gait is procedural, not clips:
+  foot paths by phase and speed, two-bone reaches for each leg, and the back flexing and extending through the bound.
+  Moods are graze (head down, nibbling), sitting up with its ears turning, the hop, the bound, the leap, the thump of
+  a hind foot, the rear and the bolt.
+  The pose is solved in component-space positions and turns about each joint, because the imported rest transforms
+  carry the armature's scale. A first version that composed rotations through them sent the legs astray.
+- **Chuck:** three new clips in `Tools/build_chuck_v1.py`, imported with `Import-ChuckV1.ps1 -Clips`:
+  - `RideSit`: astride behind its shoulders, leaning forward, forepaws in its scruff, legs down its flanks.
+  - `RideBound`: one bound cycle, played at the hare's own phase over the sit, by its speed.
+  - `Mount`: 0.8 s up its side.
+
+  There is a new gait, `EGait::Ride`. The hare moves him (`UpdateRide`) and the camera draws back at the bound. Thrown,
+  he tumbles into his `CrashLand`, with no wall slam and no Sanity lost.
+- **Herds:** `AFeyLife::SpawnHares`, built with each district.
+  - Highmeadow has two herds of two; the Crossroads, the orchard and the Lily Mere have one herd of two each.
+  - Each herd's home is searched for near its planned spot. It must be open, level, dry ground, clear of thresholds'
+    mouths, orchid lanes, pollen, the overlook and FeyLife's clearings, with nothing standing on it.
+  - The homes found: Highmeadow (-100500, 7000) and (-95692, 2076), the Crossroads (-62500, -5000), the orchard
+    (-31156, 8290), the Lily Mere (-63000, 34000).
+- **Sounds:**
+  - The thump and the bound's thuds are cut from BigSoundBank's CC0 "Bunny hutch" (rabbits stamping their feet; bsb_1376,
+    fetched by `Tools/Fetch-FeySounds.ps1`), with "Feet in leaves" (bsb_0137) under the thuds.
+  - The squeal is synthesised.
+  - Built by `Tools/build_fey_hare_sfx.py`.
+- **Controls as planned:** F / Y (the talk key) mounts and slides him off; so does Roll. Run toggles the bound, and it
+  ends when the stick is let go. Jump is the leap. The HUD shows "F   Ride" by a calm hare.
+- **Checks:** `-ChuckFeyMapTest=life` steps 92 and 82 to 90 (`hares_crossroads`, `hares_spawned`, `hare_shies`,
+  `hare_prompt`, `hare_mount`, `hare_bound`, `hare_leap`, `hare_pollen`, `hare_refuses`, `hare_throws_maze`,
+  `hare_throw_crashland`, `hare_throw_no_sanity`, `hare_bolts`, `hare_slide_off`, `hare_stays_calm`, `hare_remount`,
+  `hare_reset`).
+  - `CHUCK_FEY_HARE_POSES=1` with `CHUCK_FEY_LIFE_FROM=82` adds step 91: stills of each pose from the side
+    (`Life_HarePose_*`).
+- **Not built or not tested:**
+  - The deep-water, seed and moth throws are in the code but have no test. The throw zone uses `InDeepWater` or
+    `InRiver`.
+  - Displacer lashes are told apart from seeds and moths by the counters (`LashHits`).
+  - The plan's thorns throw does not apply: no hare reaches thorns (there are none in its districts).
+  - Redcap Hollow is the Deepwood's, where no hare goes.

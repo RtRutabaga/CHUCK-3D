@@ -58,6 +58,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "PhlegethosSetting.h"
 #include "PhlegethosFall.h"
+#include "FeyHare.h"
 
 AChuckCharacter::AChuckCharacter()
 {
@@ -94,7 +95,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight"), TEXT("Crawl"), TEXT("SwingSlip"), TEXT("FallFlail"), TEXT("HeldLeg"), TEXT("Tumble"), TEXT("CrashLand"), TEXT("WallSlam")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight"), TEXT("Crawl"), TEXT("SwingSlip"), TEXT("FallFlail"), TEXT("HeldLeg"), TEXT("Tumble"), TEXT("CrashLand"), TEXT("WallSlam"), TEXT("RideSit"), TEXT("RideBound"), TEXT("Mount")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -268,8 +269,8 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap"), TEXT("Held"), TEXT("Crawl"), TEXT("Thrown")};
-    static_assert(UE_ARRAY_COUNT(Names) == static_cast<int32>(EGait::Thrown) + 1, "a name for every gait");
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap"), TEXT("Held"), TEXT("Crawl"), TEXT("Thrown"), TEXT("Ride")};
+    static_assert(UE_ARRAY_COUNT(Names) == static_cast<int32>(EGait::Ride) + 1, "a name for every gait");
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -301,6 +302,7 @@ void AChuckCharacter::Right(float Value) { InputRight = Value; if (!OwnsCapsule(
 void AChuckCharacter::StrafeKeysAxis(float Value) { StrafeKeys = Value; if (!OwnsCapsule() && !IsTalking()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
 void AChuckCharacter::Dodge()
 {
+    if (IsRiding()) { if (!IsRideMounting() && RideMount.IsValid()) RideMount->Dismount(); return; }   // (Roll: he slides off)
     // Action events dispatch before this frame's axis events: read the stick
     // directly so a direction pressed together with C counts.
     if (InputComponent) { InputRight = InputComponent->GetAxisValue(TEXT("Right")); InputForward = InputComponent->GetAxisValue(TEXT("Forward")); StrafeKeys = InputComponent->GetAxisValue(TEXT("StrafeKeys")); }
@@ -335,16 +337,16 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
     CrawlCam = DeltaSeconds > 0 ? FMath::FInterpTo(CrawlCam, Gait == EGait::Crawl ? 1.f : 0.f, DeltaSeconds, 3.f) : (Gait == EGait::Crawl ? 1.f : 0.f);
     const float BoomPitch = FMath::Lerp(FMath::Clamp(SmoothLook, HighestPitch, RatPitch), -7.f, CrawlCam);
     const float CameraBlend = FMath::Clamp((BoomPitch - RatPitch) / (ElevatedPitch - RatPitch), 0.f, 1.f) * (1.f - CrawlCam);
-    Boom->TargetArmLength = FMath::Lerp(FMath::Lerp(220.f, 400.f, CameraBlend), 95.f, CrawlCam);
+    Boom->TargetArmLength = FMath::Lerp(FMath::Lerp(220.f, 400.f, CameraBlend), 95.f, CrawlCam) + 70.f * RideDraw;   // (drawn back at the hare's bound)
     if (DeltaSeconds > 0 && LookIdle > .3f && Gait == EGait::Crawl)
         ViewYaw = FRotator::NormalizeAxis(ViewYaw + FMath::FindDeltaAngleDegrees(ViewYaw, GetActorRotation().Yaw) * FMath::Min(1.f, DeltaSeconds * 3.f));
     // GTA-style auto-follow: after a moment without look input the orbit eases
     // behind Chuck while he walks away from the camera. Strafing or walking
     // toward the lens leaves it alone.
     LookIdle += DeltaSeconds;
-    const FVector Velocity = GetVelocity();
+    const FVector Velocity = IsRiding() && RideMount.IsValid() ? RideMount->GetRideVelocity() : GetVelocity();
     const float Speed = Velocity.Size2D();
-    if (DeltaSeconds > 0 && LookIdle > AutoFollowDelay && Speed > 10.f && GetCharacterMovement()->IsMovingOnGround())
+    if (DeltaSeconds > 0 && LookIdle > AutoFollowDelay && Speed > 10.f && (GetCharacterMovement()->IsMovingOnGround() || IsRiding()))
     {
         const float Along = FVector::DotProduct(Velocity.GetSafeNormal2D(), FRotator(0, ViewYaw, 0).Vector());
         const float Weight = FMath::Clamp((Along - .5f) / .5f, 0.f, 1.f) * FMath::Min(Speed / ChuckClipData::WalkSpeed, 1.f);
@@ -380,7 +382,7 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
     {
         const bool bAirborne = GetCharacterMovement()->IsFalling();
         // Hold height through ordinary jumps, but follow a wall climb up.
-        FollowZ = FMath::FInterpTo(FollowZ, ActorZ, DeltaSeconds, bAirborne && !bWallJumpFlight ? 1.5f : 8.f);
+        FollowZ = FMath::FInterpTo(FollowZ, ActorZ, DeltaSeconds, IsRiding() ? 4.f : bAirborne && !bWallJumpFlight ? 1.5f : 8.f);
         FollowZ = FMath::Clamp(FollowZ, ActorZ - 40.f, ActorZ + 40.f);
     }
     // Rat-height end: chest-high pivot and a 5 degree tilt put the lens about
@@ -451,6 +453,8 @@ void AChuckCharacter::RespawnAtAreaStart()
 void AChuckCharacter::ResetAtLocation(const FVector& Location)
 {
     ++ResetGeneration;
+    if (Gait == EGait::Ride || RideMount.IsValid()) { if (RideMount.IsValid()) RemoveTickPrerequisiteActor(RideMount.Get()); RideMount.Reset(); SetActorEnableCollision(true); RideDraw = 0; }
+    bRideThrown = false;
     GetCharacterMovement()->RemoveRootMotionSource(TEXT("ZombieImpact"));
     ImpactAt = -1;
     GetCharacterMovement()->StopMovementImmediately();
@@ -541,7 +545,7 @@ float AChuckCharacter::Period(EClip Clip) const
     // The importer keeps the full loop period (Idle 2.0 s, WalkLoop 0.3 s,
     // JumpLoop 0.4 s; logged as CHUCK_CLIP) and interpolates back to frame 0.
     const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop || Clip == EClip::WallRun || Clip == EClip::Hang || Clip == EClip::ShimmyLeft || Clip == EClip::ShimmyRight
-        || Clip == EClip::StrafeLeft || Clip == EClip::StrafeRight || Clip == EClip::StrafeRunLeft || Clip == EClip::StrafeRunRight || Clip == EClip::Crawl || Clip == EClip::FallFlail || Clip == EClip::HeldLeg || Clip == EClip::Tumble;
+        || Clip == EClip::StrafeLeft || Clip == EClip::StrafeRight || Clip == EClip::StrafeRunLeft || Clip == EClip::StrafeRunRight || Clip == EClip::Crawl || Clip == EClip::FallFlail || Clip == EClip::HeldLeg || Clip == EClip::Tumble || Clip == EClip::RideSit || Clip == EClip::RideBound;
     const UAnimSequence* Sequence = Clips[static_cast<int32>(Clip)];
     return bLoop && Sequence ? Sequence->GetPlayLength() : 0.f;
 }
@@ -650,6 +654,7 @@ namespace
 
 void AChuckCharacter::DodgeToward(FVector2D Stick)
 {
+    if (IsRiding()) { if (!IsRideMounting() && RideMount.IsValid()) RideMount->Dismount(); return; }   // (Roll on the hare: he slides off)
     auto* Movement = GetCharacterMovement();
     if (IsAstral() || IsTalking()) return;
     if (Gait == EGait::Hang) { DropFromHang(); return; }  // dodge while hanging: let go
@@ -778,6 +783,7 @@ void AChuckCharacter::JumpPressed()
 {
     auto* Movement = GetCharacterMovement();
     const float Now = GetWorld()->GetTimeSeconds();
+    if (IsRiding()) { if (RideMount.IsValid()) RideMount->Leap(); return; }   // (the hare's long leap)
     if (Gait == EGait::Climb || Gait == EGait::Crawl || IsAstral() || IsTalking()) return;
     if (Gait == EGait::Hang)
     {
@@ -2057,6 +2063,7 @@ AChuckCharacter::EClip AChuckCharacter::PickPaw(bool bFirst, EClip Previous)
 }
 void AChuckCharacter::Slash()
 {
+    if (IsRiding()) return;
     auto* Movement = GetCharacterMovement();
     bSlashHeld = true;
     const bool bStandingSlash = Gait == EGait::Slash;
@@ -2178,6 +2185,7 @@ bool AChuckCharacter::TakeBite(const FVector& From, int32 Amount, bool bZombieHi
     TalkingTo.Reset();
     Sanity = FMath::Max(0, Sanity - Amount);
     if (Sanity == 0) { bPendingVanish = true; PendingVanishAt = Now + .35f; }
+    if (IsRiding()) { ImpactAt = Now; return true; }   // (on the hare: no stumble; the hare decides whether he stays on)
     FVector Away = (GetActorLocation() - From).GetSafeNormal2D();
     if (Away.IsNearlyZero()) Away = -GetActorForwardVector().GetSafeNormal2D();
     // A stumble back out of reach: a short hop away, the slash layer dropped.
@@ -2349,7 +2357,7 @@ void AChuckCharacter::UpdateThrown(float DeltaSeconds)
         bBodyQuatLive = true;
         const FVector V = Movement->Velocity;
         // Struck a wall: going fast, the speed across the ground cut short, and a wall where he was going.
-        if (ThrowPrevVel.Size2D() > 220.f && V.Size2D() < ThrowPrevVel.Size2D() * .45f)
+        if (!bRideThrown && ThrowPrevVel.Size2D() > 220.f && V.Size2D() < ThrowPrevVel.Size2D() * .45f)
         {
             FHitResult Wall;
             FCollisionQueryParams Q(SCENE_QUERY_STAT(ChuckThrownWall), false, this);
@@ -2373,7 +2381,7 @@ void AChuckCharacter::UpdateThrown(float DeltaSeconds)
         BodyQuat = FQuat::Slerp(BodyQuatFrom, FQuat::Identity, FMath::SmoothStep(0.f, .12f, ThrownClock));
         if (ThrownClock >= Clips[static_cast<int32>(EClip::CrashLand)]->GetPlayLength() - .05f)
         {
-            bBodyQuatLive = false; Gait = EGait::Idle; SetClip(EClip::Idle, 0, .25f);
+            bBodyQuatLive = false; bRideThrown = false; Gait = EGait::Idle; SetClip(EClip::Idle, 0, .25f);
             Movement->SetMovementMode(MOVE_Walking);
         }
         break;
@@ -2493,6 +2501,8 @@ bool AChuckCharacter::GetDialogue(FString& Speaker, FString& Text) const
 }
 void AChuckCharacter::Interact()
 {
+    // On the great hare: the talk key slides him off (once he is up).
+    if (IsRiding()) { if (!IsRideMounting() && RideMount.IsValid()) RideMount->Dismount(); return; }
     if (IsTalking())
     {
         // Next line, or the conversation's over.
@@ -2507,6 +2517,8 @@ void AChuckCharacter::Interact()
         SetActorRotation(FRotator(0, (NPC->GetActorLocation() - GetActorLocation()).Rotation().Yaw, 0));
         return;
     }
+    // A calm great hare in reach (the Feywild, 2026-11-25): up onto its back.
+    if (AFeyHare* Hare = GetMountPrompt()) { Hare->Mount(this); return; }
     // The captain's chest aboard the ship (2026-11-03): interacting opens it, as scratching it does.
     if (AShipChest* Chest = AShipChest::Get(GetWorld()))
         if (Chest->CanInteract(this)) Chest->Open();
@@ -4067,6 +4079,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     if (bSlideCamera) HoldSlideCamera();
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
     GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > FMath::Lerp(70.f, 30.f, CrawlCam),true);
+    if (Gait == EGait::Ride) { UpdateRide(DeltaSeconds); return; }   // (on the great hare: it moves him)
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
     // (The temple's sanctum, enlarged on 2026-10-23, has its floor below this line: it is not off the world.)
@@ -4118,4 +4131,147 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     else if (ShipRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
     // Into Phlegethos's molten lake (2026-11-14): Astral, back at the start of the stretch.
     else if (PhlegethosLavaSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
+}
+
+// ------------------------------------------------------------------ riding the great hare (2026-11-25; FeyHare.h)
+bool AChuckCharacter::CanBeginRide() const
+{
+    if (bCutscene || bSceneHold || bDemoEnded || IsTalking() || IsAstral() || bPendingVanish || RideMount.IsValid()) return false;
+    if (!GetCharacterMovement()->IsMovingOnGround()) return false;
+    return Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Turn || Gait == EGait::Land || Gait == EGait::Strafe;
+}
+AFeyHare* AChuckCharacter::GetMountPrompt() const
+{
+    return CanBeginRide() ? AFeyHare::MountPrompt(this) : nullptr;
+}
+bool AChuckCharacter::IsRideMounting() const
+{
+    return IsRiding() && Base == EClip::Mount;
+}
+bool AChuckCharacter::BeginRide(AFeyHare* Hare)
+{
+    if (!Hare || !CanBeginRide()) return false;
+    auto* Movement = GetCharacterMovement();
+    if (IsSprinting()) EndSprint(false);
+    LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = SprintWeight = 0;
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    SetActorEnableCollision(false);
+    RideMount = Hare; RideClock = 0.f; RideIdle = 0.f; bRunHeld = false; bRideThrown = false;
+    RideFrom = GetMesh()->GetComponentLocation();
+    RideStartYaw = static_cast<float>(GetActorRotation().Yaw);
+    AddTickPrerequisiteActor(Hare);
+    Gait = EGait::Ride;
+    SetClip(EClip::Mount, 0, .12f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_RIDE_BEGIN at=%s"), *GetActorLocation().ToCompactString());
+    return true;
+}
+void AChuckCharacter::EndRide(bool bThrown, const FVector& Velocity)
+{
+    if (Gait != EGait::Ride) return;
+    AFeyHare* Hare = RideMount.Get();
+    if (Hare) RemoveTickPrerequisiteActor(Hare);
+    RideMount.Reset();
+    auto* Movement = GetCharacterMovement();
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    SetActorEnableCollision(true);
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0, 0, -Half), FRotator::ZeroRotator);
+    bRunJump = bSprintLeap = false; RunWeight = SprintWeight = 0;
+    if (bThrown)
+    {
+        // Off its back over its head: tumbling end over end along the throw, to crash-land (UpdateThrown) at no cost.
+        const FVector D = Velocity.GetSafeNormal2D().IsNearlyZero() ? GetActorForwardVector() : Velocity.GetSafeNormal2D();
+        const FVector Axis = FVector::CrossProduct(FVector::UpVector, D).GetSafeNormal();
+        SpinAxis = Axis.IsNearlyZero() ? FVector::RightVector : Axis;
+        SpinRate = 8.f; SpinAngle = 0; BodyQuat = FQuat::Identity; BodyQuatFrom = BodyQuat; bBodyQuatLive = true; bLegHeld = false;
+        SetActorLocation(GetActorLocation() + FVector(0, 0, 10.f), false, nullptr, ETeleportType::TeleportPhysics);
+        Movement->SetMovementMode(MOVE_Falling);
+        Movement->Velocity = Velocity;
+        Gait = EGait::Thrown; ThrownPhase = EThrown::Flight; ThrownClock = 0; ThrowPrevVel = Velocity;
+        bRideThrown = true;
+        BiteImmuneUntil = GetWorld()->GetTimeSeconds() + .6f;
+        SetActorRotation(FRotator(0, D.Rotation().Yaw + 180.f, 0));
+        SetClip(EClip::Tumble, 0, .1f);
+        ++Throws;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_RIDE_THROWN velocity=%s"), *Velocity.ToCompactString());
+    }
+    else
+    {
+        // Slid off sideways onto the ground beside it (its left, else its right, else behind it), where he fits.
+        FVector At = GetActorLocation();
+        if (Hare)
+        {
+            const FVector Centre = Hare->GetActorLocation();
+            const FVector Left = -Hare->GetActorRightVector(), Back = -Hare->GetActorForwardVector();
+            FCollisionQueryParams Q(SCENE_QUERY_STAT(ChuckRideOff), false, this); Q.AddIgnoredActor(Hare);
+            for (const FVector& Way : {Left, -Left, Back, Left + Back})
+            {
+                const FVector Try = Centre + Way.GetSafeNormal2D() * (AFeyHare::Radius + GetCapsuleComponent()->GetScaledCapsuleRadius() + 30.f);
+                FHitResult Floor;
+                if (!GetWorld()->LineTraceSingleByChannel(Floor, Try + FVector(0, 0, 80.f), Try - FVector(0, 0, 200.f), ECC_Visibility, Q) || Floor.ImpactNormal.Z < .6f) continue;
+                const FVector Stand = Floor.ImpactPoint + FVector(0, 0, Half + 2.f);
+                if (GetWorld()->OverlapAnyTestByChannel(Stand, FQuat::Identity, ECC_Pawn, GetCapsuleComponent()->GetCollisionShape(), Q)) continue;
+                At = Stand; break;
+            }
+        }
+        SetActorLocationAndRotation(At, FRotator(0, GetActorRotation().Yaw, 0), false, nullptr, ETeleportType::TeleportPhysics);
+        Movement->SetMovementMode(MOVE_Falling);
+        Movement->Velocity = FVector::ZeroVector;
+        Gait = EGait::Air;
+        SetClip(EClip::JumpLoop, 0, .12f);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_RIDE_OFF at=%s"), *At.ToCompactString());
+    }
+    PreviousMotionLocation = GetActorLocation();
+    RideDraw = 0.f;
+}
+void AChuckCharacter::UpdateRide(float DeltaSeconds)
+{
+    AFeyHare* Hare = RideMount.Get();
+    const float Now = GetWorld()->GetTimeSeconds();
+    // His Sanity gone (a lash), or the hare gone: off it (the vanish follows on the ground).
+    if (!Hare || (bPendingVanish && Now >= PendingVanishAt)) { EndRide(false, FVector::ZeroVector); return; }
+    RideClock += DeltaSeconds;
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    const FQuat Seat = Hare->GetSeatQuat();
+    const FVector MeshAt = Hare->GetSeat() + Seat.RotateVector(FVector(0, 0, -AFeyHare::SeatZ));
+    const FRotator Yaw(0, Hare->GetActorRotation().Yaw, 0);
+    const float MountTime = Clips[static_cast<int32>(EClip::Mount)] ? Clips[static_cast<int32>(EClip::Mount)]->GetPlayLength() : .8f;
+    if (Base == EClip::Mount)
+    {
+        // Up its side in an arc, turned to sit as it faces (Tools/build_chuck_v1.py, mount: seated by u = 1).
+        const float U = FMath::SmoothStep(.18f, .66f, RideClock);
+        FVector P = FMath::Lerp(RideFrom, MeshAt, U); P.Z += 16.f * FMath::Sin(PI * U);
+        const FQuat R = FQuat::Slerp(FRotator(0, RideStartYaw, 0).Quaternion(), Seat, FMath::SmoothStep(.1f, .6f, RideClock));
+        SetActorLocationAndRotation(P + FVector(0, 0, Half), Yaw, false, nullptr, ETeleportType::TeleportPhysics);
+        GetMesh()->SetWorldLocationAndRotation(P, R);
+        BaseTime = RideClock;
+        if (RideClock >= MountTime) { SetClip(EClip::RideSit, 0, .2f); UE_LOG(LogTemp, Display, TEXT("CHUCK_RIDE_SEATED")); }
+    }
+    else
+    {
+        SetActorLocationAndRotation(MeshAt + FVector(0, 0, Half), Yaw, false, nullptr, ETeleportType::TeleportPhysics);
+        GetMesh()->SetWorldLocationAndRotation(MeshAt, Seat);
+        BaseTime += DeltaSeconds;
+    }
+    // Letting go of the stick a moment ends the bound (as his own run ends when he stops).
+    if (StickWorld().Size() < .1f) { RideIdle += DeltaSeconds; if (RideIdle > .4f) bRunHeld = false; } else RideIdle = 0.f;
+    RideDraw = FMath::FInterpTo(RideDraw, Hare->GetBoundWeight(), DeltaSeconds, 2.f);
+    UpdateRidePose(DeltaSeconds);
+}
+void AChuckCharacter::UpdateRidePose(float DeltaSeconds)
+{
+    auto* Anim = GetChuckAnim();
+    if (!Anim || Clips.Contains(nullptr)) return;
+    FadeWeight = FMath::Max(0.f, FadeWeight - FadeRate * DeltaSeconds);
+    FChuckAnimParams& P = Anim->Params;
+    P = FChuckAnimParams();
+    P.ClipA = Clips[static_cast<int32>(Base)]; P.TimeA = BaseTime; P.PeriodA = Period(Base); P.bSnapshotB = false;
+    P.ClipB = FadeWeight > 0 ? Clips[static_cast<int32>(Fading)] : nullptr; P.TimeB = FadingTime; P.PeriodB = Period(Fading); P.WeightB = FadeWeight;
+    // Seated: the bound over the sit by the hare's speed, at its own phase.
+    if (Base == EClip::RideSit && RideMount.IsValid())
+    {
+        UAnimSequence* Bound = Clips[static_cast<int32>(EClip::RideBound)];
+        P.ClipRun = Bound; P.PeriodRun = Bound->GetPlayLength(); P.TimeRun = RideMount->GetPhase() * P.PeriodRun;
+        P.WeightRun = FMath::Clamp(RideMount->GetBoundWeight() * 1.2f, 0.f, 1.f); P.bRunOnA = true;
+    }
 }

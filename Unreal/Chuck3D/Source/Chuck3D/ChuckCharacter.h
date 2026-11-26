@@ -16,6 +16,7 @@ class USoundBase;
 class UCurveFloat;
 class UInstancedStaticMeshComponent;
 class ADockNPC;
+class AFeyHare;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -449,6 +450,19 @@ public:
     /** F / Y: talk to the NPC in front of him, or advance / close the conversation. */
     void Interact();
     bool IsTalking() const { return TalkingTo.IsValid(); }
+    // The Feywild's great hare (2026-11-25; FeyHare.h): the hare's calls. BeginRide puts him on its back (the Mount clip
+    // carries him up its side), EndRide off it: slid off beside it, or thrown (Velocity) to tumble and crash-land.
+    bool CanBeginRide() const;
+    bool BeginRide(AFeyHare* Hare);
+    void EndRide(bool bThrown, const FVector& Velocity);
+    bool IsRiding() const { return Gait == EGait::Ride; }
+    bool IsRideMounting() const;
+    AFeyHare* GetRideMount() const { return IsRiding() ? RideMount.Get() : nullptr; }
+    /** The stick, camera-relative, in the world (the hare steers by it). */
+    FVector GetRideStick() const { return StickWorld(); }
+    bool IsRunToggled() const { return bRunHeld; }
+    /** The calm hare in reach (the HUD's "Ride" prompt). */
+    AFeyHare* GetMountPrompt() const;
     /** Which of the NPC's lines is showing (0 first). */
     int32 GetTalkLine() const { return TalkLine; }
     /** Who Chuck is talking to (they gesture while he listens). */
@@ -517,9 +531,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Crawl, SwingSlip, FallFlail, HeldLeg, Tumble, CrashLand, WallSlam, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Crawl, SwingSlip, FallFlail, HeldLeg, Tumble, CrashLand, WallSlam, RideSit, RideBound, Mount, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held, Crawl, Thrown };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held, Crawl, Thrown, Ride };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -565,7 +579,7 @@ private:
     float RunupLength = 0;
     float SprintAirTime = 0;   // off the ground at a sprint, not leaping
     int32 SprintLeaps = 0;
-    void SprintPressed() { TrySprint(); }
+    void SprintPressed() { if (Gait == EGait::Ride) { bRunHeld = true; return; } TrySprint(); }
     uint32 ResetGeneration = 0;
     float StaminaLockUntil = -1.f;
     void SpendStamina(float Cost);
@@ -843,6 +857,13 @@ private:
     // A latch, not a hold: holding Shift while pressing Space (and a direction)
     // can exceed what many keyboards register at once.
     void RunPressed() { bRunHeld = !bRunHeld; }
+    // Riding the Feywild's great hare (2026-11-25, FeyHare.h): seated on its back, the stick and Run steering it.
+    TWeakObjectPtr<AFeyHare> RideMount;
+    FVector RideFrom = FVector::ZeroVector;
+    float RideClock = 0.f, RideIdle = 0.f, RideDraw = 0.f, RideStartYaw = 0.f;
+    bool bRideThrown = false;   // (thrown off it: the throw's crash costs nothing, and no wall slam)
+    void UpdateRide(float DeltaSeconds);
+    void UpdateRidePose(float DeltaSeconds);
     bool IsDodging() const { return Gait == EGait::Roll || Gait == EGait::SideJump; }
     void Dodge();
     void FinishDodge();

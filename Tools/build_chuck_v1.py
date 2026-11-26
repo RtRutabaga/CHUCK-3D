@@ -2421,6 +2421,98 @@ author('WallSlam', SLAM_FRAMES, wall_slam, False, {
     'slide_s': list(SLAM_SLIDE), 'stance_intervals_s': {'foot_L': [], 'foot_R': []},
     'notes': 'Back first into a wall: flattened, the head whipping back into it and forward; limp down it (the runtime lowers him over slide_s); seated and slumped against it; forward onto his paws and up by 2.5 s.'})
 
+# ---- riding the Feywild's great hare (2026-11-25; docs/regions/FEYWILD-HARE.md). Seated behind its shoulders like a
+# child on a pony, his forepaws in its scruff. The runtime (ChuckCharacter's Ride gait) puts his mesh origin RIDE_SEAT_Z
+# below the hare's saddle point and leans the whole body into turns; these clips are the limbs.
+#   RideSit (loop, 2 s): the seat at a standstill or a hop: low over its back, leaning forward, legs astride its barrel,
+#     forepaws gripping in front of him, tail hanging over its rump, looking about.
+#   RideBound (loop, one bound cycle; the runtime plays it at the hare's own phase, blended over RideSit by its speed):
+#     tossed with each landing, crouched lower, ears back, the tail streaming and whipping, his head held steady.
+#   Mount (0.8 s): from standing at its left side (the runtime carries him in an arc up onto its back): a crouch, a
+#     reach up its side, the pull, the right leg swung over, settled into the seat (RideSit's first frame).
+RIDE_DROP = 10.            # the pelvis lowered from standing: the seat
+RIDE_SEAT_Z = 7.5          # where the hare's back meets him, in his mesh frame (the runtime's constant)
+RIDE_GRIP = {'L': Vector((21., 6., 7.5)), 'R': Vector((21., -6., 7.5))}       # wrists on its withers, in the scruff
+RIDE_BALL = {'L': Vector((3., 17.5, -8.)), 'R': Vector((3., -17.5, -8.))}   # paws down its flanks
+RIDE_FRAMES, BOUND_FRAMES, MOUNT_FRAMES = 60, 24, 25
+
+def ride_body(lean, look=0., breath=0., bounce=0., tail_up=0., whip=0., w=0.):
+    poser.translate('pelvis', (0, 0, -RIDE_DROP + bounce))
+    poser.rotate('pelvis', 'Y', 8 + lean * .15)
+    poser.rotate('spine_01', 'Y', lean * .4 - .5 * breath)
+    poser.rotate('spine_02', 'Y', lean * .3)
+    poser.rotate('chest', 'Y', lean * .3 - .8 * breath)
+    poser.rotate('chest', 'Z', look * .25)
+    poser.rotate('neck', 'Y', -lean * .35)
+    poser.rotate('head', 'Y', -lean * .45 - 2 + .6 * breath)
+    poser.rotate('head', 'Z', look * .6)
+    for i, b in enumerate(TAIL):
+        poser.rotate(b, 'Y', (4 if i == 0 else -4) * (1 - tail_up) + (14 if i == 0 else 2) * tail_up)   # (+Y lifts it: along its back, over the rump)
+        poser.rotate(b, 'Z', whip * math.sin(w - .7 * i) + 4 * math.sin(w * .5 + i))
+
+def ride_limbs(grip=1., spread=1., u=0.):
+    poser.update()
+    r = 0.
+    for s, sg in (('L', 1), ('R', -1)):
+        wrist = lerp(REST_WRIST[s] + Vector((4., 0., 6.)), RIDE_GRIP[s], grip) + Vector((0., 0., .8 * math.sin(u)))
+        r = max(r, poser.arm(s, wrist, pole=(-.15, sg * 1., -.55)))
+        curl(s, lerp(15., 62., grip))
+        ball = lerp(STAND_PAWS[s], RIDE_BALL[s], spread)
+        r = max(r, poser.leg(s, ball, 35. * spread, 10. * spread, pole=(1., sg * 1.3 * spread, .2)))
+    ik_goals()
+    return r
+
+def ride_sit(phase, f):
+    w = TAU * phase
+    breath = math.sin(2 * w)
+    look = 14 * math.sin(w + .5) + 5 * math.sin(3 * w)
+    ride_body(42., look, breath, .4 * breath, 0., 3., w)
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'X', (1 if side == 'L' else -1) * 2. * math.sin(4 * w + (0 if side == 'L' else 1.1)))
+    return ride_limbs(1., 1., w)
+
+def ride_bound(phase, f):
+    # The hare's cycle (FeyHare.cpp): forefeet land about 0.1, hind feet about 0.55, the long flight about 0.85.
+    w = TAU * phase
+    toss = 2.6 * math.cos(TAU * (phase - .85)) + 1.1 * math.cos(2 * TAU * (phase - .33))
+    pitch = 6. * math.cos(TAU * (phase - .1))
+    ride_body(52. + pitch, 0., 0., toss - 2., .8, 14., 2 * w)
+    poser.rotate('head', 'Y', -pitch * .8)                                        # his head held steady
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'Y', 30.)                                     # laid back in the wind
+    return ride_limbs(1., 1., 2 * w)
+
+def mount(phase, f):
+    t = f / FPS
+    u = smoothstep(t, .18, .66)                     # from standing to seated
+    reach = smoothstep(t, 0., .2) * (1 - smoothstep(t, .3, .62))
+    swing = math.sin(math.pi * smoothstep(t, .28, .6))
+    crouch = math.sin(math.pi * smoothstep(t, 0., .3)) * (1 - u)
+    ride_body(lerp(0., 42., u) + 18. * swing, 0., 0., 0., 0., 3. * u, t * 6.)
+    poser.translate('pelvis', (0, 0, (RIDE_DROP - 4. * crouch) * (1 - u)))       # (ride_body lowered it fully)
+    poser.update()
+    r = 0.
+    for s, sg in (('L', 1), ('R', -1)):
+        up = Vector((7., -4., 38.)) if s == 'L' else Vector((6., -11., 36.))      # reaching up its side (it is to his right)
+        wrist = lerp(lerp(REST_WRIST[s] + Vector((1.5, 0., 0.)), up, reach), RIDE_GRIP[s], u)
+        r = max(r, poser.arm(s, wrist, pole=(-.2, sg * 1., -.4)))
+        curl(s, lerp(20., 62., max(u, reach)))
+        ball = lerp(STAND_PAWS[s], RIDE_BALL[s], u)
+        if s == 'R': ball = ball + Vector((-3., -4., 16.)) * swing                    # the right leg swung up and over
+        r = max(r, poser.leg(s, ball, 35. * u, 10. * u, pole=(1., sg * 1.3 * u, .2)))
+    ik_goals()
+    return r
+
+author('RideSit', RIDE_FRAMES, ride_sit, True, {
+    'seat_z': RIDE_SEAT_Z, 'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Astride the great hare behind its shoulders, leaning forward, forepaws in its scruff, legs down its flanks, tail over its rump; looking about. The runtime puts his origin seat_z below the saddle.'}, ground=False)
+author('RideBound', BOUND_FRAMES, ride_bound, True, {
+    'seat_z': RIDE_SEAT_Z, 'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'One cycle of the hare\'s bound (played at its phase, over RideSit by its speed): tossed at each landing, crouched lower, ears back, tail streaming, head steady.'}, ground=False)
+author('Mount', MOUNT_FRAMES, mount, False, {
+    'seat_z': RIDE_SEAT_Z, 'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'From standing at the hare\'s left side to the seat (RideSit\'s first frame) in 0.8 s: crouch, reach up its side, pull, the right leg over. The runtime carries him up in an arc.'}, ground=False)
+
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,
            primary_bone_axis='Y', secondary_bone_axis='X', use_armature_deform_only=False,

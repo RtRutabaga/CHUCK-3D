@@ -4763,4 +4763,10 @@ void ADockHUD::DrawHUD()
         float W=0,H=0;GetTextSize(Prompt,W,H,GEngine->GetSmallFont(),1.2f);
         DrawText(Prompt,FLinearColor(.95f,.95f,.95f),(Canvas->SizeX-W)*.5f,Canvas->SizeY*.8f,GEngine->GetSmallFont(),1.2f);
     }
+    else if(Chuck->GetMountPrompt())   // (a calm great hare in reach, the Feywild, 2026-11-25)
+    {
+        const FString Prompt=TEXT("F   Ride");
+        float W=0,H=0;GetTextSize(Prompt,W,H,GEngine->GetSmallFont(),1.2f);
+        DrawText(Prompt,FLinearColor(.95f,.95f,.95f),(Canvas->SizeX-W)*.5f,Canvas->SizeY*.8f,GEngine->GetSmallFont(),1.2f);
+    }
 }

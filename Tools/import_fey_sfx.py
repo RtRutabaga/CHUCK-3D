@@ -16,6 +16,8 @@ DEST = '/Game/Art/Audio/SFX'
 SOUNDS = json.loads((ROOT / 'SourceAssets/Audio/SFX/fey-sfx-manifest.json').read_text())['sounds']
 # (2026-11-24) and the small delights' synthesised sounds (Tools/gen_fey_delights_sfx.py)
 SOUNDS.update(json.loads((ROOT / 'SourceAssets/Audio/SFX/fey-delights-sfx-manifest.json').read_text())['sounds'])
+# (2026-11-25) and the great hare's (Tools/build_fey_hare_sfx.py)
+SOUNDS.update(json.loads((ROOT / 'SourceAssets/Audio/SFX/fey-hare-sfx-manifest.json').read_text())['sounds'])
 ONLY = [n for n in os.environ.get('CHUCK_FEY_SFX_ONLY', '').split(',') if n]   # (a comma list: import only these, so the rest do not churn)
 for name, info in sorted(SOUNDS.items()):
     if ONLY and name not in ONLY: continue

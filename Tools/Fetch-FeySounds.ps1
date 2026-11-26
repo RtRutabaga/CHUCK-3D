@@ -21,6 +21,7 @@ $wanted = [ordered]@{
     '0150' = 'water-bubbles'; '1529' = 'splash-small-1'
     '2093' = 'delirious-laughter-3'; '2096' = 'delirious-laughter-6'
     '1000' = 'bumblebee-1'; '1001' = 'bumblebee-2'   # (stage 6: the bees on the maze's hedge tops)
+    '1376' = 'bunny-hutch'   # (2026-11-25: rabbits stamping their feet, for the great hare's warning thump and its bound)
 }
 $records = @()
 foreach ($id in $wanted.Keys) {

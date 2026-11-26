@@ -2,6 +2,83 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 25 (fourth) — Feywild: the great hare (Claude)
+
+- **Asked:** merge `origin/claude/clever-feynman-s6sycn` (the plan), then build the great hare with the plan's own
+  recommendations (bound 550 cm/s, leap about 3.5 m by 70 cm, no Riverbank hare, mixed coats); use helpful free
+  resources.
+- **Source:** `main` at 498d9fe8 (the plan merged); this commit. The package's receipt names 498d9fe, because the work
+  was not yet committed.
+- **Built:**
+  - **Mesh and skeleton:** `Tools/build_fey_hare.py` (Blender 4.5.14, SDF kit) produces
+    `SourceAssets/Enemies/Feywild/Hare/SK_FeyHare.fbx` with its own skeleton, including a `saddle` bone. It is imported
+    by `Tools/import_fey_hare.py` to `/Game/Art/Feywild/Creatures/Hare`. `M_FeyHareFur` is triplanar fur on the
+    pre-skinned position, tinted per coat.
+  - **The hare:** `AFeyHare` (ACharacter + UPoseableMeshComponent). The gait is procedural: foot paths by phase and
+    speed, two-bone IK, and a back that flexes. Unridden it grazes, sits up, hops, and lollops off from a running Chuck.
+    Ridden, it does a hop-along (150), the bound (550) and the leap. It refuses within 8 m of a threshold's mouth and
+    thumps. It throws him (rear, then his CrashLand, no Sanity lost) and bolts home. Death or a checkpoint resets every
+    hare.
+  - **Herds:** `AFeyLife::SpawnHares` finds a home for each herd at runtime (rings of 450 cm, open ground). They are
+    spawned and reset with the district's creatures.
+  - **Chuck:** `EGait::Ride` and clips RideSit, RideBound and Mount (`Tools/build_chuck_v1.py`, imported with
+    Import-ChuckV1 -Clips).
+    - The talk key mounts and dismounts, and the HUD shows "F   Ride".
+    - Jump leaps, Roll dismounts, Run toggles the bound, and Slash is ignored.
+    - Bites cause no knockback while riding.
+    - The camera boom grows with the bound.
+  - **Sounds:** `Tools/build_fey_hare_sfx.py` produces thumps and bound thuds, cut by onset detection from BigSoundBank
+    bsb_1376 "Bunny hutch" (CC0, added to `Fetch-FeySounds.ps1` and its manifest) with bsb_0137 leaves. The throw
+    squeal is synthesised.
+  - **Tests:** life steps 92 (the Crossroads herd) and 82–90:
+    - herds and grazing;
+    - shy;
+    - prompt and mount;
+    - bound, leap and frame time;
+    - pollen;
+    - refuse;
+    - maze throw;
+    - slide-off and remount;
+    - death reset.
+
+    Step 91 is the pose review, run only with `CHUCK_FEY_HARE_POSES=1`.
+- **Changed:**
+  - New: `FeyHare.h/.cpp`, `Tools/build_fey_hare.py`, `import_fey_hare.py` and `build_fey_hare_sfx.py`.
+  - Edited: `ChuckCharacter.h/.cpp` (both now CRLF throughout), `DockGameMode.cpp`, `FeyLife.h/.cpp`,
+    `FeyMapTest.cpp`, `Tools/build_chuck_v1.py`, `Fetch-FeySounds.ps1`, `import_fey_sfx.py`, `Chuck_V1.blend`, the
+    animation manifest, and `docs/regions/FEYWILD-HARE.md`.
+  - Content: `Art/Feywild/Creatures/Hare/*`, `Art/Audio/SFX/SFX_FeyHare*`, and
+    `Characters/Chuck/V1/Animations/AS_Chuck_{RideSit,RideBound,Mount}`.
+- **Contract:** the rig is unchanged.
+  - `EClip` values RideSit, RideBound and Mount are appended, and `EGait::Ride` is appended. The names static_assert is
+    updated.
+  - No existing clip was regenerated.
+- **Validation (actual):**
+  - Editor life test from step 0: failures=0 (`Local/hare-life-full.log`). The hare steps from step 80/82:
+    failures=0 (`Local/hare-life-7.log`, `Local/hare-life-8.log`).
+    - `CHUCK_FEY_HARES_TEST mounts=3 dismounts=1 throws=1 refusals=3 thumps=3 shies=2 leaps=1 top=550`.
+    - Riding frame time: 17.49 ms.
+  - Package: Verify-Package 50/50 steps with no retries, 182 passes
+    (`Local/verify-package-20261125-203410.log`, `Local/hare-package.log`). Promoted as FeywildHare. The receipt
+    names 498d9fe; the previous package is kept as `Windows-Previous-20261125-FeywildHare`; FeywildRedcapFill was
+    pruned.
+- **Evidence:**
+  - `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/FeyMap/Life_Hare*.png` and `Life_HarePose_*`.
+  - Contact sheets: `Local/hare-poses-7.png` and `Local/hare-ride-sheet.png`.
+- **Binary/LFS:**
+  - The new uassets, FBX files and wavs are small.
+  - `bsb_1376.mp3` is 2.7 MB, and is kept like the other fetched BigSoundBank sources.
+- **Known flaws:**
+  - Not played by hand.
+  - The hare stops dead against fallen logs, and steering at full bound near obstacles is untested.
+  - The camera can drop under logs.
+  - The bound and leap stills were partly occluded.
+  - The deep-water, seed and moth throws are coded but untested.
+  - Chuck's tail sticks out sideways a little in the ride clips.
+  - The coats were judged only in stills.
+- **Launcher:** current. It runs this package.
+- **Next owner:** Next part of the work can be done here (a hand playtest of the ride and any tuning it calls for).
+
 ## November 25 (third) — Feywild: the delights' known flaws fixed (Claude)
 
 - **Asked:** proceed with the next steps, which were the flaws listed in the delights entry below.

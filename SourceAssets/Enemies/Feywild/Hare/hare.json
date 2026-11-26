@@ -1,0 +1,357 @@
+{
+ "uv_cm": 232.64,
+ "bones": {
+  "root": {
+   "head": [
+    0,
+    0,
+    0
+   ],
+   "tail": [
+    0,
+    0,
+    12
+   ],
+   "parent": null
+  },
+  "spine": {
+   "head": [
+    -14,
+    0,
+    64
+   ],
+   "tail": [
+    8,
+    0,
+    64
+   ],
+   "parent": "root"
+  },
+  "chest": {
+   "head": [
+    8,
+    0,
+    64
+   ],
+   "tail": [
+    28,
+    0,
+    60
+   ],
+   "parent": "spine"
+  },
+  "neck": {
+   "head": [
+    28,
+    0,
+    62
+   ],
+   "tail": [
+    40,
+    0,
+    76
+   ],
+   "parent": "chest"
+  },
+  "head": {
+   "head": [
+    40,
+    0,
+    76
+   ],
+   "tail": [
+    64,
+    0,
+    74
+   ],
+   "parent": "neck"
+  },
+  "hips": {
+   "head": [
+    -14,
+    0,
+    64
+   ],
+   "tail": [
+    -36,
+    0,
+    60
+   ],
+   "parent": "spine"
+  },
+  "scut": {
+   "head": [
+    -40,
+    0,
+    62
+   ],
+   "tail": [
+    -48,
+    0,
+    68
+   ],
+   "parent": "hips"
+  },
+  "saddle": {
+   "head": [
+    -3,
+    0,
+    80
+   ],
+   "tail": [
+    -3,
+    0,
+    88
+   ],
+   "parent": "spine"
+  },
+  "ear1_l": {
+   "head": [
+    45,
+    5,
+    85
+   ],
+   "tail": [
+    43,
+    9,
+    104
+   ],
+   "parent": "head"
+  },
+  "ear2_l": {
+   "head": [
+    43,
+    9,
+    104
+   ],
+   "tail": [
+    39,
+    12,
+    123
+   ],
+   "parent": "ear1_l"
+  },
+  "fupper_l": {
+   "head": [
+    24,
+    8.5,
+    54
+   ],
+   "tail": [
+    20,
+    8.5,
+    33
+   ],
+   "parent": "chest"
+  },
+  "flower_l": {
+   "head": [
+    20,
+    8.5,
+    33
+   ],
+   "tail": [
+    23,
+    8.5,
+    7
+   ],
+   "parent": "fupper_l"
+  },
+  "fpaw_l": {
+   "head": [
+    23,
+    8.5,
+    7
+   ],
+   "tail": [
+    31,
+    8.5,
+    1.5
+   ],
+   "parent": "flower_l"
+  },
+  "thigh_l": {
+   "head": [
+    -28,
+    11.5,
+    56
+   ],
+   "tail": [
+    -13,
+    11.5,
+    37
+   ],
+   "parent": "hips"
+  },
+  "shin_l": {
+   "head": [
+    -13,
+    11.5,
+    37
+   ],
+   "tail": [
+    -33,
+    11.5,
+    17
+   ],
+   "parent": "thigh_l"
+  },
+  "hfoot_l": {
+   "head": [
+    -33,
+    11.5,
+    17
+   ],
+   "tail": [
+    -12,
+    11.5,
+    3
+   ],
+   "parent": "shin_l"
+  },
+  "htoe_l": {
+   "head": [
+    -12,
+    11.5,
+    3
+   ],
+   "tail": [
+    -2,
+    11.5,
+    1.2
+   ],
+   "parent": "hfoot_l"
+  },
+  "ear1_r": {
+   "head": [
+    45,
+    -5,
+    85
+   ],
+   "tail": [
+    43,
+    -9,
+    104
+   ],
+   "parent": "head"
+  },
+  "ear2_r": {
+   "head": [
+    43,
+    -9,
+    104
+   ],
+   "tail": [
+    39,
+    -12,
+    123
+   ],
+   "parent": "ear1_r"
+  },
+  "fupper_r": {
+   "head": [
+    24,
+    -8.5,
+    54
+   ],
+   "tail": [
+    20,
+    -8.5,
+    33
+   ],
+   "parent": "chest"
+  },
+  "flower_r": {
+   "head": [
+    20,
+    -8.5,
+    33
+   ],
+   "tail": [
+    23,
+    -8.5,
+    7
+   ],
+   "parent": "fupper_r"
+  },
+  "fpaw_r": {
+   "head": [
+    23,
+    -8.5,
+    7
+   ],
+   "tail": [
+    31,
+    -8.5,
+    1.5
+   ],
+   "parent": "flower_r"
+  },
+  "thigh_r": {
+   "head": [
+    -28,
+    -11.5,
+    56
+   ],
+   "tail": [
+    -13,
+    -11.5,
+    37
+   ],
+   "parent": "hips"
+  },
+  "shin_r": {
+   "head": [
+    -13,
+    -11.5,
+    37
+   ],
+   "tail": [
+    -33,
+    -11.5,
+    17
+   ],
+   "parent": "thigh_r"
+  },
+  "hfoot_r": {
+   "head": [
+    -33,
+    -11.5,
+    17
+   ],
+   "tail": [
+    -12,
+    -11.5,
+    3
+   ],
+   "parent": "shin_r"
+  },
+  "htoe_r": {
+   "head": [
+    -12,
+    -11.5,
+    3
+   ],
+   "tail": [
+    -2,
+    -11.5,
+    1.2
+   ],
+   "parent": "hfoot_r"
+  }
+ },
+ "bounds_cm": [
+  [
+   -50.5,
+   -20.2,
+   -0.9
+  ],
+  [
+   68.1,
+   20.0,
+   124.8
+  ]
+ ],
+ "tris": 51066,
+ "note": "Tools/build_fey_hare.py; the game poses it in code (FeyHare.cpp). saddle: Chuck's seat, no weights."
+}

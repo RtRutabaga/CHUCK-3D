@@ -6,6 +6,13 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Feywild: the great hare (November 25, Claude):** a rideable great hare, built from
+  [regions/FEYWILD-HARE.md](regions/FEYWILD-HARE.md) with its recommended answers. There are herds in Highmeadow (two),
+  the Crossroads, the orchard and the Lily Mere, and none in the Riverbank. Walk up to one and press F/Y to ride. The
+  stick steers, Run gives the bound (550 cm/s), Jump leaps, and Roll or F slides him off. It refuses threshold mouths,
+  and it throws him at the overlook, on the way down to the maze, in water, and when a seed or a moth hits him.
+  Procedural gait (`FeyHare.cpp`); Chuck's new clips are RideSit, RideBound and Mount. Verified 50/50 and promoted as
+  FeywildHare. Not played by hand yet.
 - **Feywild: the trio in the package (November 24, Claude):** the Crossroads trio had never been cooked into the
   package; the user found none in game. `/Game/Characters/FeyTrio` is now always cooked, and a missing trio fails the
   feyMap verify step. Verified 50/50; the trio confirmed in the packaged game; promoted as FeywildTrioCook.

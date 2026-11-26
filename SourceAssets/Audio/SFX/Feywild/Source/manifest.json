@@ -317,5 +317,16 @@
     "bytes": 816128,
     "sha256": "f8c796b96668f24c499ed9e42f5feb512aeae3606aba56ceea5d13602e157f0e",
     "downloaded": "2026-11-22 (Claude, at the user's request)"
+  },
+  {
+    "file": "BigSoundBank/bsb_1376.mp3",
+    "title": "bunny-hutch",
+    "author": "Joseph Sardin (BigSoundBank)",
+    "license": "CC0 1.0",
+    "page": "https://bigsoundbank.com/bunny-hutch-s1376.html",
+    "url": "https://bigsoundbank.com/UPLOAD/mp3/1376.mp3",
+    "bytes": 2693028,
+    "sha256": "89e05b90401ba603af3c45a321571854f9a6e7c1e25e9a302eb35aebbbf55acd",
+    "downloaded": "2026-11-22 (Claude, at the user's request)"
   }
 ]
