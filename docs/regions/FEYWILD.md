@@ -509,11 +509,38 @@ The user's list, after the trio. Nothing here hurts him or changes the route; ea
   - The worst threshold frame was 678 ms. The walk before this work had 563 ms, so that hitch predates it.
 - Stills: `Life_FairyRing`, `Life_Spores`, `Life_Wisps`, `Life_WispsEnd`, `Life_Koi`, `Life_Swans`, `Life_Rainbow`, `Life_RainbowAgainstSun`, `Life_Crow`, `Life_CrowFlight`, `Life_MazeRedcap`.
 
-**Not yet:**
+**Not yet:** all three items below were fixed on 2026-11-25.
 
 - No still shows the plants reacting (the motion is small and needs watching in play).
 - The new beasts' and roaming redcaps' ground has not been looked at by hand.
 - The swans are small at that distance.
+
+**Second pass (2026-11-25): the known flaws.**
+
+- **The plants' reaction, seen.** No still had caught it because it switches off whenever the camera is not his own,
+  and every still uses a test camera.
+  - `AChultFoliageFade::bTestKeepOn`, for tests only, keeps it on.
+  - Life step 81 frames one Deepwood fern from a fixed camera twice: `Life_FernFar` with him 20 m off, then
+    `Life_FernNear` with him in it.
+  - The fern's reaction was too faint to see: at most about 6 cm at a frond tip. It now reaches 1.7 m and pushes
+    70 cm with a 35 cm dip (was 1.3 m, 32 cm and 22 cm). The fronds visibly part round him.
+- **The wisps no longer stall.** Every run had stopped him under the lead wisp behind an oak whose roots reach 5.4 m
+  from its trunk.
+  - The way is now kept clear every 2.5 m between the points, not only at them.
+  - Oaks and the rapids' bank rocks now keep out of FeyLife's clearings too. Before, only `Free()` checked them. Each
+    check runs after the random draws, so every other tree and rock keeps its place.
+  - The second point moved 2.8 m so the way bends round that oak.
+  - The test's 8 s assist is still there as a guard, but no longer fires.
+- **The swans are nearer.** They fly 55 to 61 m out and 4 to 6 m under the brink (were 92 m out and 10 m under), and
+  rise 5 m over the threshold's rock mass.
+  - The life test traces the ground under the whole crossing (`swans_clear`): at least 2.5 m. It is 3.6 m at the
+    lowest.
+- **The new creatures' ground is audited.** `CHUCK_FEY_LIFE_GROUND_AUDIT` runs as each district's life is built. It
+  samples every 2 m along each new beast's round and every 3 m over each roaming redcap's leash, and flags river, deep
+  water, ground steeper than 35 degrees, and anything solid standing more than 1.2 m over a beast's way.
+  - It found two oaks and two rocks on the Highmeadow beasts' legs. Those legs are now clearings.
+  - Both districts audit at 0: Deepwood 400 samples, Highmeadow 144.
+  - The life test's `creature_ground` check requires 0.
 
 ## The Crossroads trio, third round (2026-11-24)
 

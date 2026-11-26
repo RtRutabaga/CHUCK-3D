@@ -133,6 +133,12 @@ namespace
                 {
                     TArray<FVector>& Rd = P.MoreRounds.AddDefaulted_GetRef();
                     for (int32 K = 0; K < 5; ++K) { const float A = FMath::DegreesToRadians(K * 72.f + 15.f), Rr = K % 2 ? 2100.f : 2600.f; const FVector2D Q = C + FVector2D(FMath::Cos(A), FMath::Sin(A)) * Rr; Rd.Add(FVector(Q.X, Q.Y, LandZ(Highmeadow, Q.X, Q.Y))); }
+                    // (2026-11-25) its legs kept clear of oaks and rocks (the ground audit found two of each on them)
+                    for (int32 K = 0; K < Rd.Num(); ++K)
+                    {
+                        const FVector2D A(Rd[K]), B(Rd[(K + 1) % Rd.Num()]); const int32 N = FMath::CeilToInt(FVector2D::Distance(A, B) / 250.f);
+                        for (int32 I = 0; I < N; ++I) P.Clear.Add(FVector(FMath::Lerp(A, B, I / float(N)), 350.f));
+                    }
                 }
                 for (const FVector2D& Q : {FVector2D(-105500.f, 8600.f), FVector2D(-107500.f, 12600.f), FVector2D(-110800.f, 10600.f), FVector2D(-110200.f, 7600.f), FVector2D(-107200.f, 6900.f)})
                     P.Round.Add(FVector(Q.X, Q.Y, LandZ(Highmeadow, Q.X, Q.Y)));
@@ -387,6 +393,8 @@ namespace
 
 // ------------------------------------------------------------------ AFeyLife
 bool AFeyLife::bCalm = false;
+int32 AFeyLife::GroundSamples = 0;
+int32 AFeyLife::GroundBad = 0;
 int32 AFeyLife::FlowerToggles = 0, AFeyLife::OrchidShots = 0, AFeyLife::OrchidHits = 0, AFeyLife::MothTouches = 0, AFeyLife::OrchidAimed = 0;
 bool AFeyLife::bOrchidSure = false;
 const TArray<TWeakObjectPtr<AFeyLife>>& AFeyLife::All() { return GLife; }
@@ -418,6 +426,8 @@ UProceduralMeshComponent* AFeyLife::NewMesh(USceneComponent* Parent, const FName
     auto* M = NewObject<UProceduralMeshComponent>(this, Name); M->SetupAttachment(Parent ? Parent : RootComponent.Get());
     M->bUseAsyncCooking = false; M->RegisterComponent(); return M;
 }
+
+static void AuditFeyGround(UWorld* World, AActor* Self, int32 D, const FPlace& P);   // (below BuildHag)
 
 void AFeyLife::Build(int32 D)
 {
@@ -573,6 +583,7 @@ void AFeyLife::Build(int32 D)
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BUILT district=%s flowers=%d vines=%d pollen=%d orchids=%d moths=%d mites=%d redcaps=%d beast=%d refuges=%d pads=%d"), FeyMap::District(D).Name, Flowers.Num(), Vines.Num(), Pollen.Num(), Orchids.Num(), Moths.Num(),
         Mites.Num(), Redcaps.Num(), Beast != nullptr, Refuges.Num(), PadRises.Num() ? PadRises[0].Pads.Num() : 0);
     if (MoreBeasts.Num()) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_MORE_BEASTS district=%s beasts=%d"), FeyMap::District(D).Name, MoreBeasts.Num());
+    AuditFeyGround(GetWorld(), this, D, P);
     });
     // (2026-11-24) The district's small delights (fairy rings, wisps, koi, puffballs, swans, rainbow, crows, turning signs).
     Pending.Add([this, D]()
@@ -926,6 +937,43 @@ void AFeyLife::SpawnRedcaps()
         Post.Leash = FBox2D(FVector2D(R.X, R.Y) - FVector2D(1350.f, 1350.f), FVector2D(R.X, R.Y) + FVector2D(1350.f, 1350.f));
         if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) { S->SetFeyFill(40.f); Redcaps.Add(S); }
     }
+}
+
+// (2026-11-25) The ground under the 11-24 creatures, checked once as they are built: along each new beast's round (every 2 m,
+// the closing leg too) and over each roaming redcap's leash (every 3 m). Bad: in the river or deep water, steep (over 35
+// degrees), or, on a beast's way, something solid standing more than 1.2 m over the land (a rock, a trunk). Under the
+// leashes trunks are only counted: redcaps go round them.
+static void AuditFeyGround(UWorld* World, AActor* Self, int32 D, const FPlace& P)
+{
+    if (!P.MoreRounds.Num() && !P.Roamers.Num()) return;
+    int32 N = 0, Wet = 0, Steep = 0, Blocked = 0, Trunks = 0; FVector2D FirstBad = FVector2D::ZeroVector;
+    FCollisionObjectQueryParams Obj(ECC_WorldStatic); FCollisionQueryParams Q; Q.AddIgnoredActor(Self);
+    auto Sample = [&](float X, float Y, bool bWay)
+    {
+        ++N; const float Z = LandZ(D, X, Y);
+        const float G = FMath::Max(FMath::Abs(LandZ(D, X + 100.f, Y) - Z), FMath::Abs(LandZ(D, X, Y + 100.f) - Z)) / 100.f;
+        const bool bWet = FeyMap::InRiver(D, X, Y) || FeyMap::InDeepWater(X, Y), bSteep = G > .7f;
+        FHitResult Hit; bool bOver = false;
+        if (World->LineTraceSingleByObjectType(Hit, FeyWorld(FVector(X, Y, Z + 400.f)), FeyWorld(FVector(X, Y, Z - 50.f)), Obj, Q))
+            bOver = FeyLocal(Hit.ImpactPoint).Z - Z > 120.f;
+        if (bOver && bWay)
+        {
+            const auto* Ism = Cast<UInstancedStaticMeshComponent>(Hit.GetComponent());
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_GROUND_BLOCK at=%.0f,%.0f over_cm=%.0f mesh=%s"), X, Y, FeyLocal(Hit.ImpactPoint).Z - Z,
+                Ism && Ism->GetStaticMesh() ? *Ism->GetStaticMesh()->GetName() : Hit.GetComponent() ? *Hit.GetComponent()->GetName() : TEXT("-"));
+        }
+        Wet += bWet; Steep += bSteep; (bWay ? Blocked : Trunks) += bOver;
+        if ((bWet || bSteep || (bWay && bOver)) && FirstBad.IsZero()) FirstBad = FVector2D(X, Y);
+    };
+    for (const TArray<FVector>& Rd : P.MoreRounds) for (int32 K = 0; K < Rd.Num(); ++K)
+    {
+        const FVector A = Rd[K], B = Rd[(K + 1) % Rd.Num()]; const int32 Steps = FMath::Max(1, FMath::CeilToInt(FVector::Dist2D(A, B) / 200.f));
+        for (int32 I = 0; I < Steps; ++I) { const FVector C = FMath::Lerp(A, B, I / float(Steps)); Sample(C.X, C.Y, true); }
+    }
+    for (const FVector& R : P.Roamers) for (float U = -1350.f; U <= 1350.f; U += 300.f) for (float V = -1350.f; V <= 1350.f; V += 300.f) Sample(R.X + U, R.Y + V, false);
+    const int32 Bad = Wet + Steep + Blocked; AFeyLife::GroundSamples += N; AFeyLife::GroundBad += Bad;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_GROUND_AUDIT district=%s samples=%d wet=%d steep=%d blocked=%d trunks_in_leashes=%d first_bad=%.0f,%.0f"),
+        FeyMap::District(D).Name, N, Wet, Steep, Blocked, Trunks, FirstBad.X, FirstBad.Y);
 }
 
 void AFeyLife::BuildHag()

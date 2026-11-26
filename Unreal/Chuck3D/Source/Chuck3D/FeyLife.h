@@ -58,6 +58,10 @@ public:
     static const TArray<TWeakObjectPtr<AFeyLife>>& All();
     /** Tests and the route walker: no orchid or moth hurts him while set. */
     static bool bCalm;
+    // (2026-11-25) The ground audit of the new beasts' rounds and roaming redcaps' leashes: samples taken, and bad ones
+    // (river, deep water, steep, or something solid standing over the land on a beast's way).
+    static int32 GroundSamples;
+    static int32 GroundBad;
     static int32 FlowerToggles;
     static int32 OrchidShots;
     static int32 OrchidHits;

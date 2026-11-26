@@ -14,6 +14,7 @@
 #include "Misc/Paths.h"
 
 bool AChultFoliageFade::bForceOff = false;
+bool AChultFoliageFade::bTestKeepOn = false;
 
 AChultFoliageFade::AChultFoliageFade()
 {
@@ -48,7 +49,7 @@ void AChultFoliageFade::Tick(float DeltaSeconds)
     if (!Collection) return;
     const auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     const APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
-    const bool bOn = Chuck && PC && PC->PlayerCameraManager && !Chuck->IsInFallCutscene() && !Chuck->IsHidden() && PC->GetViewTarget() == Chuck && !bForceOff;
+    const bool bOn = Chuck && PC && PC->PlayerCameraManager && !Chuck->IsInFallCutscene() && !Chuck->IsHidden() && (PC->GetViewTarget() == Chuck || bTestKeepOn) && !bForceOff;
     Strength = FMath::FInterpConstantTo(Strength, bOn ? 1.f : 0.f, DeltaSeconds, 4.f);
     if (!Chuck || !PC || !PC->PlayerCameraManager) return;
     const FVector At = Chuck->GetActorLocation(), Eye = PC->PlayerCameraManager->GetCameraLocation();

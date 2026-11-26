@@ -22,6 +22,7 @@ public:
     float GetStrength() const { return Strength; }
     /** Held off whatever happens (the review's comparison stills). */
     static bool bForceOff;
+    static bool bTestKeepOn;   // (2026-11-25, tests only: on under a test camera too, so a still can show the Feywild plants reacting to him)
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;

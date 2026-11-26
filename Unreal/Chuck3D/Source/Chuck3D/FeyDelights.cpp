@@ -41,7 +41,9 @@ namespace
     const int32 RingDistrict[] = {Riverbank, Orchard, Deepwood, LilyMere};
     constexpr float RingR = 165.f;
     // The wisps' way: from the Moonmoth Fen's end, round its pools, to a hidden pool's western shore.
-    const FVector2D WispPoints[] = {{-66900.f, 35700.f}, {-67500.f, 36700.f}, {-68300.f, 37600.f}, {-68700.f, 38700.f}, {-68350.f, 39650.f}};
+    // (2026-11-25: the second point moved 2.8 m (from -67500,36700), so the way bends round an oak at -68133,36593 whose
+    // roots reach 5.4 m and stopped him under the lead wisp on every run)
+    const FVector2D WispPoints[] = {{-66900.f, 35700.f}, {-67300.f, 36900.f}, {-68300.f, 37600.f}, {-68700.f, 38700.f}, {-68350.f, 39650.f}};
     // The rapids' cascade (FeyMap.cpp: the river's level steps up 2.2 m about Y 14000): its spray at the foot.
     constexpr float CascadeY = 13650.f;
 
@@ -226,6 +228,13 @@ const TArray<FVector>& AFeyDelights::Clearings()
         TArray<FVector> Out;
         for (int32 I = 0; I < UE_ARRAY_COUNT(RingSpots); ++I) { const FVector2D R = RingGround(I); Out.Add(FVector(R.X, R.Y, RingR + 260.f)); }
         for (const FVector2D& W : WispPoints) Out.Add(FVector(W, 300.f));   // (the wisps' way kept open)
+        // (2026-11-25) and between the points too, every 2.5 m: something solid planted mid-way between the second and third
+        // stopped him straight under the lead wisp on every run.
+        for (int32 K = 0; K + 1 < UE_ARRAY_COUNT(WispPoints); ++K)
+        {
+            const FVector2D A = WispPoints[K], B = WispPoints[K + 1]; const int32 N = FMath::CeilToInt(FVector2D::Distance(A, B) / 250.f);
+            for (int32 I = 1; I < N; ++I) Out.Add(FVector(FMath::Lerp(A, B, I / float(N)), 300.f));
+        }
         Out.Add(FVector(WispPoints[UE_ARRAY_COUNT(WispPoints) - 1], 380.f));   // (the cigarettes' shore)
         return Out;
     }();
@@ -425,13 +434,16 @@ FVector AFeyDelights::GetSwanAt(int32 I) const { return SwanAt(I, SwanHold >= 0.
 
 FVector AFeyDelights::SwanAt(int32 I, float Time)
 {
-    // A slow line crossing below the Maze Overlook, north to south over the maze's outer rings, 9 to 11 m under the brink.
+    // A slow line crossing below the Maze Overlook, north to south, 55 m out and 4 to 6 m under the brink (2026-11-25: was 92 m
+    // out and 10 m under, specks from the brink; nearer at the same angle down, so the near ridge still does not hide them).
     const FVector2D O = FeyMap::OverlookAt(); const float Oz = LandZ(Highmeadow, O.X, O.Y);
     constexpr float Speed = 380.f, Y0 = 26000.f, Y1 = -16000.f, Gap = 45.f;
     const float Period = (Y0 - Y1) / Speed + Gap, T = FMath::Fmod(Time, Period);
     const float Y = Y0 - (T - I * 1.45f) * Speed;
-    const float X = O.X - 9200.f - 240.f * I + 90.f * FMath::Sin(Y / 4100.f);
-    return FVector(X, Y, Oz - 980.f - 25.f * I + 40.f * FMath::Sin(Y / 2600.f + I));
+    const float X = O.X - 5500.f - 200.f * I + 90.f * FMath::Sin(Y / 4100.f);
+    // (rising 5 m over the threshold's rock mass at about Y 7200, which the nearer line would otherwise skim)
+    const float Ridge = FMath::Clamp(1.f - FMath::Abs(Y - 7200.f) / 2600.f, 0.f, 1.f), Lift = 500.f * Ridge * Ridge * (3.f - 2.f * Ridge);
+    return FVector(X, Y, Oz - 400.f - 25.f * I + 40.f * FMath::Sin(Y / 2600.f + I) + Lift);
 }
 
 void AFeyDelights::BuildRainbow()

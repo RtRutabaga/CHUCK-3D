@@ -934,7 +934,7 @@ for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeyCloud', cl
                  ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22., react=(80., 20., 9.))),
                  # (2026-11-24) The Feywild's own fern: Chult's fern_02 as M_ChultFern draws it, its fronds curling away from him (with
                  # Chult's see-through fade put back below). FeyMap.cpp sets it on the districts' ferns; Chult's keep M_ChultFern.
-                 ('M_FeyFern', lambda m: foliage(m, nat('T_fern_02_diff_2k'), nat('T_fern_02_nor_dx_2k'), nat('T_fern_02_arm_2k'), nat('T_fern_02_alpha_2k'), (.68, .74, .55), None, .9, 90., react=(130., 32., 22.))),
+                 ('M_FeyFern', lambda m: foliage(m, nat('T_fern_02_diff_2k'), nat('T_fern_02_nor_dx_2k'), nat('T_fern_02_arm_2k'), nat('T_fern_02_alpha_2k'), (.68, .74, .55), None, .9, 90., react=(170., 70., 35.))),
                  ('M_FeyRainbow', rainbow), ('M_FeyKoi', koi),
                  ('M_FeyCelandine', lambda m: foliage(m, textures['celandine_01', 'diffuse'], textures['celandine_01', 'nor_dx'], textures['celandine_01', 'arm'], textures['celandine_01', 'alpha'], (1., 1., .8), None, .8, 18.)),
                  ('M_FeyFungus', lambda m: fungus(m, 30.)), ('M_FeyFungusBig', lambda m: fungus(m, 64.)),

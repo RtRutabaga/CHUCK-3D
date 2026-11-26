@@ -1811,6 +1811,9 @@ namespace
         auto Put = [&](int32 K, float X, float Y, float S, float Yaw, float Sink, float Tilt)
         {
             const FRotator Rot(R.FRandRange(-Tilt, Tilt), Yaw, R.FRandRange(-Tilt, Tilt));
+            // (2026-11-25) No rock in FeyLife's clearings, whatever placed it (the rapids' banks did not ask Free); checked
+            // after the draws, so every other rock keeps its place.
+            if (K >= KRock0 && K < KRock0 + 6) for (const FVector& Cl : FeyLifeClearings()) if (FVector2D::DistSquared(FVector2D(X, Y), FVector2D(Cl)) < FMath::Square(Cl.Z)) return;
             // (2026-11-23) Nothing on ground steeper than 45 degrees (petals and grass hung on the narrow cut's walls).
             const float E = 25.f;   // (and none beside such ground: tall grass at a wall's foot leant up into the rock)
             for (const FVector2D& O : {FVector2D(0, 0), FVector2D(80, 0), FVector2D(-80, 0), FVector2D(0, 80), FVector2D(0, -80)})
@@ -1838,6 +1841,7 @@ namespace
         auto Oak = [&](float X, float Y, float S, float Gap)
         {
             for (const FVector& O : Oaks) if (FVector2D::DistSquared(FVector2D(X, Y), FVector2D(O)) < FMath::Square(Gap * FMath::Max(S, O.Z) * .5f + Gap * .5f)) return false;
+            for (const FVector& Cl : FeyLifeClearings()) if (FVector2D::DistSquared(FVector2D(X, Y), FVector2D(Cl)) < FMath::Square(Cl.Z)) return false;   // (2026-11-25: the wisps' way, the beasts' rounds)
             if (D == Highmeadow)   // (2026-11-21) none in the overlook's view down onto the maze, whatever planted it
             {
                 const FVector2D V = FVector2D(X, Y) - Overlook, To = (Table[Maze].Hub - Overlook).GetSafeNormal();

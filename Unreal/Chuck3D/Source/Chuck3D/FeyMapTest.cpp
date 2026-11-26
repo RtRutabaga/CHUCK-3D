@@ -7,6 +7,9 @@
 #include "FeyLife.h"
 #include "FeyDelights.h"
 #include "FeyCreatures.h"
+#include "ChultFoliageFade.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "UObject/UObjectIterator.h"
 #include "TempleSkeleton.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -787,7 +790,18 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     if (FVector::Dist2D(L, Want) > 40.f) Drive(Want - L);
                     // (stuck on a root or a pool's edge for 8 s: logged, and put a little nearer, as a player would go round)
                     if (Dl->GetWispLead() != R->Hits1) { R->Hits1 = Dl->GetWispLead(); R->MinDist = Since; }
-                    else if (Since - R->MinDist > 8.f) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_WISPS_ASSIST lead=%d at=%.0f,%.0f"), R->Hits1, L.X, L.Y); Put(Want + (L - Want).GetSafeNormal2D() * 450.f, Want - L); R->MinDist = Since; }
+                    else if (Since - R->MinDist > 8.f)
+                    {
+                        FHitResult Hit; FCollisionQueryParams Q; Q.AddIgnoredActor(Chuck);
+                        const FVector From = Chuck->GetActorLocation(), Dir = FeyWorld(Want) - FeyWorld(L); 
+                        const bool bHit = Chuck->GetWorld()->SweepSingleByChannel(Hit, From, From + Dir.GetSafeNormal2D() * 150.f, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(25.f), Q);
+                        const FVector HL = bHit ? FeyLocal(Hit.ImpactPoint) : FVector::ZeroVector;
+                        const auto* WIsm = bHit ? Cast<UInstancedStaticMeshComponent>(Hit.GetComponent()) : nullptr;
+                        if (WIsm && Hit.Item >= 0) { FTransform T; WIsm->GetInstanceTransform(Hit.Item, T, true); const FVector C = FeyLocal(T.GetLocation());
+                            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_WISPS_BLOCKER centre=%.0f,%.0f scale=%.2f"), C.X, C.Y, T.GetScale3D().X); }
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_WISPS_BLOCK mesh=%s hit=%d actor=%s comp=%s at=%.0f,%.0f,%.0f nz=%.2f feet_z=%.0f"), WIsm && WIsm->GetStaticMesh() ? *WIsm->GetStaticMesh()->GetName() : TEXT("-"), bHit, bHit && Hit.GetActor() ? *Hit.GetActor()->GetName() : TEXT("-"), bHit && Hit.GetComponent() ? *Hit.GetComponent()->GetName() : TEXT("-"), HL.X, HL.Y, HL.Z, Hit.ImpactNormal.Z, L.Z);
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_WISPS_ASSIST lead=%d at=%.0f,%.0f"), R->Hits1, L.X, L.Y); Put(Want + (L - Want).GetSafeNormal2D() * 450.f, Want - L); R->MinDist = Since;
+                    }
                     return;
                 }
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_WISPS moves=%d lead=%d cigarettes=%d"), AFeyDelights::WispMoves - R->Hits0, Dl->GetWispLead(), Chuck->GetCigarettes() - R->Cigs0);
@@ -825,6 +839,24 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 float Best = 1e9f, Tb = 0.f; for (float T = 0.f; T < 130.f; T += .5f) { const float D = FMath::Abs(AFeyDelights::SwanAt(3, T).Y - O.Y + 1500.f); if (D < Best) { Best = D; Tb = T; } }
                 AFeyDelights::SwanHold = Tb;
                 const FVector Mid = AFeyDelights::SwanAt(3, Tb);
+                {   // (2026-11-25) nothing under the crossing within 2.5 m of a swan: traced down along the whole line
+                    float Clear = 1e9f; FVector Worst = FVector::ZeroVector;
+                    FCollisionQueryParams Q; Q.AddIgnoredActor(Dl);
+                    for (float T = 0.f; T < 160.f; T += 1.f) for (int32 I = 0; I < 7; ++I)
+                    {
+                        const FVector Sw = AFeyDelights::SwanAt(I, T); if (FMath::Abs(Sw.Y - O.Y) > 16000.f) continue;
+                        FHitResult Hit; const FVector Sww = FeyWorld(Sw);
+                        if (Chuck->GetWorld()->LineTraceSingleByChannel(Hit, Sww + FVector(0, 0, 300.f), Sww - FVector(0, 0, 6000.f), ECC_Visibility, Q))
+                        {
+                            const float C = Sw.Z - FeyLocal(Hit.ImpactPoint).Z; if (C < Clear) { Clear = C; Worst = Sw; }
+                            if (C < 250.f && I == 0) { const auto* Ism = Cast<UInstancedStaticMeshComponent>(Hit.GetComponent());
+                                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_SWANS_LOW t=%.0f at=%.0f,%.0f,%.0f clear=%.0f land=%.0f hit=%s"), T, Sw.X, Sw.Y, Sw.Z, C, LandZ(FeyMap::DistrictAt(Sw.X, Sw.Y), Sw.X, Sw.Y),
+                                    Ism && Ism->GetStaticMesh() ? *Ism->GetStaticMesh()->GetName() : Hit.GetComponent() ? *Hit.GetComponent()->GetName() : TEXT("-")); }
+                        }
+                    }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_SWANS_CLEAR min_cm=%.0f at=%.0f,%.0f,%.0f out_m=%.0f"), Clear, Worst.X, Worst.Y, Worst.Z, (O.X - Mid.X) / 100.f);
+                    Check(Clear > 250.f, TEXT("swans_clear"));
+                }
                 Cam(FVector(O.X - 150.f, O.Y - 200.f, Oz + 120.f), Mid);
                 R->CrackStep = 75; R->bShort = false; R->PhaseStart = Now; return;
             }
@@ -881,6 +913,36 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 if (R->OrchidSub >= 2 && Since - R->MinDist < 1.2f) { const FVector A = Dl->GetCrows()[R->Hits1].At; Cam(A + FVector(500.f, 300.f, 150.f), A); if (Since - R->MinDist > .8f && R->OrchidSub == 2) { Shot(TEXT("CrowFlight")); R->OrchidSub = 3; } return; }
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHT_CROW_FLIGHT flights=%d"), AFeyDelights::CrowFlights - R->Hits0);
                 Check(AFeyDelights::CrowFlights > R->Hits0, TEXT("crow_takes_off"));
+                Uncam(); R->bPlaced = false; R->CrackStep = 81; R->PhaseStart = Now; return;
+            }
+            case 81:   // (2026-11-25) the plants react to him: a Deepwood fern from a fixed camera, him 20 m off, then in it
+            {
+                if (!R->bPlaced)
+                {
+                    // The fern nearest the crows' first perch, of the Feywild's own (M_FeyFern), on the Deepwood's ground.
+                    const FVector Near = DelightsOf(Deepwood)->GetCrows().Num() ? DelightsOf(Deepwood)->GetCrows()[0].Perch : FVector(-70000.f, -33000.f, 0.f);
+                    float Best = 1e18f; R->PadAt = FVector::ZeroVector;
+                    for (TObjectIterator<UHierarchicalInstancedStaticMeshComponent> It; It; ++It)
+                    {
+                        if (It->GetWorld() != Chuck->GetWorld() || !It->GetMaterial(0) || !It->GetMaterial(0)->GetName().Contains(TEXT("FeyFern"))) continue;
+                        for (int32 I = 0; I < It->GetInstanceCount(); I += 3)
+                        {
+                            FTransform T; It->GetInstanceTransform(I, T, true); const FVector Lc = FeyLocal(T.GetLocation());
+                            if (FeyMap::DistrictAt(Lc.X, Lc.Y) != Deepwood) continue;
+                            const float D2 = FVector::DistSquared2D(Lc, Near); if (D2 < Best) { Best = D2; R->PadAt = Lc; }
+                        }
+                    }
+                    if (R->PadAt.IsZero()) { Check(false, TEXT("fern_found")); R->CrackStep = 80; return; }
+                    AChultFoliageFade::bTestKeepOn = true;
+                    Put(R->PadAt + FVector(2000.f, 0, 0), FVector(-1, 0, 0)); R->bPlaced = true; R->OrchidSub = 20; R->PhaseStart = Now; return;
+                }
+                const FVector F = R->PadAt, Eye = F + FVector(170.f, 230.f, 120.f);
+                Cam(Eye, F + FVector(0, 0, 25.f));
+                if (R->OrchidSub == 20 && Since > 1.2f) { Shot(TEXT("FernFar")); R->OrchidSub = 21; }
+                if (R->OrchidSub == 21 && Since > 1.5f) { Put(F, FVector(1, 1, 0)); R->OrchidSub = 22; R->MinDist = Since; }
+                if (R->OrchidSub == 22 && Since - R->MinDist > 1.2f) { Shot(TEXT("FernNear")); R->OrchidSub = 23; }
+                if (Since < 3.2f) return;
+                AChultFoliageFade::bTestKeepOn = false; R->OrchidSub = 0;
                 Uncam(); R->bPlaced = false; R->CrackStep = 80; R->PhaseStart = Now; return;
             }
             case 80:   // (2026-11-24, the user: the redcaps too dark, the maze's most) A maze redcap, lit by its own fill
@@ -888,15 +950,16 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 if (!R->bPlaced) { Map->LoadNow(Maze); Chuck->ResetAtLocation(FeyCheckpointWorld(Maze)); R->bPlaced = true; R->PhaseStart = Now; return; }
                 AFeyLife* Ml = LifeOf(Maze);
                 if ((!Ml || !Ml->GetRedcaps().Num()) && Since < 10.f) return;
-                if (!Ml || !Ml->GetRedcaps().Num()) { Check(false, TEXT("maze_redcaps")); R->CrackStep = 81; return; }
+                if (!Ml || !Ml->GetRedcaps().Num()) { Check(false, TEXT("maze_redcaps")); R->CrackStep = 82; return; }
                 const FVector Rc = FeyLocal(Ml->GetRedcaps()[0]->GetActorLocation());
                 if (R->OrchidSub < 10) { Ml->GetRedcaps()[0]->ResetToPost(); Cam(Rc + FVector(260.f, 120.f, 60.f), Rc + FVector(0, 0, 10.f)); R->OrchidSub = 10; R->PhaseStart = Now; return; }
                 if (Since > 1.f && R->OrchidSub == 10) { Shot(TEXT("MazeRedcap")); R->OrchidSub = 11; }
                 if (Since < 1.3f) return;
-                Uncam(); R->CrackStep = 81; R->PhaseStart = Now; return;
+                Uncam(); R->CrackStep = 82; R->PhaseStart = Now; return;
             }
             default:
                 if (Since < 1.f) return;
+                Check(AFeyLife::GroundSamples > 0 && AFeyLife::GroundBad == 0, TEXT("creature_ground"));   // (2026-11-25: the 11-24 beasts' rounds, the roaming redcaps' leashes)
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_TEST failures=%d toggles=%d orchid_shots=%d orchid_hits=%d moth_touches=%d mite_bites=%d mite_kills=%d beast_notices=%d lashes=%d lash_hits=%d paces=%d"), R->LifeFails, AFeyLife::FlowerToggles, AFeyLife::OrchidShots, AFeyLife::OrchidHits, AFeyLife::MothTouches,
                     AFeyMite::Bites, AFeyMite::Kills, AFeyDisplacer::Notices, AFeyDisplacer::Lashes, AFeyDisplacer::LashHits, AFeyDisplacer::Paces);
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHTS_TEST rings=%d wisp_moves=%d koi_scatters=%d bursts=%d sign_turns=%d crow_flights=%d"), AFeyDelights::RingVisits, AFeyDelights::WispMoves, AFeyDelights::KoiScatters, AFeyDelights::Bursts, AFeyDelights::SignTurns, AFeyDelights::CrowFlights);

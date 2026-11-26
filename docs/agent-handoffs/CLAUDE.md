@@ -2,6 +2,58 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 25 (third) — Feywild: the delights' known flaws fixed (Claude)
+
+- **Asked:** proceed with the next steps, which were the flaws listed in the delights entry below.
+- **Source:** `main` at 06068b04; this commit. The package's receipt names 06068b0, because the work was not yet committed.
+- **Fixed:**
+  - **The wisp test needed its assist.** An oak root (`SM_FeyOak1Collision`) stood on the wisps' second point.
+    - The trail now runs `{-66900,35700} … {-68350,39650}`, clear of the oak.
+    - The trail between the points is a clearing: points every 250 cm with a 300 cm radius.
+    - Oaks and the six Chult rocks now respect `FeyLifeClearings()`. The check runs after the random draws, so
+      everything else stays where it was.
+  - **The swans were small and low.** The line is 2 m higher, with a smooth lift where it passes `FeyThresholdMass9`.
+    - A new test, `swans_clear`, traces all 7 swans over their whole run: the minimum clearance is 364 cm.
+  - **The ground under the new creatures was unchecked.** `AuditFeyGround` samples every 200 cm along each beast's
+    round, and every 300 cm over each roaming redcap's leash. It flags water, a gradient above .7, and anything more
+    than 120 cm above the land on a beast's way.
+    - The first audit found 6 blocks in Highmeadow: 2 oaks and 4 rocks. The beasts' rounds are now clearings.
+    - A new test, `creature_ground`, needs samples > 0 and no bad ones.
+  - **No still showed the plants reacting.** Under a test camera the reaction was off, because `MPC_ChultFoliageFade`
+    Strength is only 1 when Chuck is the view target, and it was too weak.
+    - `UChultFoliageFade::bTestKeepOn` is a test-only flag.
+    - `M_FeyFern` react is (170, 70, 35) in `Tools/create_feywild_assets.py`; the material was rebuilt.
+    - Life step 81 shoots one Deepwood fern from the same camera with Chuck away (`Life_FernFar`) and beside it
+      (`Life_FernNear`).
+- **Changed:**
+  - `FeyDelights.cpp`, `FeyMap.cpp`, `FeyLife.h/.cpp`, `FeyMapTest.cpp`, `ChultFoliageFade.h/.cpp`.
+  - `Tools/create_feywild_assets.py` and `Content/Art/Feywild/M_FeyFern.uasset`.
+  - `docs/regions/FEYWILD.md`.
+- **Contract:** unchanged. The additions are a test-only static on `UChultFoliageFade` and two audit counters on
+  `AFeyLife`.
+- **Validation (actual):**
+  - Editor life test from step 0: failures=0 (`Local/fey-flaws-full2.log`).
+    - There is no `WISPS_ASSIST`: the wisp trail is clear.
+    - `swans_clear` passed with a minimum of 364 cm.
+    - The ground audit found 0 bad samples (Deepwood 400 samples, Highmeadow 144).
+    - Delights counters: rings 1, wisp moves 4, koi scatters 5, bursts 4, sign turns 17, crow flights 1.
+  - The full editor run came before the final fern values and step 81's `Put(F)`. Those were run from step 76:
+    0 failures (`Local/fey-fern-76.log`).
+  - Stills in `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/FeyMap/`:
+    - `Life_FernFar` and `Life_FernNear`: the fronds part beside him.
+    - `Life_Swans`: seven readable white swans.
+  - Package: 50/50 steps, 182 passes (`Local/verify-package-20261125-152424.log`).
+    - `phleg` failed once and passed on retry. The first run stopped at about 10 minutes with no result line, which
+      matches the slow-machine timeouts in the flake ledger. Nothing in this pass touches Phlegethos.
+  - Promoted as **FeywildFlaws**; the candidate is removed.
+- **Known flaws:**
+  - The Deepwood fern stills are dark. The reaction can be read, but it is not a showcase shot.
+  - Only the fern was captured in stills. The caps, bell lamps and grass still have no still showing them react.
+  - Not played by hand in the launcher build.
+  - The threshold hitch recorded earlier remains.
+
+Next part of the work can be done here (a hand playtest of the Feywild and any tuning; the trio's dialogue once the user supplies it).
+
 ## November 25 (second) — Feywild: redcaps less whitewashed (Claude)
 
 - **Asked:** make the redcaps look less whitewashed.
