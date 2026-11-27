@@ -2,6 +2,54 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 27 — Feywild: the Deepwood's climbs; jellyfish second look; Deepwood light (Claude)
+
+- **Asked:**
+  - Spruce up the jellyfish.
+  - Build the Deepwood climb: the crossings the jellyfish cannot get round, with more jellyfish beyond.
+  - Less white light in the Deepwood and a little less fog, so the blue comes through.
+- **Source:** `main` at 2d8f6c0a; this commit. The receipt names 2d8f6c0 plus this work, uncommitted at packaging.
+- **Done:**
+  - **The climbs:** `FeyDeepCrossing.h/.cpp`; see [regions/FEYWILD-DEEPWOOD-CROSSINGS.md](../regions/FEYWILD-DEEPWOOD-CROSSINGS.md).
+    - Spawned by `AFeyLife` with the Deepwood.
+    - The thorns prick and slow him through `FeyGroundSpeedScale`.
+    - `FeyDeep::WalkerHop` carries the route walk over a crossing.
+    - The barriers are full arcs, with a hard 2.5 m keep-off in `AFeyJelly::Move`.
+    - Twelve jellyfish in all.
+  - **The jellyfish:**
+    - The bell is two layers, with canals, rim lights and a rounder dome.
+    - The arms are ribbons, and the tendrils have beads of light.
+    - `M_FeyJelly`'s glow and opacity were rebalanced.
+    - A rim NaN was clamped.
+  - **Light:** in `FeywildSetting.cpp`, the gloom's sky light is .38 (was .56) and tinted blue. The fog density factor
+    is 4.3 (was 5.5), the extinction 1.65 (was 2.1), and the albedo bluer. In `FeyMap.cpp` the root lights and lanterns
+    are a fifth stronger.
+  - **Test aid:** `AChuckCharacter::SetTestHoldWorld` holds a test stick that is applied in his own tick. The test's
+    per-frame input could miss a frame and end his sprint.
+- **Changed:**
+  - New: `FeyDeepCrossing.h/.cpp`, `docs/regions/FEYWILD-DEEPWOOD-CROSSINGS.md`.
+  - Edited: `FeyJelly.h/.cpp`, `FeyLife.cpp`, `FeyMap.cpp`, `FeyMapTest.cpp`, `FeywildSetting.cpp`,
+    `ChuckCharacter.h/.cpp` (the test hold, and a sprint-end log), `Tools/create_fey_jelly_assets.py`,
+    `M_FeyJelly.uasset`, `docs/regions/FEYWILD-JELLYFISH.md`.
+- **Contract:** unchanged.
+- **Validation (actual):**
+  - Editor life steps 101 to 112: failures=0 (`Local/deep-life-9.log`, `-10.log`).
+    - Hoops: 5 catches.
+    - Roots: 2 vaults, 1 leap with a 2.1 m run-up.
+    - A jellyfish ridden at the root crossing stayed 7.8 to 8.6 m from its line.
+    - The walls: 83 probes, no gaps.
+    - Frame time: 17.65 ms.
+  - Package: Verify-Package 50/50 with no retries, 182 passes (`Local/verify-package-20261126-232409.log`). Promoted as
+    FeywildDeepClimb.
+- **Evidence:** `Local/deep-sheet-2.png`, `-3.png`, `deep-light-after.png`, `jelly-sheet-7.png`.
+- **Known flaws:**
+  - Not played by hand.
+  - The thicket's core shows as dark mass in places.
+  - The crossings have no sounds.
+  - The verify route walk does not reach the Deepwood corner (the crossing steps do).
+- **Launcher:** current.
+- **Next owner:** Next part of the work can be done here (the user's next list: spores, statues, trio, beast, cigarettes).
+
 ## November 26 (third) — Feywild: the Deepwood jellyfish (Claude)
 
 - **Asked:** approve and build the jellyfish plan with its recommendations: Redcap Hollow stays on foot; pale teal with

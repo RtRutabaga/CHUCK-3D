@@ -21,7 +21,7 @@ namespace
     float Smooth(float A, float B, float X) { const float T = FMath::Clamp((X - A) / (B - A), 0.f, 1.f); return T * T * (3 - 2 * T); }
     // Each one's tint (the plan: pale teal, a violet rim), a little different across them.
     const FLinearColor Tints[] = {FLinearColor(1.f, 1.f, 1.f), FLinearColor(.9f, 1.f, 1.1f), FLinearColor(1.08f, .95f, 1.f), FLinearColor(.95f, 1.05f, .95f)};
-    constexpr int32 NS = 40;                 // the bell's segments round
+    constexpr int32 NS = 64;                 // the bell's segments round
     constexpr int32 NT = 15;                 // its rings, apex to the curled rim
     constexpr int32 StrandPts = 13;
     constexpr float Gravity = 980.f;
@@ -34,7 +34,7 @@ namespace
     {
         const float R = AFeyJelly::BellR, H = AFeyJelly::BellH;
         float Rr, Z;
-        if (T <= 1.f) { Rr = R * FMath::Pow(FMath::Sin(T * HALF_PI), .85f); Z = H * (1.f + .14f * C) * (1.f - FMath::Pow(T, 2.2f)); }
+        if (T <= 1.f) { Rr = R * FMath::Sin(T * HALF_PI); Z = H * (1.f + .14f * C) * FMath::Pow(FMath::Max(0.f, FMath::Cos(T * HALF_PI)), .8f); }   // (a dome, rounder than it is tall)
         else { const float U = (T - 1.f) / .14f; Rr = R * (1.f - .07f * U); Z = -9.f * U * U; }
         Rr *= 1.f - .2f * C * FMath::Pow(FMath::Min(T, 1.f), 1.5f);
         Rr += 2.6f * FMath::Cos(16.f * A) * Smooth(.86f, 1.1f, T);   // (the lappets)
@@ -199,9 +199,10 @@ bool AFeyJelly::RefuseDir(const FVector& At, FVector& Dir) const
     // A crossing's barrier: never past it, either way.
     for (const FBarrier& B : Barriers())
     {
-        const FVector2D AB = B.B - B.A; const float T = FMath::Clamp(FVector2D::DotProduct(L - B.A, AB) / FMath::Max(1.f, static_cast<float>(AB.SizeSquared())), 0.f, 1.f);
-        const FVector2D To = B.A + AB * T - L;
-        Keep(To, static_cast<float>(To.Size()), 600.f);
+        float Best = 1e18f; FVector2D Near = L;
+        for (int32 I = 0; I + 1 < B.Line.Num(); ++I) { const FVector2D Q = FMath::ClosestPointOnSegment2D(L, B.Line[I], B.Line[I + 1]); const float D2 = static_cast<float>(FVector2D::DistSquared(Q, L)); if (D2 < Best) { Best = D2; Near = Q; } }
+        const FVector2D To = Near - L;
+        Keep(To, static_cast<float>(To.Size()), 900.f);   // (room to stop from 5 m/s short of it)
     }
     // ...and never off its district's land.
     const FVector Ahead = At + Dir.GetSafeNormal2D() * 300.f;
@@ -413,6 +414,28 @@ void AFeyJelly::Move(float Dt, const FVector& Want, float MaxSpeed, float AccelR
             V2 += Tan * static_cast<float>(FVector::DotProduct(FVector(Want.X, Want.Y, 0.f), -N)) * MaxSpeed * .8f * FMath::Min(1.f, Dt * 8.f);
         }
     }
+    // A crossing's barrier is a hard line too (the steering alone can carry it on at 5 m/s): never nearer than 2.5 m.
+    {
+        auto LineDist = [&](const FVector& W, FVector2D& Away) -> float
+        {
+            const FVector2D L(FeyLocal(W)); float Best = 1e9f;
+            for (const FBarrier& B : Barriers())
+                for (int32 I = 0; I + 1 < B.Line.Num(); ++I)
+                {
+                    const FVector2D Q = FMath::ClosestPointOnSegment2D(L, B.Line[I], B.Line[I + 1]); const float D = static_cast<float>(FVector2D::Distance(Q, L));
+                    if (D < Best) { Best = D; Away = (L - Q).GetSafeNormal(); }
+                }
+            return Best;
+        };
+        FVector2D AwayOld, AwayNew;
+        const float DOld = LineDist(GetActorLocation(), AwayOld), DNew = LineDist(P, AwayNew);
+        if (DNew < 250.f && DNew < DOld)
+        {
+            P.X = GetActorLocation().X; P.Y = GetActorLocation().Y;
+            const FVector N(AwayOld.X, AwayOld.Y, 0.f);
+            V2 -= N * FMath::Min(0.f, static_cast<float>(FVector::DotProduct(V2, N)));
+        }
+    }
     // Up and down: following the ground at its height, eased, under whatever is overhead.
     float G = GroundZ, MaxTop = 1e9f;
     if (Heights(P, G, MaxTop)) GroundZ = G;
@@ -534,75 +557,122 @@ void AFeyJelly::SimStrands(float Dt)
 
 void AFeyJelly::DrawBell(bool bCreate)
 {
+    // (2026-11-26, second look) Two layers: the outer bell (clear, with eight faint radial canals, a violet margin and eight
+    // bright points at the rim between the lappets), and inside it a smaller, denser inner bell carrying the four
+    // horseshoe marks, so the dome reads as a body with depth rather than a shell.
     const float C = Contraction(Phase);
     const FVector P = GetActorLocation();
     const FVector V2 = FVector(Vel.X, Vel.Y, 0.f);
     const FQuat Lean = V2.IsNearlyZero() ? FQuat::Identity : FQuat(FVector::CrossProduct(FVector::UpVector, V2.GetSafeNormal()).GetSafeNormal(), FMath::DegreesToRadians(9.f * GetSpeedFraction()));
-    const FQuat Yaw = FRotator(0, FacingYaw, 0).Quaternion() * Lean.Inverse();   // (the lean is applied in world space below)
-    TArray<FVector> V, N; TArray<FColor> Col; TArray<FVector2D> UV; TArray<FProcMeshTangent> Tan;
-    V.Reserve(NT * (NS + 1)); N.Reserve(NT * (NS + 1));
+    const FQuat Yaw = FRotator(0, FacingYaw, 0).Quaternion();
+    TArray<FVector> V, N; TArray<FColor> Col; TArray<FVector2D> UV; TArray<FProcMeshTangent> Tan; TArray<int32> Tri;
     auto T = [](int32 Ti) { return Ti < NT - 2 ? static_cast<float>(Ti) / (NT - 3) : 1.f + .07f * (Ti - (NT - 3)); };
-    for (int32 Ti = 0; Ti < NT; ++Ti)
-        for (int32 Ai = 0; Ai <= NS; ++Ai)
-        {
-            const float A = 2.f * PI * Ai / NS, Tt = T(Ti);
-            const FVector L = BellAt(Tt, A, C);
-            const FVector Dt = BellAt(Tt + .01f, A, C) - BellAt(FMath::Max(0.f, Tt - .01f), A, C), Da = BellAt(Tt, A + .01f, C) - BellAt(Tt, A - .01f, C);
-            FVector Nl = Ti == 0 ? FVector::UpVector : FVector::CrossProduct(Da, Dt).GetSafeNormal();
-            if (FVector::DotProduct(Nl, FVector(L.X, L.Y, L.Z + 20.f)) < 0.f) Nl = -Nl;
-            V.Add(P + Lean.RotateVector(Yaw.RotateVector(L) * 1.f)); N.Add(Lean.RotateVector(Yaw.RotateVector(Nl)));
-            if (bCreate)
+    for (int32 Layer = 0; Layer < 2; ++Layer)
+    {
+        const int32 Rings = Layer == 0 ? NT : NT - 2;   // (the inner one has no curled margin)
+        const FVector Scale = Layer == 0 ? FVector(1.f) : FVector(.72f, .72f, .62f);
+        const FVector Raise = Layer == 0 ? FVector::ZeroVector : FVector(0, 0, 5.f);
+        const int32 Base = V.Num();
+        for (int32 Ti = 0; Ti < Rings; ++Ti)
+            for (int32 Ai = 0; Ai <= NS; ++Ai)
             {
-                // Pale teal, violet toward the rim; four faint horseshoe marks seen through the dome.
-                const float Rim = Smooth(.8f, 1.12f, Tt), Mark = Smooth(.55f, .85f, FMath::Cos(4.f * A)) * Smooth(.28f, .38f, Tt) * (1.f - Smooth(.52f, .62f, Tt));
-                const FLinearColor Lc = FMath::Lerp(FMath::Lerp(FLinearColor(.38f, .92f, 1.f), FLinearColor(.62f, .52f, 1.f), Rim), FLinearColor(.85f, .7f, 1.f), Mark);
-                const float Alpha = FMath::Clamp(.04f + .5f * Rim * Rim + .45f * Mark, 0.f, 1.f);
-                Col.Add(FColor(FMath::RoundToInt(Lc.R * 255), FMath::RoundToInt(Lc.G * 255), FMath::RoundToInt(Lc.B * 255), FMath::RoundToInt(Alpha * 255)));
+                const float A = 2.f * PI * Ai / NS, Tt = T(Ti);
+                const float Ci = Layer == 0 ? C : C * 1.2f;
+                const FVector L = BellAt(Tt, A, Ci) * Scale + Raise;
+                const FVector Dt = BellAt(Tt + .01f, A, Ci) - BellAt(FMath::Max(0.f, Tt - .01f), A, Ci), Da = BellAt(Tt, A + .01f, Ci) - BellAt(Tt, A - .01f, Ci);
+                FVector Nl = Ti == 0 ? FVector::UpVector : FVector::CrossProduct(Da * Scale, Dt * Scale).GetSafeNormal();
+                if (FVector::DotProduct(Nl, FVector(L.X, L.Y, L.Z + 20.f)) < 0.f) Nl = -Nl;
+                V.Add(P + Lean.RotateVector(Yaw.RotateVector(L))); N.Add(Lean.RotateVector(Yaw.RotateVector(Nl)));
+                if (!bCreate) continue;
+                FLinearColor Lc; float Alpha;
+                if (Layer == 0)
+                {
+                    const float Rim = Smooth(.82f, 1.12f, Tt);
+                    const float Canal = FMath::Pow(FMath::Max(0.f, FMath::Cos(4.f * A)), 14.f) * Smooth(.15f, .4f, Tt) * (1.f - Rim);   // (the eight radial canals: at 0, 90, 180 and 270 degrees...)
+                    const float Canal2 = FMath::Pow(FMath::Max(0.f, FMath::Cos(4.f * A + PI)), 14.f) * Smooth(.15f, .4f, Tt) * (1.f - Rim);   // (...and at 45, 135, 225 and 315)
+                    const float Dot = FMath::Pow(FMath::Max(0.f, FMath::Cos(8.f * A + PI)), 18.f) * Smooth(.9f, 1.f, Tt) * (1.f - Smooth(1.07f, 1.12f, Tt));
+                    Lc = FMath::Lerp(FMath::Lerp(FLinearColor(.36f, .9f, 1.f), FLinearColor(.6f, .52f, 1.f), Rim), FLinearColor(.75f, .98f, 1.f), FMath::Max(Canal, Canal2) * .7f);
+                    Lc = FMath::Lerp(Lc, FLinearColor(1.f, .95f, .75f), Dot);
+                    Alpha = FMath::Clamp(.02f + .3f * Rim * Rim + .4f * FMath::Max(Canal, Canal2) + 1.f * Dot, 0.f, 1.f);
+                }
+                else
+                {
+                    const float Mark = Smooth(.5f, .85f, FMath::Cos(4.f * A + PI * .25f)) * Smooth(.35f, .5f, Tt) * (1.f - Smooth(.7f, .82f, Tt));
+                    Lc = FMath::Lerp(FLinearColor(.42f, .55f, 1.f), FLinearColor(.95f, .62f, .95f), Mark);
+                    Alpha = FMath::Clamp(.07f + .1f * Tt + .55f * Mark, 0.f, 1.f);
+                }
+                Col.Add(FColor(FMath::RoundToInt(FMath::Min(1.f, Lc.R) * 255), FMath::RoundToInt(FMath::Min(1.f, Lc.G) * 255), FMath::RoundToInt(FMath::Min(1.f, Lc.B) * 255), FMath::RoundToInt(Alpha * 255)));
                 UV.Add(FVector2D(static_cast<float>(Ai) / NS, Tt));
             }
-        }
-    if (bCreate)
-    {
-        TArray<int32> Tri;
-        for (int32 Ti = 0; Ti < NT - 1; ++Ti)
-            for (int32 Ai = 0; Ai < NS; ++Ai)
-            {
-                const int32 A0 = Ti * (NS + 1) + Ai, A1 = A0 + 1, B0 = A0 + NS + 1, B1 = B0 + 1;
-                Tri.Append({A0, B0, A1, A1, B0, B1});
-            }
-        Mesh->CreateMeshSection(0, V, Tri, N, UV, Col, Tan, false);
-        BellColors = Col;
+        if (bCreate)
+            for (int32 Ti = 0; Ti < Rings - 1; ++Ti)
+                for (int32 Ai = 0; Ai < NS; ++Ai)
+                {
+                    const int32 A0 = Base + Ti * (NS + 1) + Ai, A1 = A0 + 1, B0 = A0 + NS + 1, B1 = B0 + 1;
+                    Tri.Append({A0, B0, A1, A1, B0, B1});
+                }
     }
+    if (bCreate) { Mesh->CreateMeshSection(0, V, Tri, N, UV, Col, Tan, false); BellColors = Col; }
     else Mesh->UpdateMeshSection(0, V, N, TArray<FVector2D>(), BellColors, Tan);
 }
 
 void AFeyJelly::DrawStrands(bool bCreate)
 {
+    // The tendrils are fine tubes. (2026-11-26, second look) The oral arms are ribbons, as a real jellyfish's are: broad
+    // at the root and narrowing, twisting slowly along their length, their edges ruffled into folds that ripple.
     TArray<FVector> V, N; TArray<FColor> Col; TArray<int32> Tri; TArray<FVector2D> UV; TArray<FProcMeshTangent> Tan;
-    for (const FStrand& S : Strands)
+    for (int32 Si = 0; Si < Strands.Num(); ++Si)
     {
-        const int32 Sides = S.bArm ? 6 : 4, Base = V.Num();
+        const FStrand& S = Strands[Si];
+        const int32 Base = V.Num();
+        const int32 Across = S.bArm ? 5 : 4;
         for (int32 K = 0; K < StrandPts; ++K)
         {
             const FVector Tg = (S.X[FMath::Min(K + 1, StrandPts - 1)] - S.X[FMath::Max(K - 1, 0)]).GetSafeNormal();
             FVector Ax = FVector::CrossProduct(Tg, FVector::UpVector); if (!Ax.Normalize()) Ax = FVector::RightVector;
             const FVector Bx = FVector::CrossProduct(Tg, Ax);
             const float U = static_cast<float>(K) / (StrandPts - 1);
-            float R = FMath::Lerp(S.R0, S.R1, U);
-            if (S.bArm) R *= 1.f + .3f * FMath::Sin(U * 23.f + Clock * 2.f);   // (frilled)
-            for (int32 J = 0; J < Sides; ++J)
+            if (S.bArm)
             {
-                const float A = 2.f * PI * J / Sides;
-                const FVector Nn = Ax * FMath::Cos(A) + Bx * FMath::Sin(A);
-                V.Add(S.X[K] + Nn * R); N.Add(Nn);
-                if (bCreate) { FColor Cc = S.Color; Cc.A = static_cast<uint8>(Cc.A * (1.f - .55f * U)); Col.Add(Cc); UV.Add(FVector2D(U, static_cast<float>(J) / Sides)); }
-            }
-            if (bCreate && K < StrandPts - 1)
-                for (int32 J = 0; J < Sides; ++J)
+                const float Tw = U * 2.6f * PI + Si * 1.3f + .3f * FMath::Sin(Clock * .8f + Si);
+                const FVector Wd = Ax * FMath::Cos(Tw) + Bx * FMath::Sin(Tw), Nd = FVector::CrossProduct(Tg, Wd);
+                const float Half = FMath::Lerp(3.4f, 1.1f, U);
+                for (int32 J = 0; J < Across; ++J)
                 {
-                    const int32 A0 = Base + K * Sides + J, A1 = Base + K * Sides + (J + 1) % Sides, B0 = A0 + Sides, B1 = A1 + Sides;
-                    Tri.Append({A0, B0, A1, A1, B0, B1});
+                    const float X = static_cast<float>(J) / (Across - 1) * 2.f - 1.f;   // -1 .. 1 across
+                    const float Ruffle = FMath::Square(X) * (1.4f * FMath::Sin(U * 34.f + X * 2.f + Clock * 3.f + Si)) * (1.f - .5f * U);
+                    V.Add(S.X[K] + Wd * (X * Half) + Nd * Ruffle); N.Add((Nd + Wd * X * .3f).GetSafeNormal());
+                    if (bCreate) { FColor Cc = S.Color; Cc.A = static_cast<uint8>(Cc.A * (1.f - .45f * U) * (.75f + .25f * FMath::Abs(X))); Col.Add(Cc); UV.Add(FVector2D(U, (X + 1.f) * .5f)); }
                 }
+                if (bCreate && K < StrandPts - 1)
+                    for (int32 J = 0; J < Across - 1; ++J)
+                    {
+                        const int32 A0 = Base + K * Across + J, A1 = A0 + 1, B0 = A0 + Across, B1 = A1 + Across;
+                        Tri.Append({A0, B0, A1, A1, B0, B1});
+                    }
+            }
+            else
+            {
+                const float R = FMath::Lerp(S.R0, S.R1, U);
+                for (int32 J = 0; J < Across; ++J)
+                {
+                    const float A = 2.f * PI * J / Across;
+                    const FVector Nn = Ax * FMath::Cos(A) + Bx * FMath::Sin(A);
+                    V.Add(S.X[K] + Nn * R); N.Add(Nn);
+                    if (bCreate)
+                    {
+                        // (faint beads of light along them: the stinging cells' clusters)
+                        const float Bead = FMath::Pow(FMath::Max(0.f, FMath::Sin(U * 9.f * PI + Si)), 12.f) * .6f;
+                        FColor Cc = S.Color; Cc.A = static_cast<uint8>(FMath::Min(255.f, Cc.A * (1.f - .6f * U) + 120.f * Bead)); Col.Add(Cc); UV.Add(FVector2D(U, static_cast<float>(J) / Across));
+                    }
+                }
+                if (bCreate && K < StrandPts - 1)
+                    for (int32 J = 0; J < Across; ++J)
+                    {
+                        const int32 A0 = Base + K * Across + J, A1 = Base + K * Across + (J + 1) % Across, B0 = A0 + Across, B1 = A1 + Across;
+                        Tri.Append({A0, B0, A1, A1, B0, B1});
+                    }
+            }
         }
     }
     if (bCreate) { Mesh->CreateMeshSection(1, V, Tri, N, UV, Col, Tan, false); StrandColors = Col; }

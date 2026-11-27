@@ -205,3 +205,15 @@ data the jellyfish read.
   - The crossings and their barriers do not exist yet.
   - The bell is a smooth dome with marks, not a detailed sculpt.
   - The arms are thin tubes with a frill wobble, not true ribbons.
+
+## Second look and the crossings (2026-11-26, later)
+
+- **The look:**
+  - The bell is now a rounder dome (48 cm tall) with an inner bell inside it, which carries the four horseshoe marks.
+  - Eight faint radial canals run over it, with eight lit points round its rim.
+  - The oral arms are twisting ribbons with ruffled edges, and the tendrils carry faint beads of light.
+  - Emission and opacity were rebalanced so the detail glows and the dome stays clear.
+  - A NaN at the rim (a fractional power of a cosine just below zero) once hid the whole mesh. It is clamped.
+- **The crossings:** the Deepwood's crossings are built ([FEYWILD-DEEPWOOD-CROSSINGS.md](FEYWILD-DEEPWOOD-CROSSINGS.md)).
+  - Their barriers are full arcs, and the jellyfish never come within 2.5 m of one.
+  - Two jellyfish wait either side of each crossing, twelve in all.

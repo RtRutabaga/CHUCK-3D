@@ -382,11 +382,11 @@ void AFeywildSetting::ApplyFog()
 {
     if (!Fog) return;
     const float G = GloomNow;
-    Fog->SetFogDensity(.018f * (1.f + 5.f * MistK) * (1.f + 5.5f * G));   // (2026-11-21: the Deepwood foggier still)
+    Fog->SetFogDensity(.018f * (1.f + 5.f * MistK) * (1.f + 4.3f * G));   // (2026-11-21: the Deepwood foggier still; 2026-11-26, the user: eased a little, 5.5 -> 4.3, so its blue lights come through)
     Fog->SetFogInscatteringColor(FMath::Lerp(FLinearColor(.17f, .3f, .46f), FLinearColor(.045f, .1f, .21f), G));
     Fog->SetDirectionalInscatteringColor(FMath::Lerp(FLinearColor(.8f, .42f, .17f), FLinearColor(.12f, .11f, .14f), G));
-    Fog->SetVolumetricFogAlbedo(FMath::Lerp(FLinearColor(FColor(225, 235, 255)), FLinearColor(.45f, .62f, 1.f), G).ToFColor(true));
-    Fog->SetVolumetricFogExtinctionScale(FMath::Lerp(.45f, 2.1f, G));
+    Fog->SetVolumetricFogAlbedo(FMath::Lerp(FLinearColor(FColor(225, 235, 255)), FLinearColor(.32f, .52f, 1.f), G).ToFColor(true));   // (2026-11-26: bluer, less white scattered)
+    Fog->SetVolumetricFogExtinctionScale(FMath::Lerp(.45f, 1.65f, G));   // (2026-11-26: 2.1 -> 1.65)
 }
 
 // The Deepwood (2026-11-20, the user: much darker, bluer, foggier, a very different part of the forest).
@@ -399,7 +399,7 @@ void AFeywildSetting::SetGloom(float G)
     if (SkyMid) SkyMid->SetScalarParameterValue(TEXT("Overcast"), Smooth(0.f, 1.f, G));
     if (SunLight) { SunLight->SetIntensity(5.5f * FMath::Lerp(1.f, .05f, G)); SunLight->SetLightColor(FMath::Lerp(FLinearColor(1.f, .66f, .36f), FLinearColor(.55f, .62f, .78f), G)); }
     if (FillLight) { FillLight->SetIntensity(FillBase * FMath::Lerp(1.f, .8f, G)); FillLight->SetLightColor(FMath::Lerp(FLinearColor(.46f, .64f, 1.f), FLinearColor(.22f, .4f, 1.f), G)); }   // (2026-11-21: the Deepwood's blue fill a little brighter)
-    if (Sky) Sky->SetIntensity(SkyBase * FMath::Lerp(1.f, .56f, G));   // (2026-11-21: a little more light overall in the Deepwood; 2026-11-22, the user: less from the sky, more from its blue lanterns and fungi)
+    if (Sky) { Sky->SetIntensity(SkyBase * FMath::Lerp(1.f, .38f, G)); Sky->SetLightColor(FMath::Lerp(FLinearColor::White, FLinearColor(.62f, .76f, 1.f), G)); }   // (2026-11-26, the user: less white light in the Deepwood, .56 -> .38 and tinted blue, so its blue lights read)   // (2026-11-21: a little more light overall in the Deepwood; 2026-11-22, the user: less from the sky, more from its blue lanterns and fungi)
     if (PostComp)
     {
         PostComp->Settings.AutoExposureBias = -.18f * G;   // (2026-11-22: under the overcast, a little less darkened)

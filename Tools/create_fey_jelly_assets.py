@@ -21,8 +21,8 @@ F1, F3 = unreal.CustomMaterialOutputType.CMOT_FLOAT1, unreal.CustomMaterialOutpu
 CODE = r"""
 float f=saturate(F);
 float3 c=VC.rgb*Tint.rgb;
-float glow=(Glow*(.05+.42*f*f)+VA*.10)*Bright;   // (the Deepwood is exposed bright: a little emission reads as a glow)
-Opa=saturate(.04+.38*f*f+VA*.30)*Fade;
+float glow=(Glow*(.04+.26*f*f)+VA*.30)*Bright;   // (the Deepwood is exposed bright: a little emission reads as a glow; the painted detail glows most)
+Opa=saturate(.03+.22*f*f+VA*.55)*Fade;   // (the silhouette only a little denser: the canals, rim lights and marks carry it)
 return c*glow;
 """
 

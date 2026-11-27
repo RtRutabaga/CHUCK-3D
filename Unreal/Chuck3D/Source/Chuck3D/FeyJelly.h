@@ -60,8 +60,9 @@ public:
     /** His feet's clearance over the ground under them now (cm; while held). */
     float GetFeetClearance() const { return FeetClear; }
     static const TArray<TWeakObjectPtr<AFeyJelly>>& All();
-    /** A crossing's barrier (the Deepwood's local coordinates, A to B wall to wall): it may not pass either way. */
-    struct FBarrier { FVector2D A, B; };
+    /** A crossing's barrier (the Deepwood's local coordinates, a line from wall to wall): it may not pass either way; two
+     *  wait at each of Sides (either side of the crossing, where he comes down). FeyDeepCrossing.h fills it. */
+    struct FBarrier { TArray<FVector2D> Line; FVector2D Sides[2]; };
     static TArray<FBarrier>& Barriers();
     // Counters for the tests.
     static int32 Holds;
@@ -79,7 +80,7 @@ public:
     static constexpr float Leash = 1800.f;
     static constexpr float Reach = 110.f;
     static constexpr float BellR = 58.f;
-    static constexpr float BellH = 62.f;
+    static constexpr float BellH = 48.f;
     static constexpr float ArmDrop = 72.f;       // the bell's rim down to his paws
     static constexpr float RideGripUp = 185.f;   // his paws over the ground, held (his feet about 1.2 m up)
     static constexpr float IdleGripUp = 80.f;    // the arms' held point over the ground, unridden (his raised paws)

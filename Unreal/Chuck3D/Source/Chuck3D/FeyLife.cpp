@@ -4,6 +4,7 @@
 #include "FeyTrio.h"
 #include "FeyHare.h"
 #include "FeyJelly.h"
+#include "FeyDeepCrossing.h"
 #include "Engine/OverlapResult.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "FeyMap.h"
@@ -558,6 +559,8 @@ void AFeyLife::Build(int32 D)
     {
     BuildCamp();
     if (District == Deepwood) BuildHag();
+    // (2026-11-26) The Deepwood's climbs: the root and thorn crossings guarding its way to Highmeadow (FeyDeepCrossing.h).
+    if (District == Deepwood) if (AFeyDeepCrossings* X = AFeyDeepCrossings::Spawn(GetWorld())) Spawned.Add(X);
     if (District == FeyMap::Crossroads)
     {
         // (2026-11-23) The trio milling by the great tree: on its ring road to the north-west, between the roads to the
@@ -1399,6 +1402,7 @@ float FeyGroundSpeedScale(const FVector& World)
     const FVector L = FeyLocal(World) - FVector(0, 0, Stand);
     for (const TWeakObjectPtr<AFeyLife>& P : GLife) if (P.IsValid() && P->InPollen(L)) return .5f;
     if (InMazeThorns(L)) return .45f;   // (2026-11-23) pushing through thorns
+    if (FeyDeep::InThorns(L)) return .45f;   // (2026-11-26) and the Deepwood crossings'
     return 1.f;
 }
 
@@ -1428,13 +1432,14 @@ void AFeyLife::SpawnJellies()
         Want.Add(Mouth + In * 2500.f + Side * 500.f);
     }
     Want.Add(FVector2D(FeyMap::District(District).Hub));
-    for (const AFeyJelly::FBarrier& B : AFeyJelly::Barriers())
+    // The crossings' barriers (FeyDeepCrossing.h), and two beyond each, either side, whichever way he crosses.
+    AFeyJelly::Barriers().Reset();
+    for (const FeyDeep::FCrossing& C : FeyDeep::Crossings())
     {
-        // (both sides: whichever way he crosses, two wait beyond)
-        const FVector2D Mid = (B.A + B.B) * .5f, N = FVector2D(-(B.B - B.A).Y, (B.B - B.A).X).GetSafeNormal();
-        Want.Add(Mid + N * 1500.f); Want.Add(Mid + N * 1500.f + (B.B - B.A).GetSafeNormal() * 400.f);
-        Want.Add(Mid - N * 1500.f); Want.Add(Mid - N * 1500.f + (B.B - B.A).GetSafeNormal() * 400.f);
+        AFeyJelly::FBarrier B; B.Line = C.Line; B.Sides[0] = C.SideIn; B.Sides[1] = C.SideOut; AFeyJelly::Barriers().Add(B);
     }
+    for (const AFeyJelly::FBarrier& B : AFeyJelly::Barriers())
+        for (const FVector2D& Sd : B.Sides) { Want.Add(Sd + FVector2D(0.f, 350.f)); Want.Add(Sd - FVector2D(0.f, 350.f)); }
     const FDistrict& Ds = FeyMap::District(District);
     int32 Why[5] = {};   // (bounds, mouth, hollow, overhead, room)
     auto Good = [&](const FVector2D& Q) -> bool
@@ -1450,6 +1455,8 @@ void AFeyLife::SpawnJellies()
         FHitResult Hit; FCollisionQueryParams Qp(SCENE_QUERY_STAT(FeyJellyHome), false, this);
         if (GetWorld()->LineTraceSingleByChannel(Hit, FeyWorld(FVector(Q.X, Q.Y, Z + 45.f)), FeyWorld(FVector(Q.X, Q.Y, Z + 420.f)), ECC_Visibility, Qp)) { ++Why[3]; return false; }
         if (GetWorld()->OverlapAnyTestByChannel(FeyWorld(FVector(Q.X, Q.Y, Z + 220.f)), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(95.f, 160.f), Qp)) { ++Why[4]; return false; }
+        for (const AFeyJelly* J : Jellies) if (FVector2D::Distance(FVector2D(FeyLocal(J->GetHome())), Q) < 450.f) { ++Why[4]; return false; }   // (not on another's home)
+        for (const AFeyJelly::FBarrier& B : AFeyJelly::Barriers()) for (int32 I = 0; I + 1 < B.Line.Num(); ++I) if (FVector2D::Distance(FMath::ClosestPointOnSegment2D(Q, B.Line[I], B.Line[I + 1]), Q) < 900.f) { ++Why[1]; return false; }   // (clear of a crossing's wall)
         return true;
     };
     FActorSpawnParameters Sp; Sp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;

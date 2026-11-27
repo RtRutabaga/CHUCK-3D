@@ -423,6 +423,10 @@ public:
     int32 GetSprintLeaps() const { return SprintLeaps; }
     /** Tests (input disabled): the raw stick a dodge reads to choose its exit. */
     void SetTestStick(FVector2D Stick) { InputRight = Stick.X; InputForward = Stick.Y; }
+    /** (2026-11-26) Tests: hold the stick along a world direction every frame from his own tick, as a player's held stick is
+     *  (a test's own input can miss a frame, which ends a sprint); zero lets go. */
+    void SetTestHoldWorld(const FVector& Direction) { TestHold = Direction.GetSafeNormal2D(); }
+    FVector TestHold = FVector::ZeroVector;
     /** The test stick pushed along a world direction, whichever way the camera now looks. */
     void SetTestStickWorld(const FVector& Direction)
     {
