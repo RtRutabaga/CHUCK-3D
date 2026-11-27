@@ -1,5 +1,6 @@
 // The Feywild's small delights (Claude, 2026-11-24). See FeyDelights.h.
 #include "FeyDelights.h"
+#include "FeySpores.h"
 #include "FeyMap.h"
 #include "FeyMesh.h"
 #include "FeyLife.h"
@@ -217,6 +218,7 @@ namespace
     }
 }
 
+int32 AFeyDelights::RingCigarettes = 0;
 int32 AFeyDelights::RingVisits = 0, AFeyDelights::WispMoves = 0, AFeyDelights::KoiScatters = 0, AFeyDelights::Bursts = 0, AFeyDelights::SignTurns = 0, AFeyDelights::CrowFlights = 0;
 float AFeyDelights::MusicDip = 1.f, AFeyDelights::SwanHold = -1.f;
 const TArray<TWeakObjectPtr<AFeyDelights>>& AFeyDelights::All() { return GDelights; }
@@ -250,6 +252,7 @@ AFeyDelights::AFeyDelights()
 
 void AFeyDelights::EndPlay(const EEndPlayReason::Type Reason)
 {
+    for (AActor* A : RingCigs) if (IsValid(A)) A->Destroy();   // (gone with the district)
     GDelights.RemoveAll([this](const TWeakObjectPtr<AFeyDelights>& P) { return !P.IsValid() || P.Get() == this; });
     if (Rings.Num()) MusicDip = 1.f;
     for (AActor* A : Spawned) if (IsValid(A)) A->Destroy();
@@ -512,6 +515,14 @@ void AFeyDelights::BuildCrows()
 // ------------------------------------------------------------------ living
 void AFeyDelights::Burst(const FVector& At, int32 Count, float Speed, const FColor& Cl, float Rise)
 {
+    // (2026-11-26, the user: the spore clouds to look better) AFeySpores draws them now: glowing grains, and for a real burst
+    // (a puffball, a seed head) billows of spore cloud on the CC0 WispySmoke flipbook. The old specks below go unused.
+    if (AFeySpores* Sp = AFeySpores::Get(GetWorld()))
+    {
+        const FLinearColor Lc(Cl.R / 255.f, Cl.G / 255.f, Cl.B / 255.f);
+        Sp->Puff(FeyWorld(At), Count, Speed, Lc, Rise, Count >= 30 ? 5 : 0, 60.f + Count * .7f);
+        return;
+    }
     for (int32 I = 0; I < Count && Motes.Num() < 600; ++I)
     {
         FMote M; M.P = At + FMath::VRand() * FMath::FRandRange(2.f, 10.f);
@@ -563,6 +574,17 @@ void AFeyDelights::Tick(float DeltaSeconds)
     {
         ++RingVisits; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_FAIRY_RING district=%s ring=%d"), FeyMap::District(District).Name, Now);
         if (BellWait <= 0.f) { Play(SBell, Feet + FVector(0, 0, 60.f), .55f); BellWait = 9.f; }
+        // (2026-11-26, the user: when the ring does its thing, a cigarette appears) the first time in each ring, one rises out
+        // of the grass at its middle in a puff of motes, and falls back to lie there for him.
+        if (!Rings[Now].bGave)
+        {
+            Rings[Now].bGave = true;
+            const FVector Mid = Rings[Now].C;
+            if (ACigarettePickup* Cg = ACigarettePickup::Spawn(GetWorld(), FeyWorld(Mid + FVector(0, 0, 20.f)), FVector(0, 0, 260.f), FeyWorld(Mid).Z)) RingCigs.Add(Cg);
+            Burst(Mid + FVector(0, 0, 30.f), 26, 60.f, Col(.75f, 1.f, .7f, .55f), 50.f);
+            ++RingCigarettes;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_RING_CIGARETTE district=%s ring=%d"), FeyMap::District(District).Name, Now);
+        }
         for (int32 K = 0; K < 28; ++K) { const float A = FMath::FRandRange(0.f, 2 * PI), Rr = FMath::FRandRange(40.f, 140.f); Burst(Feet + FVector(Rr * FMath::Cos(A), Rr * FMath::Sin(A), 4.f), 1, 6.f, Col(.75f, 1.f, .7f, .5f), 38.f); }
     }
     if (Now >= 0 && FMath::FRand() < Dt * 6.f) { const float A = FMath::FRandRange(0.f, 2 * PI), Rr = FMath::FRandRange(40.f, 150.f); Burst(Feet + FVector(Rr * FMath::Cos(A), Rr * FMath::Sin(A), 4.f), 1, 5.f, Col(.75f, 1.f, .7f, .5f), 34.f); }

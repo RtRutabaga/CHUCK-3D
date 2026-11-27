@@ -14,6 +14,15 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - **The ride:** he swings under it like a pendulum. Roll or F lets go.
   - **The edges:** it drifts back from the ways out and from Redcap Hollow. It shakes him off only on its way out.
   - Verified 50/50 and promoted as FeywildJelly. Not played by hand.
+- **Feywild: spores, white marble, trio, beast, cigarettes (November 27, Claude):** the user's list.
+  - **Spores:** puffballs, seed heads, fairy rings and the slowing pollen beds now show glowing spore clouds (CC0 Unity
+    Labs flipbook) and grains (`AFeySpores`).
+  - **Maze statues:** the satyr statues are white marble, and the hooded turning statues are gone.
+  - **Trio:** the satyr is taller and the centaur's man shorter and set lower, so the satyr's head is above the
+    centaur's. The horse's breast rises into his belly in a V with a coat-coloured fringe.
+  - **Beast:** Highmeadow's displacer now patrols the road to the maze, not the overlook.
+  - **Cigarettes:** each fairy ring gives one, and cigarette grass grows in every district and the maze.
+  - Verified 50/50 and promoted as FeywildSporesTrio.
 - **Feywild: the Deepwood's climbs, the jellyfish's second look, bluer Deepwood light (November 27, Claude):**
   - **The climbs:** two crossings guard the Deepwood's hidden way to Highmeadow, each an arc from wall to wall.
     - Roots: vault a root, sprint-leap a strip of thorns, vault a second root.

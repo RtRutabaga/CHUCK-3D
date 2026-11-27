@@ -164,6 +164,9 @@ private:
     void SpawnHares();
     UPROPERTY() TArray<class AFeyJelly*> Jellies;     // (2026-11-26) the Deepwood's jellyfish (FeyJelly.h)
     void SpawnJellies();
+public:
+    static int32 CigGrass;   // (2026-11-26) cigarette-grass tufts planted
+private:
     UPROPERTY() UPointLightComponent* FireLight = nullptr;
     UPROPERTY() UPointLightComponent* HagLight = nullptr;
     // (2026-11-22) Its sounds (Tools/build_fey_sfx.py, CC0 recordings): one-shots and the loops (moths' wings, the camp).

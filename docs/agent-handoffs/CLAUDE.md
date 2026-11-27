@@ -2,6 +2,59 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 27 (second) — Feywild: spores, white marble, trio, beast, cigarettes (Claude)
+
+- **Asked:**
+  - Free resources to make the puffball and other spore clouds look better, and the slowing spores too.
+  - The maze statues white marble, with the rudimentary statues removed.
+  - The trio: the satyr's head a bit above the centaur's, and a smoother join from horse to man.
+  - The displacer beast on the path to the maze, not the overlook.
+  - A cigarette from the mushroom ring.
+  - A little cigarette grass in the Feywild and the maze.
+- **Source:** `main` at c49b0dd3; this commit.
+- **Done:**
+  - **Spores:** `FeySpores.h/.cpp` and `Tools/create_fey_spore_materials.py`.
+    - Clouds use `M_FeySporeCloud`, the CC0 WispySmoke01 flipbook already in the project, lit from within.
+    - Grains use `M_FeySporeMote`.
+    - `AFeyDelights::Burst` now calls `Puff()`.
+    - The pollen beds are `AddField()` fields.
+  - **Marble:** `Tools/import_fey_satyr.py` makes the stone near-white, with faint veins and less grime and moss. The
+    material-only mode is `CHUCK_FEY_SATYR_MARBLE_ONLY`. The instancing usage flag is now set; without it the game drew
+    the default material.
+  - **Statues:** the hooded statues are no longer built (`FeyLife.cpp`), and life step 55 is skipped.
+  - **Trio:** `trio.json` sets the centaur to 176 cm and the satyr to 180.
+    - In `build_fey_trio.py`: the torso sits 6 cm lower, the breast's top is tapered, there is a breast wedge and a V
+      up the belly, and CoatHair fringe cards.
+    - Re-run in order: anims, import, grooms, then the hero fabrics restored.
+    - `FeyTrio.h` Lift is 42.2.
+  - **Beast:** the round is centred on the maze road 40 m in from its mouth, 80 m from the overlook.
+  - **Ring:** the first time in each ring a cigarette rises out of the grass (`RingCigarettes`).
+  - **Cigarette grass:** `AGrassTuft` with one cigarette each; three per district, and three in the maze's dead ends.
+- **Changed:**
+  - Code: `FeyDelights.h/.cpp`, `FeyLife.h/.cpp`, `FeyMapTest.cpp`, `FeyTrio.h`, and the new `FeySpores.h/.cpp`.
+  - Tools: `create_fey_spore_materials.py`, `import_fey_satyr.py`, `build_fey_trio.py`, `trio.json`.
+  - Content: `Spores/*`, `M_FeyMarble`, and `/Game/Characters/FeyTrio/*`, with their SourceAssets FBX and ABC files.
+- **Contract:** unchanged.
+- **Validation (actual):**
+  - Editor full life test: failures=0 (`Local/next-life-1.log`).
+    - Spores: 51 puffs, no missing materials.
+    - Cigarette grass: 3 tufts in every district.
+    - Rings: one cigarette given.
+    - The beast: notices 2, lash 1.
+  - Maze steps from 50: failures=0, with no marble warning.
+  - Trio shots: `Local/shots/feywild-trio`, `Local/trio5-sheet.png`, `trio8-waist.png`.
+  - Package: Verify-Package 50/50 with no retries, 182 passes (`Local/verify-package-20261127-021821.log`). Promoted as
+    FeywildSporesTrio.
+- **Evidence:** `Local/next-sheet-1.png` (spores, beast), `next-sheet-3.png` (white satyrs), `trio5-sheet.png`,
+  `trio8-waist.png`.
+- **Known flaws:**
+  - Not played by hand.
+  - The marble reads pale blue in the maze's moonlight.
+  - The gnome's legs still press up to 8 cm into the satyr's shoulders, as before.
+  - The ring cigarette is once per ring per load.
+- **Launcher:** current.
+- **Next owner:** Next part of the work can be done here (a hand playtest of the Feywild and any tuning).
+
 ## November 27 — Feywild: the Deepwood's climbs; jellyfish second look; Deepwood light (Claude)
 
 - **Asked:**

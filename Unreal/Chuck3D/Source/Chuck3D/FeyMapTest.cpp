@@ -10,6 +10,7 @@
 #include "FeyHare.h"
 #include "FeyJelly.h"
 #include "FeyDeepCrossing.h"
+#include "FeySpores.h"
 #include "ChultFoliageFade.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "UObject/UObjectIterator.h"
@@ -533,8 +534,9 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 Check(Fz < Gz + 200.f, TEXT("bees_put_him_down"));
                 R->bPlaced = false; R->CrackStep = 55; R->PhaseStart = Now; return;
             }
-            case 55:   // a statue turns while he looks away
+            case 55:   // a statue turns while he looks away (2026-11-26: the hooded turning statues were removed at the user's word; none to check)
             {
+                if (MazeMarks().Num() >= 0) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_STATUES removed")); R->bPlaced = false; R->CrackStep = 56; R->PhaseStart = Now; return; }
                 // (2026-11-23) the first turning statue on the way through: him in the corridor's middle 2.6 m along, facing away
                 FMazeMark Mk; for (const FMazeMark& M : MazeMarks()) if (M.Kind == 1) { Mk = M; break; }
                 const FVector2D Tn(-Mk.In.Y, Mk.In.X), Sq = Mk.P + Mk.In * 82.f + Tn * 260.f;
@@ -1559,7 +1561,9 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             default:
                 if (Since < 1.f) return;
-                Check(AFeyLife::GroundSamples > 0 && AFeyLife::GroundBad == 0, TEXT("creature_ground"));   // (2026-11-25: the 11-24 beasts' rounds, the roaming redcaps' leashes)
+                Check(AFeyLife::GroundSamples > 0 && AFeyLife::GroundBad == 0, TEXT("creature_ground"));
+                if (FPlatformMisc::GetEnvironmentVariable(TEXT("CHUCK_FEY_LIFE_FROM")).IsEmpty()) { Check(AFeyLife::CigGrass >= 6, TEXT("cig_grass_planted")); Check(AFeyDelights::RingVisits == 0 || AFeyDelights::RingCigarettes > 0, TEXT("ring_gives_cigarette")); }   // (2026-11-26)
+                if (AFeySpores* Sp = AFeySpores::Get(Chuck->GetWorld())) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_SPORES_TEST puffs=%d missing=%d cig_grass=%d ring_cigs=%d"), AFeySpores::Puffs, Sp->GetMissingMaterials(), AFeyLife::CigGrass, AFeyDelights::RingCigarettes); Check(Sp->GetMissingMaterials() == 0, TEXT("spore_materials")); }   // (2026-11-25: the 11-24 beasts' rounds, the roaming redcaps' leashes)
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_TEST failures=%d toggles=%d orchid_shots=%d orchid_hits=%d moth_touches=%d mite_bites=%d mite_kills=%d beast_notices=%d lashes=%d lash_hits=%d paces=%d"), R->LifeFails, AFeyLife::FlowerToggles, AFeyLife::OrchidShots, AFeyLife::OrchidHits, AFeyLife::MothTouches,
                     AFeyMite::Bites, AFeyMite::Kills, AFeyDisplacer::Notices, AFeyDisplacer::Lashes, AFeyDisplacer::LashHits, AFeyDisplacer::Paces);
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHTS_TEST rings=%d wisp_moves=%d koi_scatters=%d bursts=%d sign_turns=%d crow_flights=%d"), AFeyDelights::RingVisits, AFeyDelights::WispMoves, AFeyDelights::KoiScatters, AFeyDelights::Bursts, AFeyDelights::SignTurns, AFeyDelights::CrowFlights);
