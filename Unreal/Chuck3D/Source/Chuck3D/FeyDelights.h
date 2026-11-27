@@ -39,10 +39,11 @@ public:
     bool TryScratch(const FVector& Location, const FVector& Ahead, float Reach);
 
     // Tests and stills.
+    static int32 RingCigarettes;
     static int32 RingVisits; static int32 WispMoves; static int32 KoiScatters; static int32 Bursts; static int32 SignTurns; static int32 CrowFlights;
     /** The music's dip while he stands in a fairy ring (1 none; read by ADockGameMode::UpdateMusicDuck). */
     static float MusicDip;
-    struct FRing { FVector C = FVector::ZeroVector; float R = 160.f; };
+    struct FRing { FVector C = FVector::ZeroVector; float R = 160.f; bool bGave = false; };   // (bGave: its cigarette given, 2026-11-26)
     struct FPuff { FVector P = FVector::ZeroVector; bool bSeed = false; float Gone = -1.f, Size = 1.f; };
     struct FWisp { FVector At = FVector::ZeroVector, From = FVector::ZeroVector; float Move = 1.f; };
     struct FKoi { FVector2D Home = FVector2D::ZeroVector; float R = 150.f, Phase = 0, Dir = 1, Flee = 0; FVector2D At = FVector2D::ZeroVector, Away = FVector2D::ZeroVector; float Yaw = 0; };
@@ -72,6 +73,7 @@ private:
     float Clock = 0, BellWait = 0, SwanClock = 0;
     bool bWasGrounded = true;
     TArray<FRing> Rings;
+    UPROPERTY() TArray<AActor*> RingCigs;
     TArray<FPuff> Puffs;
     TArray<FWisp> Wisps; TArray<FVector> WispWay;
     TArray<FKoi> Koi;

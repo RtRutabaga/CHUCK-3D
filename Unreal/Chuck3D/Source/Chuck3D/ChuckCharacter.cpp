@@ -455,6 +455,7 @@ void AChuckCharacter::RespawnAtAreaStart()
 void AChuckCharacter::ResetAtLocation(const FVector& Location)
 {
     ++ResetGeneration;
+    TestHold = FVector::ZeroVector;
     if (Gait == EGait::Ride || RideMount.IsValid()) { if (RideMount.IsValid()) RemoveTickPrerequisiteActor(RideMount.Get()); RideMount.Reset(); SetActorEnableCollision(true); RideDraw = 0; }
     if (Gait == EGait::JellyHang || JellyMount.IsValid()) { if (JellyMount.IsValid()) RemoveTickPrerequisiteActor(JellyMount.Get()); JellyMount.Reset(); SetActorEnableCollision(true); RideDraw = 0; }
     bRideThrown = false;
@@ -3629,7 +3630,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (Stamina <= 0.f) EndSprint(false);
         else if (bLeaping) {}   // the leap carries the sprint
         else if (Movement->IsFalling()) { if (SprintAirTime > SprintDropGrace) EndSprint(true); }
-        else if (Gait != EGait::Loop || bStrafe || !bInput || IsTalking()) EndSprint(false);   // let go of the stick: over
+        else if (Gait != EGait::Loop || bStrafe || !bInput || IsTalking()) { UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT_ENDS gait=%s strafe=%d input=%d"), GetGaitName(), bStrafe ? 1 : 0, bInput ? 1 : 0); EndSprint(false); }   // let go of the stick: over
     }
     // Not sprinting, whatever he's doing but climbing or swinging: stamina refills.
     else if (Stamina < 1.f && !IsClimbing())
@@ -4037,6 +4038,7 @@ void AChuckCharacter::Quit()
 void AChuckCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    if (!TestHold.IsNearlyZero()) { SetTestStickWorld(TestHold); AddMovementInput(TestHold, 1.f, true); }   // (tests: a held stick)
     auto* PC=Cast<APlayerController>(Controller);
     if(bDemoEnded)
     {

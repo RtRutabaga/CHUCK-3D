@@ -348,13 +348,17 @@ def vloft(table, zf, side, p=2.6):
     return f
 
 
+def lerp_(a, b, t): return a + (b - a) * t
+
+
 def centaur(rig, meshes, slots, rng):
     """A horse's body from the human's hips back, built as a horse is: a lofted trunk on its true lines, with the
     muscles over it (shoulder and its point, triceps, the two breast muscles parted by their groove, forearm, haunch,
     point of hip, stifle, gaskin, hamstring), the joints a horse has (elbow, flat-fronted knee, the hock's point, round
     fetlock with its ergot) and slanted hooves; dark points (bay) below the knees and hocks."""
     F = Final(rig); P0 = F.j('pelvis')
-    zf = P0.z + 4. - 150.                                          # the horse's floor (below the human's)
+    zf = P0.z + 10. - 150.                                         # the horse's floor (below the human's; 2026-11-26, the user:
+    # his torso set 6 cm lower into the horse, so the satyr riding behind him sits a little higher than his head)
     global LIFT; LIFT = -zf
     def Z(h): return zf + h
     def H(x, y, h): return V(x, y, Z(h))
@@ -396,6 +400,10 @@ def centaur(rig, meshes, slots, rng):
         keel = .5 * np.clip((x + 40.) / 40., 0., 1.)   # (2026-11-24: the chest narrows down to the breastbone between the
         # forelegs, so the forearms show broad from the front; behind the girth the barrel stays widest low, as before)
         we = np.maximum(w * (1. - .13 * vc - .05 * vc ** 2) * (1. - keel * np.clip(-vc, 0., 1.) ** 1.5), .5)
+        # (2026-11-26, second look) the breast's top drawn in toward his waist, so he widens down into it rather than
+        # standing in a wider barrel
+        tp = np.clip((x + 22.) / 30., 0., 1.) * np.clip((v - .05) / .8, 0., 1.)
+        we = np.maximum(we * (1. - .3 * tp), .5)
         q = np.sqrt((y / we) ** 2 + v ** 2)
         d = (q - 1.) * np.minimum(we, hh)
         d = np.where(x > x_hi, np.maximum(d, x - x_hi), d)
@@ -420,6 +428,18 @@ def centaur(rig, meshes, slots, rng):
         rx0, rx1 = min(p.x for p in ring), max(p.x for p in ring); ry = max(abs(p.y) for p in ring)
         zc, rz = (cut - 10. + top) * .5, (top - cut + 10.) * .5
         B.ell('h_front', ((rx0 + rx1) * .5 - 1., 0, zc), ((rx1 - rx0) * .5 + 1.8, ry + 1.8, rz), k=6)
+        # (2026-11-26, the user: the change from horse to man too abrupt, as centaurs are drawn elsewhere) the horse's
+        # breast rises into his lower belly as a tapering wedge, from the barrel's width at the withers to his waist under
+        # the belt, blended broadly, so the coat climbs his front instead of stopping at a ring round his hips
+        xm = (rx0 + rx1) * .5
+        for k_ in range(6):
+            t = k_ / 5.
+            z = Z(132.) + (top - 3. - Z(132.)) * t
+            B.ell('h_front', (xm + 2. - 3. * t, 0, z), (lerp_(17., (rx1 - rx0) * .5 + 1.2, t), lerp_(21., ry + 1.2, t), 7.), k=9)
+        # ...and in a V up the middle of his belly in front, a little above the belt's line, narrowing to a point
+        for k_ in range(5):
+            t = k_ / 4.
+            B.ell('h_front', (rx1 - 1.8 - 1.5 * t, 0, top - 4. + 11. * t), (3.2, lerp_(10., 2.5, t), 4.5), k=4)   # (its face just proud of his skin)
         print('CHUCK_TRIO_JOIN', f'x={rx0:.0f}..{rx1:.0f} y={ry:.0f} cut={cut:.0f} top={top:.0f}')
     for side, s in (('l', 1.), ('r', -1.)):
         f, h = legs[f'f{side}'], legs[f'h{side}']
@@ -486,6 +506,22 @@ def centaur(rig, meshes, slots, rng):
             a = rng.uniform(-math.pi * .9, math.pi * .9) + math.pi; n = V(math.cos(a), math.sin(a), 0)   # (mostly behind the fetlock)
             feather.append((leg[3] + n * 4.8 + V(0, 0, rng.uniform(-4, 9)), n, V(0, 0, -1)))
     fob = cards('Feather', feather, rng, 'HorseHair', 15, 2.4, .25, .25); hair.append(('feather', fob))
+    # (2026-11-26) Where the coat meets his skin: short coat-coloured hair growing up out of the coat over his lower belly
+    # and back, thinning upward in a V at the front (to a little below the navel), so the one gives way to the other.
+    if skin and ring:
+        x_front = max(p.x for p in ring)
+        def fringe_ok(p, n):
+            h = p.z - (top - 9.); up = 1. - abs(p.y) / (ry + 3.) if p.x > xm else .35
+            return -3. < h < 10. * max(up, .2) + 1. and n.z < .6 and rng.random() < .95 - h / 16.
+        roots = []
+        for ob in skin:
+            M_ = ob.matrix_world; tmp = ob.copy(); tmp.data = ob.data.copy(); tmp.data.transform(Matrix.Scale(100., 4) @ M_); tmp.matrix_world = Matrix.Identity(4)
+            for p, n in surface_points(tmp, 1400, rng, fringe_ok): roots.append((p, n, (V(0, 0, 1) * .6 + n * .4).normalized()))
+            bpy.data.objects.remove(tmp, do_unlink=True)
+        if roots:
+            cob = cards('CoatFringe', roots, rng, 'CoatHair', 7.5, 1.5, -.05, .35); hair.append(('fringe', cob))
+            slots['CoatHair'] = {'type': 'hair', 'texture': 'Textures/beard_locks.png', 'tint': [1.15, .46, .17]}   # (the coat's own bay, Hero_coat .4, .15, .05, over the dark lock texture)
+            print('CHUCK_TRIO_FRINGE', len(roots))
     slots['HorseHair'] = {'type': 'hair', 'texture': 'Textures/beard_locks.png', 'tint': [.03, .02, .014]}
     for kind, ob in hair:
         Q = np.array([v.co[:] for v in ob.data.vertices])

@@ -7,7 +7,9 @@ UnrealEditor-Cmd <uproject> "-ExecutePythonScript=<absolute path to this file>" 
                 (FeyMap gives each a box), with generated LODs.
   SM_FeySatyrFrown  the same faun with his face re-carved to a scowl (Tools/build_fey_satyr.py), for the dead ends.
   M_FeyMarble   Poly Haven marble_01 (CC0) projected from three sides in the statue's own space (the scan has no UVs), a
-                little weathered: grey in the hollows that face down, a faint green on the tops of the lower parts.
+                little weathered: grey in the hollows that face down, a faint green on the tops of the lower parts. (2026-11-26,
+                the user: white marble) near-white, the scan's veins only faint; CHUCK_FEY_SATYR_MARBLE_ONLY=1 rebuilds the
+                material alone (delete M_FeyMarble.uasset first), without re-importing the textures or the statues.
 Only these assets are created or replaced.
 """
 from pathlib import Path
@@ -37,9 +39,14 @@ def texture(name, file, kind):
     return tx
 
 
-C = texture('T_Marble01_Diff', 'marble_01_diff_2k.jpg', 'color')
-N = texture('T_Marble01_NorDX', 'marble_01_nor_dx_2k.jpg', 'normal')
-R = texture('T_Marble01_Rough', 'marble_01_rough_2k.jpg', 'mask')
+import os
+MARBLE_ONLY = bool(os.environ.get('CHUCK_FEY_SATYR_MARBLE_ONLY'))
+if MARBLE_ONLY:
+    C, N, R = (unreal.load_asset(f'{DEST}/{n}') for n in ('T_Marble01_Diff', 'T_Marble01_NorDX', 'T_Marble01_Rough'))
+else:
+    C = texture('T_Marble01_Diff', 'marble_01_diff_2k.jpg', 'color')
+    N = texture('T_Marble01_NorDX', 'marble_01_nor_dx_2k.jpg', 'normal')
+    R = texture('T_Marble01_Rough', 'marble_01_rough_2k.jpg', 'mask')
 
 MARBLE = r"""
 float3 n=normalize(LN);float3 w=pow(abs(n),4.);w/=dot(w,1);
@@ -49,10 +56,12 @@ float r=Texture2DSample(R,RSampler,ua).r*w.x+Texture2DSample(R,RSampler,ub).r*w.
 float2 nx=Texture2DSample(NM,NMSampler,ua).rg*2-1,ny=Texture2DSample(NM,NMSampler,ub).rg*2-1,nz=Texture2DSample(NM,NMSampler,uc).rg*2-1;
 float3 dn=float3(0,nx.x,nx.y)*w.x+float3(ny.x,0,ny.y)*w.y+float3(nz.x,nz.y,0)*w.z;
 float low=saturate(1.-P.z/90.);
-float grime=saturate(-n.z)*.35+low*.12;
-float moss=saturate(n.z-.55)*low*.8;
-float3 base=c*Tint;
-base=lerp(base,base*float3(.62,.62,.6),grime);
+float grime=saturate(-n.z)*.2+low*.06;
+float moss=saturate(n.z-.55)*low*.3;
+// (2026-11-26, the user: white marble) the scan's own grey veins kept faintly in a near-white stone
+float l=dot(c,float3(.3,.59,.11));
+float3 base=float3(.95,.945,.925)*lerp(.84,1.03,saturate(l*1.6))*Tint;
+base=lerp(base,base*float3(.78,.78,.76),grime);
 base=lerp(base,float3(.16,.22,.08),moss);
 Rough=lerp(saturate(r*.7+.08),.85,max(grime,moss));
 WN=normalize(n+dn*.6);
@@ -66,6 +75,7 @@ def build_marble():
     if mat: LIB.delete_all_material_expressions(mat)
     else: mat = TOOLS.create_asset('M_FeyMarble', DEST, unreal.Material, unreal.MaterialFactoryNew())
     mat.set_editor_property('tangent_space_normal', False)
+    mat.set_editor_property('used_with_instanced_static_meshes', True)   # (the maze draws the statues instanced: without it, the default material)
     def node(cls, **props):
         e = LIB.create_material_expression(mat, cls)
         for k, v in props.items(): e.set_editor_property(k, v)
@@ -97,7 +107,7 @@ def build_marble():
 
 
 mat = build_marble()
-for name in ('SM_FeySatyr', 'SM_FeySatyrFrown'):
+for name in (() if MARBLE_ONLY else ('SM_FeySatyr', 'SM_FeySatyrFrown')):
     o = unreal.FbxImportUI()
     o.import_mesh = True; o.import_as_skeletal = False
     o.mesh_type_to_import = unreal.FBXImportType.FBXIT_STATIC_MESH

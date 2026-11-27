@@ -14,6 +14,23 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - **The ride:** he swings under it like a pendulum. Roll or F lets go.
   - **The edges:** it drifts back from the ways out and from Redcap Hollow. It shakes him off only on its way out.
   - Verified 50/50 and promoted as FeywildJelly. Not played by hand.
+- **Feywild: spores, white marble, trio, beast, cigarettes (November 27, Claude):** the user's list.
+  - **Spores:** puffballs, seed heads, fairy rings and the slowing pollen beds now show glowing spore clouds (CC0 Unity
+    Labs flipbook) and grains (`AFeySpores`).
+  - **Maze statues:** the satyr statues are white marble, and the hooded turning statues are gone.
+  - **Trio:** the satyr is taller and the centaur's man shorter and set lower, so the satyr's head is above the
+    centaur's. The horse's breast rises into his belly in a V with a coat-coloured fringe.
+  - **Beast:** Highmeadow's displacer now patrols the road to the maze, not the overlook.
+  - **Cigarettes:** each fairy ring gives one, and cigarette grass grows in every district and the maze.
+  - Verified 50/50 and promoted as FeywildSporesTrio.
+- **Feywild: the Deepwood's climbs, the jellyfish's second look, bluer Deepwood light (November 27, Claude):**
+  - **The climbs:** two crossings guard the Deepwood's hidden way to Highmeadow, each an arc from wall to wall.
+    - Roots: vault a root, sprint-leap a strip of thorns, vault a second root.
+    - Thorns: five ivy hoops over a thorn bed.
+    - The jellyfish cannot pass them, and two wait on each side ([regions/FEYWILD-DEEPWOOD-CROSSINGS.md](regions/FEYWILD-DEEPWOOD-CROSSINGS.md)).
+  - **The jellyfish's look:** a dome with an inner bell, radial canals, lights round the rim, and ruffled ribbon arms.
+  - **Light:** the Deepwood's sky light is dimmer and bluer, and its fog thinner; its blue lights are stronger.
+  - Verified 50/50 and promoted as FeywildDeepClimb.
 - **Feywild: hares no longer run from him; the Deepwood jellyfish planned (November 26, Claude):** he can run straight
   up to a hare and ride (verified 50/50 with phleg retried once, promoted as FeywildHareCalm). The user's Deepwood mount
   is planned in [regions/FEYWILD-JELLYFISH.md](regions/FEYWILD-JELLYFISH.md): a jellyfish he hangs from, at 5 m/s. The

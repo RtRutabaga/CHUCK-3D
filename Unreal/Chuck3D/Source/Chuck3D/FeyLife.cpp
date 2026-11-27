@@ -4,6 +4,9 @@
 #include "FeyTrio.h"
 #include "FeyHare.h"
 #include "FeyJelly.h"
+#include "FeyDeepCrossing.h"
+#include "FeySpores.h"
+#include "GrassTuft.h"
 #include "Engine/OverlapResult.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "FeyMap.h"
@@ -143,8 +146,29 @@ namespace
                         for (int32 I = 0; I < N; ++I) P.Clear.Add(FVector(FMath::Lerp(A, B, I / float(N)), 350.f));
                     }
                 }
-                for (const FVector2D& Q : {FVector2D(-105500.f, 8600.f), FVector2D(-107500.f, 12600.f), FVector2D(-110800.f, 10600.f), FVector2D(-110200.f, 7600.f), FVector2D(-107200.f, 6900.f)})
-                    P.Round.Add(FVector(Q.X, Q.Y, LandZ(Highmeadow, Q.X, Q.Y)));
+                // (2026-11-26, the user: the beast on the way to the maze, a hazard to evade to get there, and not on the overlook,
+                // which he should be drawn to) its round straddles the road to the maze 40 m in from the maze's mouth, crossing it
+                // twice; the hollow logs beside the road are still its refuges. Oaks and rocks are kept off its legs.
+                {
+                    int32 Way = -1; for (int32 Th = 0; Th < Thresholds; ++Th) if (Threshold(Th).A == Highmeadow && Threshold(Th).B == Maze) Way = Th;
+                    const TArray<FVector2D>& Road = RoadOf(Highmeadow, Way);
+                    FVector2D C = Road.Num() ? Road[0] : FVector2D(-107000.f, 5000.f), Tn(1, 0); float Left = 4000.f;
+                    for (int32 I = 0; I + 1 < Road.Num() && Left > 0.f; ++I)
+                    {
+                        const float L = static_cast<float>(FVector2D::Distance(Road[I], Road[I + 1]));
+                        Tn = (Road[I + 1] - Road[I]).GetSafeNormal();
+                        if (L >= Left) { C = Road[I] + Tn * Left; Left = 0.f; } else Left -= L;
+                    }
+                    const FVector2D Sd(-Tn.Y, Tn.X);
+                    for (const FVector2D& O : {FVector2D(-1500.f, 1600.f), FVector2D(800.f, 2100.f), FVector2D(2300.f, 300.f), FVector2D(900.f, -1900.f), FVector2D(-1400.f, -1500.f)})
+                    { const FVector2D Q = C + Tn * O.X + Sd * O.Y; P.Round.Add(FVector(Q.X, Q.Y, LandZ(Highmeadow, Q.X, Q.Y))); }
+                    for (int32 K = 0; K < P.Round.Num(); ++K)
+                    {
+                        const FVector2D A(P.Round[K]), B(P.Round[(K + 1) % P.Round.Num()]); const int32 N = FMath::CeilToInt(FVector2D::Distance(A, B) / 250.f);
+                        for (int32 I = 0; I < N; ++I) P.Clear.Add(FVector(FMath::Lerp(A, B, I / float(N)), 350.f));
+                    }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_BEAST_ROUND centre=%.0f,%.0f along=%.2f,%.2f overlook_m=%.0f"), C.X, C.Y, Tn.X, Tn.Y, FVector2D::Distance(C, OverlookAt()) / 100.f);
+                }
                 FFeyPollen Pb; Pb.C = FVector2D(-107800.f, 5000.f); Pb.R = FVector2D(260.f, 380.f); Pb.Yaw = 180.f; P.Pollen.Add(Pb); P.Clear.Add(FVector(Pb.C.X, Pb.C.Y, 440.f));
             }
             {   // (stage 6, 2026-11-22) The Great Hedge Maze: the heart behind vines a hit plant opens; a hidden hit plant at each
@@ -162,7 +186,8 @@ namespace
                 for (const FMazeMark& Mk : MazeMarks())
                 {
                     const FVector2D Tn(-Mk.In.Y, Mk.In.X);
-                    if (Mk.Kind == 1) P.Statues.Add(Mk.P);
+                    // (2026-11-26, the user: the rudimentary hooded statues of nothing in particular removed; the marble satyrs stay)
+                    if (Mk.Kind == 1) {}
                     else if (Mk.Kind == 2) for (int32 M = 0; M < 2; ++M) { const FVector2D Q = Mk.P + Mk.In * 40.f + Tn * (M ? 60.f : -60.f); P.Mites.Add(FVector(Q.X, Q.Y, M * 140.f)); }
                     else if (Mk.Kind == 3) for (const FVector2D& C : {FVector2D(-12.f, 0.f), FVector2D(10.f, 9.f), FVector2D(2.f, -13.f)}) { const FVector2D Q = Mk.P + Mk.In * (14.f + C.Y) + Tn * C.X; P.Cigs.Add(FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y))); }
                 }
@@ -486,6 +511,39 @@ void AFeyLife::Build(int32 D)
             R->SetCollisionProfileName(TEXT("BlockAll")); R->RegisterComponent();
         }
     for (const FVector& C : P.Cigs) if (ACigarettePickup* Cg = ACigarettePickup::Spawn(GetWorld(), FeyWorld(C + FVector(0, 0, 30.f)), FVector::ZeroVector, FeyWorld(C).Z)) Spawned.Add(Cg);   // (gone with the district)
+    // (2026-11-26, the user: a small amount of cigarette grass in the Feywild and the maze) the 2D game's scratchable
+    // cigarette grass: a few tufts a little off the roads in each district, and in some of the maze's dead ends; each gives
+    // a cigarette when he scratches it (AGrassTuft, the docks' weed).
+    {
+        FRandomStream Rg(7700 + D * 31); int32 Made = 0;
+        auto Tuft = [&](const FVector2D& Q)
+        {
+            if (FeyMap::DistrictAt(Q.X, Q.Y) != D || FeyMap::InDeepWater(Q.X, Q.Y) || FeyMap::InRiver(D, Q.X, Q.Y)) return false;
+            for (int32 Th = 0; Th < Thresholds; ++Th) { const FThreshold& W = Threshold(Th); if ((W.A == D && FVector2D::Distance(W.PA, Q) < 1600.f) || (W.B == D && FVector2D::Distance(W.PB, Q) < 1600.f)) return false; }
+            AGrassTuft* T = AGrassTuft::PlantAt(GetWorld(), FeyWorld(FVector(Q.X, Q.Y, LandZ(D, Q.X, Q.Y))), Rg.RandRange(0, 2), Rg.FRandRange(0.f, 360.f), Rg.FRandRange(.9f, 1.2f));
+            if (!T) return false;
+            T->Cigarettes = 1; Spawned.Add(T); ++Made; return true;
+        };
+        if (D == Maze)
+        {
+            const TArray<FVector2D>& Ends = MazeDeadEnds();
+            for (int32 K = 0; K < Ends.Num() && Made < 3; K += FMath::Max(1, Ends.Num() / 4)) Tuft(Ends[K]);
+        }
+        else
+        {
+            TArray<const TArray<FVector2D>*> Roads;
+            for (int32 Th = 0; Th < Thresholds; ++Th) if ((Threshold(Th).A == D || Threshold(Th).B == D) && RoadOf(D, Th).Num() > 1) Roads.Add(&RoadOf(D, Th));
+            for (int32 Try = 0; Try < 40 && Made < 3 && Roads.Num(); ++Try)
+            {
+                const TArray<FVector2D>& Rd = *Roads[Rg.RandRange(0, Roads.Num() - 1)];
+                const int32 I = Rg.RandRange(1, Rd.Num() - 2 > 1 ? Rd.Num() - 2 : 1);
+                const FVector2D A = Rd[I], B = Rd[FMath::Min(I + 1, Rd.Num() - 1)], Tn = (B - A).GetSafeNormal();
+                Tuft(FMath::Lerp(A, B, Rg.FRand()) + FVector2D(-Tn.Y, Tn.X) * (Rg.FRand() < .5f ? -1.f : 1.f) * Rg.FRandRange(280.f, 520.f));
+            }
+        }
+        CigGrass += Made;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_CIG_GRASS district=%s tufts=%d"), FeyMap::District(D).Name, Made);
+    }
     });
     Pending.Add([this, D, &P]()
     {
@@ -509,7 +567,11 @@ void AFeyLife::Build(int32 D)
             }
         }
         Emit(NewMesh(nullptr, TEXT("PollenBlooms")), Bloom, Mats[MPlant], false);
-        Spores = SporeBase; SporeMesh = NewMesh(nullptr, TEXT("PollenSpores"));
+        // (2026-11-26, the user: the slowing spores to look better) the spores over each bed are AFeySpores' now: glowing
+        // grains lifting slowly off it and a faint gold haze low over it (CC0 flipbook), not the old flat specks.
+        if (AFeySpores* Sp = AFeySpores::Get(GetWorld()))
+            for (const FFeyPollen& Pb : Pollen) Sp->AddField(this, FeyWorld(FVector(Pb.C, LandZ(D, Pb.C.X, Pb.C.Y))), Pb.R * .9f, Pb.Yaw, FLinearColor(1.f, .78f, .3f));
+        SporeBase.Reset(); Spores.Reset();
     }
     });
     Pending.Add([this, D, &P]()
@@ -558,6 +620,8 @@ void AFeyLife::Build(int32 D)
     {
     BuildCamp();
     if (District == Deepwood) BuildHag();
+    // (2026-11-26) The Deepwood's climbs: the root and thorn crossings guarding its way to Highmeadow (FeyDeepCrossing.h).
+    if (District == Deepwood) if (AFeyDeepCrossings* X = AFeyDeepCrossings::Spawn(GetWorld())) Spawned.Add(X);
     if (District == FeyMap::Crossroads)
     {
         // (2026-11-23) The trio milling by the great tree: on its ring road to the north-west, between the roads to the
@@ -1221,6 +1285,7 @@ void AFeyLife::BuildPadRise()
 }
 
 // ------------------------------------------------------------------ stage 6 (2026-11-22): the Great Hedge Maze
+int32 AFeyLife::CigGrass = 0;
 int32 AFeyLife::BeeKnocks = 0, AFeyLife::StatueTurns = 0, AFeyLife::Reveals = 0, AFeyLife::ThornPricks = 0;
 float AFeyLife::RevealAfter = 240.f, AFeyLife::RevealEvery = 150.f;
 
@@ -1399,6 +1464,7 @@ float FeyGroundSpeedScale(const FVector& World)
     const FVector L = FeyLocal(World) - FVector(0, 0, Stand);
     for (const TWeakObjectPtr<AFeyLife>& P : GLife) if (P.IsValid() && P->InPollen(L)) return .5f;
     if (InMazeThorns(L)) return .45f;   // (2026-11-23) pushing through thorns
+    if (FeyDeep::InThorns(L)) return .45f;   // (2026-11-26) and the Deepwood crossings'
     return 1.f;
 }
 
@@ -1428,13 +1494,14 @@ void AFeyLife::SpawnJellies()
         Want.Add(Mouth + In * 2500.f + Side * 500.f);
     }
     Want.Add(FVector2D(FeyMap::District(District).Hub));
-    for (const AFeyJelly::FBarrier& B : AFeyJelly::Barriers())
+    // The crossings' barriers (FeyDeepCrossing.h), and two beyond each, either side, whichever way he crosses.
+    AFeyJelly::Barriers().Reset();
+    for (const FeyDeep::FCrossing& C : FeyDeep::Crossings())
     {
-        // (both sides: whichever way he crosses, two wait beyond)
-        const FVector2D Mid = (B.A + B.B) * .5f, N = FVector2D(-(B.B - B.A).Y, (B.B - B.A).X).GetSafeNormal();
-        Want.Add(Mid + N * 1500.f); Want.Add(Mid + N * 1500.f + (B.B - B.A).GetSafeNormal() * 400.f);
-        Want.Add(Mid - N * 1500.f); Want.Add(Mid - N * 1500.f + (B.B - B.A).GetSafeNormal() * 400.f);
+        AFeyJelly::FBarrier B; B.Line = C.Line; B.Sides[0] = C.SideIn; B.Sides[1] = C.SideOut; AFeyJelly::Barriers().Add(B);
     }
+    for (const AFeyJelly::FBarrier& B : AFeyJelly::Barriers())
+        for (const FVector2D& Sd : B.Sides) { Want.Add(Sd + FVector2D(0.f, 350.f)); Want.Add(Sd - FVector2D(0.f, 350.f)); }
     const FDistrict& Ds = FeyMap::District(District);
     int32 Why[5] = {};   // (bounds, mouth, hollow, overhead, room)
     auto Good = [&](const FVector2D& Q) -> bool
@@ -1450,6 +1517,8 @@ void AFeyLife::SpawnJellies()
         FHitResult Hit; FCollisionQueryParams Qp(SCENE_QUERY_STAT(FeyJellyHome), false, this);
         if (GetWorld()->LineTraceSingleByChannel(Hit, FeyWorld(FVector(Q.X, Q.Y, Z + 45.f)), FeyWorld(FVector(Q.X, Q.Y, Z + 420.f)), ECC_Visibility, Qp)) { ++Why[3]; return false; }
         if (GetWorld()->OverlapAnyTestByChannel(FeyWorld(FVector(Q.X, Q.Y, Z + 220.f)), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(95.f, 160.f), Qp)) { ++Why[4]; return false; }
+        for (const AFeyJelly* J : Jellies) if (FVector2D::Distance(FVector2D(FeyLocal(J->GetHome())), Q) < 450.f) { ++Why[4]; return false; }   // (not on another's home)
+        for (const AFeyJelly::FBarrier& B : AFeyJelly::Barriers()) for (int32 I = 0; I + 1 < B.Line.Num(); ++I) if (FVector2D::Distance(FMath::ClosestPointOnSegment2D(Q, B.Line[I], B.Line[I + 1]), Q) < 900.f) { ++Why[1]; return false; }   // (clear of a crossing's wall)
         return true;
     };
     FActorSpawnParameters Sp; Sp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;

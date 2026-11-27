@@ -2,7 +2,7 @@
  "note": "The Crossroads trio (the user, 2026-11-23, with an image, References/Feywild/crossroads-trio.png: a centaur carrying a satyr on its back, a gnome on the satyr's shoulders; they mill around by the Crossroads' giant tree; dialogue later). In the human kit's format (Tools/build_npc_humans.py); built by Tools/build_fey_trio.py, which adds the centaur's horse body, the satyr's goat legs and horns, the gnome's hat and the gear. 'expr:' targets are MakeHuman expression units (MPFB data/targets/expression/units/caucasian), baked into the face.",
  "npcs": {
   "FeyCentaur": {
-   "height_cm": 186,
+   "height_cm": 176,
    "macro": {"gender": 1.0, "age": 0.48, "muscle": 0.95, "weight": 0.62, "height": 0.6, "proportions": 0.6, "cupsize": 0.5, "firmness": 0.5,
              "race": {"african": 0.05, "asian": 0.05, "caucasian": 0.9}},
    "targets": {"measure-shoulder-dist-incr": 0.6, "measure-neck-circ-incr": 0.5, "torso-scale-depth-incr": 0.3, "head-square": 0.4, "chin-prominent-incr": 0.3,
@@ -26,7 +26,7 @@
    ]
   },
   "FeySatyr": {
-   "height_cm": 172,
+   "height_cm": 180,
    "macro": {"gender": 1.0, "age": 0.36, "muscle": 0.72, "weight": 0.32, "height": 0.4, "proportions": 0.55, "cupsize": 0.5, "firmness": 0.5,
              "race": {"african": 0.05, "asian": 0.05, "caucasian": 0.9}},
    "targets": {"l-ear-shape-pointed": 1.0, "r-ear-shape-pointed": 1.0, "l-ear-scale-incr": 0.7, "r-ear-scale-incr": 0.7, "l-ear-rot-backward": 0.5, "r-ear-rot-backward": 0.5,

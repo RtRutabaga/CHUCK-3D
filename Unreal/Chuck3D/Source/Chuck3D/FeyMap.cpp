@@ -1758,7 +1758,7 @@ namespace
                     for (float U = 0; U < FVector2D::Distance(L[I], L[I + 1]); U += 2400.f)
                     {
                         const FVector2D Tn = (L[I + 1] - L[I]).GetSafeNormal(), P = L[I] + Tn * U + FVector2D(-Tn.Y, Tn.X) * Rl.FRandRange(-700.f, 700.f);
-                        if (Rl.FRand() < .3f) { Plan.Lights.Add(FVector4(P.X, P.Y, Land(D, P.X, P.Y) + Rl.FRandRange(60.f, 160.f), Rl.FRandRange(8.f, 14.f))); Plan.LightCols.Add(FLinearColor(.2f, .42f, 1.f, 900.f)); }   // (2026-11-21, again: these softer; 2026-11-22: fewer and fainter, the lanterns light the way)
+                        if (Rl.FRand() < .3f) { Plan.Lights.Add(FVector4(P.X, P.Y, Land(D, P.X, P.Y) + Rl.FRandRange(60.f, 160.f), Rl.FRandRange(10.f, 17.f))); Plan.LightCols.Add(FLinearColor(.2f, .42f, 1.f, 900.f)); }   // (2026-11-21, again: these softer; 2026-11-22: fewer and fainter, the lanterns light the way; 2026-11-26: a fifth stronger, the user: more of the blue)
                     }
             // (2026-11-22, the user: the reference's blue lamps, deepwood-lantern-path.png) Crooked wooden posts along the paths,
             // each with a hooked arm and a hanging iron lantern of blue glass that lights the way a deep blue.
@@ -1793,7 +1793,7 @@ namespace
                                 const float A = 2.f * PI * K / 6.f;
                                 Lamps.Box(Ce + FVector(11.8f * FMath::Cos(A), 11.8f * FMath::Sin(A), -26.f), FVector(1.1f, 1.1f, 12.5f), FMath::RadiansToDegrees(A), Iron);
                             }
-                            Plan.Lights.Add(FVector4(Ce.X, Ce.Y, Ce.Z - 26.f, 70.f)); Plan.LightCols.Add(FLinearColor(.1f, .3f, 1.f, 1500.f));
+                            Plan.Lights.Add(FVector4(Ce.X, Ce.Y, Ce.Z - 26.f, 84.f)); Plan.LightCols.Add(FLinearColor(.1f, .3f, 1.f, 1500.f));   // (2026-11-26: 70 -> 84, the user: more of the blue)
                         }
             }
             for (int32 I = 0; I < 150; ++I)   // (2026-11-21: more of them, more along the paths)

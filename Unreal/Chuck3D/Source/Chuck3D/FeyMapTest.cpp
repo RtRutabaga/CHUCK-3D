@@ -9,6 +9,8 @@
 #include "FeyCreatures.h"
 #include "FeyHare.h"
 #include "FeyJelly.h"
+#include "FeyDeepCrossing.h"
+#include "FeySpores.h"
 #include "ChultFoliageFade.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "UObject/UObjectIterator.h"
@@ -189,6 +191,9 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             bool bByGap = false; for (const FMazeGap& G : MazeGaps()) bByGap |= FVector2D::Distance(FVector2D(Target), G.C) < 400.f;
             if (!bPad && Dist < (bByGap ? 35.f : bWay ? 130.f : 210.f)) { ++R->Next; R->Best = 1e9f; R->LastGain = W->GetTimeSeconds(); R->bJumped = false; return; }
             if (Dist < R->Best - 30.f) { R->Best = Dist; R->LastGain = W->GetTimeSeconds(); }
+            // (2026-11-26) At one of the Deepwood's crossings, the way on beyond it: over to its far side, as he would climb it
+            // (its own steps test the climb).
+            { FVector2D Land; if (FeyDeep::WalkerHop(FVector2D(L), FVector2D(Target), Land)) { float Gz = L.Z; GroundAt(Land.X, Land.Y, Gz); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_CROSSING_HOP at=%s to=%.0f,%.0f"), *L.ToCompactString(), Land.X, Land.Y); Chuck->ResetAtLocation(FeyWorld(FVector(Land.X, Land.Y, Gz + Stand + 8.f))); R->Best = 1e9f; R->LastGain = W->GetTimeSeconds(); return; } }
             const float Stall = W->GetTimeSeconds() - R->LastGain;
             if (Stall > 2.5f && !R->bJumped) { Chuck->Jump(); R->bJumped = true; }
             if (Stall > 6.f)
@@ -529,8 +534,9 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 Check(Fz < Gz + 200.f, TEXT("bees_put_him_down"));
                 R->bPlaced = false; R->CrackStep = 55; R->PhaseStart = Now; return;
             }
-            case 55:   // a statue turns while he looks away
+            case 55:   // a statue turns while he looks away (2026-11-26: the hooded turning statues were removed at the user's word; none to check)
             {
+                if (MazeMarks().Num() >= 0) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_STATUES removed")); R->bPlaced = false; R->CrackStep = 56; R->PhaseStart = Now; return; }
                 // (2026-11-23) the first turning statue on the way through: him in the corridor's middle 2.6 m along, facing away
                 FMazeMark Mk; for (const FMazeMark& M : MazeMarks()) if (M.Kind == 1) { Mk = M; break; }
                 const FVector2D Tn(-Mk.In.Y, Mk.In.X), Sq = Mk.P + Mk.In * 82.f + Tn * 260.f;
@@ -1215,9 +1221,11 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                         }
                         R->OrchidSub = 1; R->MinDist = Since;
                     }
-                    Side(Js[0], 420.f, 60.f);
+                    if (R->OrchidSub < 2) Side(Js[0], 420.f, 60.f);
+                    else { const FVector L = JL(0); Cam(L + FVector(170.f, 120.f, 10.f), L - FVector(0, 0, 25.f)); }   // (close, level with the bell)
                     if (R->OrchidSub == 1 && Since - R->MinDist > 2.5f) { Shot(TEXT("JellyDrift")); R->OrchidSub = 2; }
-                    if (Since - R->MinDist < 3.f) return;
+                    if (R->OrchidSub == 2 && Since - R->MinDist > 3.4f) { Shot(TEXT("JellyClose")); R->OrchidSub = 3; }
+                    if (Since - R->MinDist < 3.8f) return;
                     Uncam(); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 102; R->PhaseStart = Now; return;
                 }
                 case 102:   // he runs in under jelly 0 from 4 m and takes hold
@@ -1396,14 +1404,166 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_RESET home=%d of %d hanging=%d"), Home, Js.Num(), Chuck->IsJellyHanging() ? 1 : 0);
                     Check(!Chuck->IsJellyHanging() && Home == Js.Num(), TEXT("jelly_reset"));
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLIES_TEST holds=%d releases=%d shakes=%d refusals=%d blocks=%d dips=%d top=%.0f"), AFeyJelly::Holds, AFeyJelly::Releases, AFeyJelly::Shakes, AFeyJelly::Refusals, AFeyJelly::Blocks, AFeyJelly::Dips, AFeyJelly::TopSpeed);
-                    AFeyJelly::bTestStick = false; R->bPlaced = false; R->CrackStep = 99; R->PhaseStart = Now; return;
+                    AFeyJelly::bTestStick = false; R->bPlaced = false; R->CrackStep = 109; R->PhaseStart = Now; return;
+                }
+                }
+                return;
+            }
+            // ---- (2026-11-26) the Deepwood's climbs (FeyDeepCrossing.h): 109 the thorn crossing swung hoop to hoop, 110 the root
+            // crossing vaulted and leapt, 111 a jellyfish will not go through a crossing and two wait beyond each, 112 the walls
+            // hold from wall to wall (no way round).
+            case 109: case 110: case 111: case 112:
+            {
+                const TArray<FeyDeep::FCrossing>& Xs = FeyDeep::Crossings();
+                if (Xs.Num() < 2 || AFeyDeepCrossings::Built < 2 || !LifeOf(Deepwood))
+                {
+                    if (!R->bPlaced) { Map->LoadNow(Deepwood); Chuck->ResetAtLocation(FeyCheckpointWorld(Deepwood)); R->bPlaced = true; R->PkGrip = -9; R->PhaseStart = Now; return; }   // (started here: the Deepwood first)
+                    if (Since < 15.f) return;
+                    Check(false, TEXT("crossings_built")); R->CrackStep = 99; return;
+                }
+                if (R->PkGrip == -9) { R->PkGrip = -1; R->bPlaced = false; R->PhaseStart = Now; return; }   // (loaded: now the step itself)
+                const FeyDeep::FCrossing& Ro = Xs[0].Kind == FeyDeep::Roots ? Xs[0] : Xs[1];
+                const FeyDeep::FCrossing& Th = Xs[0].Kind == FeyDeep::Thorns ? Xs[0] : Xs[1];
+                const FVector L = FeyLocal(Chuck->GetActorLocation()), Feet = L - FVector(0, 0, Stand);
+                auto G3 = [&](const FVector2D& P) { float Z = 0; GroundAt(P.X, P.Y, Z); return FVector(P.X, P.Y, Z); };
+                switch (Step)
+                {
+                case 109:   // from outside, under the first hoop: up, hoop to hoop toward the mouth, off past the thorns
+                {
+                    const FeyDeep::FCrossing& C = Th;
+                    const float S = C.S(FVector2D(L)), From = (FeyDeep::Hoops - 1) * .5f * HoopStep;
+                    if (!R->bPlaced)
+                    {
+                        if (Chuck->IsJellyHanging() || Since < .5f) return;
+                        Put(G3(C.At(From, 0.f)), FVector(-C.Along, 0.f)); R->Hits0 = AFeyDeepCrossings::Pricks; R->Hits1 = Chuck->GetSwingCatches();
+                        R->PkGrip = -1; R->PkLastJump = 0.; R->bJumped = false; R->bShort = false; R->bPlaced = true; R->PhaseStart = Now; return;
+                    }
+                    const bool bGoing = Since < 14.f && S > -FeyDeep::BedHalf - 120.f;
+                    if (bGoing && R->bJumped) Drive(FVector(-C.Along, 0.f));
+                    if (!R->bJumped && Since > .8f && Chuck->GetCharacterMovement()->IsMovingOnGround()) { Chuck->JumpPressed(); R->bJumped = true; R->PkLastJump = Now; }
+                    else if (Chuck->IsSwinging() && Chuck->GetSwingGrip() != R->PkGrip && Now - R->PkLastJump > .55f) { R->PkGrip = Chuck->GetSwingGrip(); Chuck->JumpPressed(); R->PkLastJump = Now; }
+                    if (Chuck->IsSwinging() && Chuck->GetSwingCatches() - R->Hits1 >= 2 && !R->bShort) { const FVector2D E = C.At(0.f, C.HalfWidth - 30.f) + C.Along * 250.f; Cam(G3(E) + FVector(0, 0, 160.f), L); Shot(TEXT("DeepThornHoops")); R->bShort = true; }
+                    if (R->Frame % 20 == 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_HOOPS s=%.0f gait=%s catches=%d"), S, Chuck->GetGaitName(), Chuck->GetSwingCatches() - R->Hits1);
+                    if (bGoing || (Since < 16.f && !Chuck->GetCharacterMovement()->IsMovingOnGround())) return;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_HOOPS_END s=%.0f catches=%d pricks=%d"), S, Chuck->GetSwingCatches() - R->Hits1, AFeyDeepCrossings::Pricks - R->Hits0);
+                    Check(Chuck->GetSwingCatches() - R->Hits1 >= FeyDeep::Hoops - 1, TEXT("deep_hoops_move"));
+                    Check(AFeyDeepCrossings::Pricks == R->Hits0, TEXT("deep_hoops_clear_thorns"));
+                    Check(S < -FeyDeep::BedHalf, TEXT("deep_hoops_past_thorns"));
+                    Uncam(); R->bPlaced = false; R->CrackStep = 110; R->PhaseStart = Now; return;
+                }
+                case 110:   // from outside at a run: vault the root, sprint, leap the thorns, vault the second root
+                {
+                    const FeyDeep::FCrossing& C = Ro;
+                    const float S = C.S(FVector2D(L));
+                    if (!R->bPlaced)
+                    {
+                        if (Since < .5f) return;
+                        Put(G3(C.At(C.HalfLen + 250.f, 0.f)), FVector(-C.Along, 0.f)); Chuck->SetStamina(1.f);
+                        R->Hits0 = AFeyDeepCrossings::Pricks; R->Hits1 = Chuck->GetVaults(); R->Aimed0 = Chuck->GetSprintLeaps(); R->OrchidSub = 0; R->bJumped = false; R->MinDist = 1e9f; R->bShort = false; R->bPlaced = true; R->PhaseStart = Now; return;
+                    }
+                    const bool bGoing = Since < 12.f && S > -C.HalfLen - 100.f;
+                    if (bGoing)
+                    {
+                        Chuck->SetRunHeld(true); Chuck->SetTestHoldWorld(FVector(-C.Along, 0.f) + FVector(C.Perp(), 0.f) * FMath::Clamp(-C.X(FVector2D(L)) / 80.f, -.4f, .4f));
+                        // (the jumps where a player would press them: just before each root, and at the thorns' edge at a sprint)
+                        if (R->OrchidSub == 0 && S < FeyDeep::VaultAt + 95.f) { Chuck->JumpPressed(); R->OrchidSub = 1; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_VAULT1 s=%.0f gait=%s"), S, Chuck->GetGaitName()); }
+                        if (R->OrchidSub == 1 && !R->bJumped && S < FeyDeep::VaultAt - 60.f && Chuck->GetCharacterMovement()->IsMovingOnGround() && FCString::Strcmp(Chuck->GetGaitName(), TEXT("Loop")) == 0) { Chuck->SetStamina(1.f); R->bJumped = Chuck->TrySprint(); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_SPRINT s=%.0f started=%d"), S, R->bJumped ? 1 : 0); }
+                        if (R->OrchidSub == 1 && S < FeyDeep::StripHalf + 60.f) { Chuck->JumpPressed(); R->OrchidSub = 2; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_LEAP s=%.0f gait=%s sprint=%d runup=%.0f"), S, Chuck->GetGaitName(), Chuck->IsSprinting() ? 1 : 0, Chuck->GetSprintRunup()); }
+                        if (R->OrchidSub == 2 && S < -FeyDeep::VaultAt + 95.f) { Chuck->JumpPressed(); R->OrchidSub = 3; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_VAULT2 s=%.0f gait=%s"), S, Chuck->GetGaitName()); }
+                        if (!R->bShort && Chuck->IsSprintLeaping()) { Cam(G3(C.At(-C.HalfLen + 40.f, -C.HalfWidth + 40.f)) + FVector(0, 0, 120.f), L); Shot(TEXT("DeepRootLeap")); R->bShort = true; }   // (from inside the corridor, ahead of him)
+                        if (R->Frame % 15 == 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_ROOTS s=%.0f x=%.0f gait=%s sprint=%d"), S, C.X(FVector2D(L)), Chuck->GetGaitName(), Chuck->IsSprinting() ? 1 : 0);
+                        return;
+                    }
+                    Chuck->SetTestHoldWorld(FVector::ZeroVector);
+                    if (Since < 14.f && !Chuck->GetCharacterMovement()->IsMovingOnGround()) return;
+                    const int32 Vaults = Chuck->GetVaults() - R->Hits1, Leaps = Chuck->GetSprintLeaps() - R->Aimed0;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_ROOTS_END s=%.0f vaults=%d leaps=%d pricks=%d"), S, Vaults, Leaps, AFeyDeepCrossings::Pricks - R->Hits0);
+                    Check(S < -C.HalfLen, TEXT("deep_roots_through"));
+                    Check(AFeyDeepCrossings::Pricks == R->Hits0, TEXT("deep_roots_clear_thorns"));
+                    Check(Leaps >= 1 && Vaults + Leaps >= 2, TEXT("deep_roots_moves"));
+                    Uncam(); Chuck->SetRunHeld(false); Chuck->SetTestStickWorld(FVector::ZeroVector); R->bPlaced = false; R->CrackStep = 111; R->PhaseStart = Now; return;
+                }
+                case 111:   // two jellyfish either side of each crossing; one held, ridden down the road at the root crossing: it goes back
+                {
+                    AFeyLife* Dl = LifeOf(Deepwood);
+                    const TArray<AFeyJelly*> Js = Dl ? Dl->GetJellies() : TArray<AFeyJelly*>();
+                    if (!R->bPlaced)
+                    {
+                        if (Since < .5f) return;
+                        int32 Missing = 0;
+                        for (const FeyDeep::FCrossing& C : Xs)
+                            for (const FVector2D& Sd : {C.SideIn, C.SideOut})
+                            {
+                                int32 N = 0; for (AFeyJelly* J : Js) N += FVector2D::Distance(FVector2D(FeyLocal(J->GetHome())), Sd) < 1800.f;
+                                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_JELLIES kind=%d side=%.0f,%.0f near=%d"), C.Kind, Sd.X, Sd.Y, N); Missing += N < 2;
+                            }
+                        Check(Missing == 0, TEXT("deep_jellies_beyond"));
+                        // the jellyfish waiting outside the root crossing
+                        AFeyJelly* J = nullptr; float Best = 1e9f;
+                        for (AFeyJelly* Q : Js) { const float D = static_cast<float>(FVector2D::Distance(FVector2D(FeyLocal(Q->GetHome())), Ro.SideOut)); if (D < Best) { Best = D; J = Q; } }
+                        if (!J) { Check(false, TEXT("deep_jelly_refuses")); R->CrackStep = 112; return; }
+                        const FVector Gp = FeyLocal(J->GetGrip());
+                        Put(FVector(Gp.X + 20.f, Gp.Y, 0.f), FVector(-Ro.Along, 0.f));
+                        R->OrchidSub = 0; R->MinDist = 1e9f; R->Hits0 = AFeyJelly::Refusals; R->bPlaced = true; R->PhaseStart = Now; return;
+                    }
+                    if (R->OrchidSub == 0 && Since > .6f)
+                    {
+                        AFeyJelly* Pj = Chuck->GetJellyPrompt();
+                        float Bd = 1e9f; AFeyJelly* Nj = nullptr; for (AFeyJelly* Q : Js) { const float D = static_cast<float>(FVector::Dist2D(Q->GetGrip(), Chuck->GetActorLocation())); if (D < Bd) { Bd = D; Nj = Q; } }
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_JELLY_PROMPT prompt=%d nearest=%.0f dz=%.0f state=%s gait=%s"), Pj ? 1 : 0, Bd, Nj ? Nj->GetGrip().Z - (Chuck->GetActorLocation().Z - Stand) : 0.f, Nj ? Nj->GetStateName() : TEXT("-"), Chuck->GetGaitName());
+                        Chuck->Interact(); R->OrchidSub = 1; R->PhaseStart = Now; return;
+                    }
+                    if (R->OrchidSub == 0) return;
+                    AFeyJelly* Held = Chuck->GetJellyMount();
+                    if (R->OrchidSub == 1)
+                    {
+                        if (!Held) { if (Since > 2.f) { Check(false, TEXT("deep_jelly_refuses")); R->bPlaced = false; R->CrackStep = 112; R->PhaseStart = Now; } return; }
+                        if (Since < 1.6f) return;
+                        R->OrchidSub = 2; R->PhaseStart = Now; return;
+                    }
+                    if (!Held) { Check(false, TEXT("deep_jelly_refuses")); R->bPlaced = false; R->CrackStep = 112; R->PhaseStart = Now; return; }
+                    const FVector Jl = FeyLocal(Held->GetActorLocation());
+                    R->MinDist = FMath::Min(R->MinDist, static_cast<float>(FVector2D::Distance(FVector2D(Jl), Ro.Mouth)) - Ro.Radius);   // (its distance outside the wall's line)
+                    if (R->Frame % 10 == 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_JELLY_TRACK t=%.1f s=%.0f x=%.0f from_arc=%.0f v=%s state=%s barriers=%d"), Since, Ro.S(FVector2D(Jl)), Ro.X(FVector2D(Jl)), FVector2D::Distance(FVector2D(Jl), Ro.Mouth) - Ro.Radius, *Held->GetDriftVelocity().ToCompactString(), Held->GetStateName(), AFeyJelly::Barriers().Num());
+                    if (Since < 7.f) { AFeyJelly::bTestStick = true; AFeyJelly::TestStick = FVector(-Ro.Along, 0.f); Cam(Jl + FVector(Ro.Perp() * 600.f, 0.f) + FVector(Ro.Along * 300.f, 0.f) + FVector(0, 0, 120.f), Jl - FVector(0, 0, 60.f)); if (Since > 5.f && !R->bShort) { Shot(TEXT("DeepJellyBack")); R->bShort = true; } return; }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_JELLY_REFUSE closest_to_line=%.0f refusals=%d hanging=%d"), R->MinDist, AFeyJelly::Refusals - R->Hits0, Chuck->IsJellyHanging() ? 1 : 0);
+                    Check(R->MinDist > 200.f && AFeyJelly::Refusals > R->Hits0, TEXT("deep_jelly_refuses"));   // (never nearer the line than 2 m, never past it)
+                    AFeyJelly::bTestStick = false; AFeyJelly::TestStick = FVector::ZeroVector; Held->Release(false);
+                    Uncam(); R->bPlaced = false; R->bShort = false; R->CrackStep = 112; R->PhaseStart = Now; return;
+                }
+                case 112:   // no way round: at every 3 m along each wall (off the corridor) a body his size cannot pass from one side to the other
+                {
+                    // (stills of each from the road outside it)
+                    if (Since < 1.4f) { Cam(G3(Ro.At(Ro.HalfLen + 900.f, 250.f)) + FVector(0, 0, 230.f), G3(Ro.Centre) + FVector(0, 0, 90.f)); if (Since > 1.2f && !R->bShort) { Shot(TEXT("DeepRootCrossing")); R->bShort = true; } return; }
+                    if (Since < 2.8f) { Cam(G3(Th.At(Th.HalfLen + 700.f, -200.f)) + FVector(0, 0, 200.f), G3(Th.Centre) + FVector(0, 0, 80.f)); if (Since > 2.6f && R->bShort) { Shot(TEXT("DeepThornCrossing")); R->bShort = false; } return; }
+                    Uncam();
+                    int32 Leaks = 0, Tries = 0;
+                    FCollisionQueryParams Q(SCENE_QUERY_STAT(DeepLeak), false, Chuck);
+                    for (const FeyDeep::FCrossing& C : Xs)
+                        for (int32 I = 2; I + 2 < C.Line.Num(); I += 2)
+                        {
+                            const FVector2D P = C.Line[I];
+                            if (FMath::Abs(C.X(P)) < C.HalfWidth + 150.f && FMath::Abs(C.S(P)) < C.HalfLen + 150.f) continue;
+                            const FeyMap::FDistrict& Ds = FeyMap::District(Deepwood);
+                            if (P.X < Ds.X0 + 80.f || P.Y > Ds.Y1 - 80.f) continue;   // (beyond the bounds already)
+                            const FVector2D Rd = (P - C.Mouth).GetSafeNormal();
+                            const FVector A = G3(P - Rd * 220.f) + FVector(0, 0, 60.f), B = G3(P + Rd * 220.f) + FVector(0, 0, 60.f);
+                            FHitResult H; ++Tries;
+                            if (!Chuck->GetWorld()->SweepSingleByChannel(H, FeyWorld(A), FeyWorld(B), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(30.f, 40.f), Q)) { ++Leaks; if (Leaks < 4) UE_LOG(LogTemp, Warning, TEXT("CHUCK_FEY_DEEP_LEAK kind=%d at=%.0f,%.0f"), C.Kind, P.X, P.Y); }
+                        }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DEEP_WALLS tries=%d leaks=%d pricks=%d"), Tries, Leaks, AFeyDeepCrossings::Pricks);
+                    Check(Tries > 40 && Leaks == 0, TEXT("deep_walls_hold"));
+                    // and stills of each from the road outside
+                    R->bPlaced = false; R->CrackStep = 99; R->PhaseStart = Now; return;
                 }
                 }
                 return;
             }
             default:
                 if (Since < 1.f) return;
-                Check(AFeyLife::GroundSamples > 0 && AFeyLife::GroundBad == 0, TEXT("creature_ground"));   // (2026-11-25: the 11-24 beasts' rounds, the roaming redcaps' leashes)
+                Check(AFeyLife::GroundSamples > 0 && AFeyLife::GroundBad == 0, TEXT("creature_ground"));
+                if (FPlatformMisc::GetEnvironmentVariable(TEXT("CHUCK_FEY_LIFE_FROM")).IsEmpty()) { Check(AFeyLife::CigGrass >= 6, TEXT("cig_grass_planted")); Check(AFeyDelights::RingVisits == 0 || AFeyDelights::RingCigarettes > 0, TEXT("ring_gives_cigarette")); }   // (2026-11-26)
+                if (AFeySpores* Sp = AFeySpores::Get(Chuck->GetWorld())) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_SPORES_TEST puffs=%d missing=%d cig_grass=%d ring_cigs=%d"), AFeySpores::Puffs, Sp->GetMissingMaterials(), AFeyLife::CigGrass, AFeyDelights::RingCigarettes); Check(Sp->GetMissingMaterials() == 0, TEXT("spore_materials")); }   // (2026-11-25: the 11-24 beasts' rounds, the roaming redcaps' leashes)
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_TEST failures=%d toggles=%d orchid_shots=%d orchid_hits=%d moth_touches=%d mite_bites=%d mite_kills=%d beast_notices=%d lashes=%d lash_hits=%d paces=%d"), R->LifeFails, AFeyLife::FlowerToggles, AFeyLife::OrchidShots, AFeyLife::OrchidHits, AFeyLife::MothTouches,
                     AFeyMite::Bites, AFeyMite::Kills, AFeyDisplacer::Notices, AFeyDisplacer::Lashes, AFeyDisplacer::LashHits, AFeyDisplacer::Paces);
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DELIGHTS_TEST rings=%d wisp_moves=%d koi_scatters=%d bursts=%d sign_turns=%d crow_flights=%d"), AFeyDelights::RingVisits, AFeyDelights::WispMoves, AFeyDelights::KoiScatters, AFeyDelights::Bursts, AFeyDelights::SignTurns, AFeyDelights::CrowFlights);
