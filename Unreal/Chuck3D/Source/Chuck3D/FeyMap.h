@@ -78,6 +78,7 @@ namespace FeyMap
      *  map then bakes only those posts' poles), an arrow's height above its post's ground, its glyph seed, and one board. */
     const TArray<FVector>& LilyPads();
     FVector2D OverlookAt();
+    FVector2D RedcapAt();   // Redcap Hollow's fire pit (the Deepwood)
     float RapidXAt(float Y);
     float RapidWLAt(float Y);
     bool InRiver(int32 D, float X, float Y);

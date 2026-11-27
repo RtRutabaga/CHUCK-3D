@@ -3,6 +3,7 @@
 #include "FeyDelights.h"
 #include "FeyTrio.h"
 #include "FeyHare.h"
+#include "FeyJelly.h"
 #include "Engine/OverlapResult.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "FeyMap.h"
@@ -421,6 +422,7 @@ void AFeyLife::EndPlay(const EEndPlayReason::Type Reason)
     if (IsValid(Beast)) Beast->Destroy();
     for (AActor* A : MoreBeasts) if (IsValid(A)) A->Destroy();
     for (AActor* A : Hares) if (IsValid(A)) A->Destroy();
+    for (AActor* A : Jellies) if (IsValid(A)) A->Destroy();
     Super::EndPlay(Reason);
 }
 
@@ -582,6 +584,7 @@ void AFeyLife::Build(int32 D)
         if (P.Round.Num()) if ((Beast = GetWorld()->SpawnActor<AFeyDisplacer>(FeyWorld(P.Round[0]), FRotator::ZeroRotator, Sp)) != nullptr) Beast->Init(P.Round, Refuges);
         for (const TArray<FVector>& Rd : P.MoreRounds) if (AFeyDisplacer* B = GetWorld()->SpawnActor<AFeyDisplacer>(FeyWorld(Rd[0]), FRotator::ZeroRotator, Sp)) { B->Init(Rd, Refuges); MoreBeasts.Add(B); }
         SpawnHares();
+        SpawnJellies();
     }
     if (auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0))) Respawns = Chuck->GetRespawns();
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BUILT district=%s flowers=%d vines=%d pollen=%d orchids=%d moths=%d mites=%d redcaps=%d beast=%d refuges=%d pads=%d"), FeyMap::District(D).Name, Flowers.Num(), Vines.Num(), Pollen.Num(), Orchids.Num(), Moths.Num(),
@@ -723,6 +726,7 @@ void AFeyLife::ResetAll()
     if (IsValid(Beast)) Beast->ResetBeast();
     for (AFeyDisplacer* B : MoreBeasts) if (IsValid(B)) B->ResetBeast();
     for (AFeyHare* H : Hares) if (IsValid(H)) H->ResetHare();
+    for (AFeyJelly* J : Jellies) if (IsValid(J)) J->ResetJelly();
     for (AActor* A : Redcaps) if (IsValid(A)) A->Destroy();
     Redcaps.Reset(); SpawnRedcaps();
 }
@@ -1405,4 +1409,65 @@ bool FeyScratch(AChuckCharacter* Chuck, const FVector& Location, const FVector& 
     for (const TWeakObjectPtr<AFeyLife>& P : GLife) if (P.IsValid()) bAny |= P->TryScratch(Location, Ahead, Reach);
     for (const TWeakObjectPtr<AFeyDelights>& P : AFeyDelights::All()) if (P.IsValid()) bAny |= P->TryScratch(Location, Ahead, Reach);   // (puffballs, seed heads)
     return bAny;
+}
+
+void AFeyLife::SpawnJellies()
+{
+    // (2026-11-26, docs/regions/FEYWILD-JELLYFISH.md) The Deepwood's jellyfish: one 25 m inside each way in (the two from
+    // the Crossroads and the one from Highmeadow), one in the middle of its loop, and two beyond each crossing's barrier
+    // (AFeyJelly::Barriers, none yet). Each home is searched for near where it is meant to be: open to the sky up to the
+    // bell's height, off the paths' mouths, out of Redcap Hollow's clearing.
+    if (District != FeyMap::Deepwood) return;
+    TArray<FVector2D> Want;
+    for (int32 Th = 0; Th < FeyMap::Thresholds; ++Th)
+    {
+        const FeyMap::FThreshold& W = FeyMap::Threshold(Th);
+        if (W.A != District && W.B != District) continue;
+        const bool bA = W.A == District;
+        const FVector2D Mouth = bA ? W.PA : W.PB, In = (Mouth - (bA ? W.PB : W.PA)).GetSafeNormal(), Side(-In.Y, In.X);
+        Want.Add(Mouth + In * 2500.f + Side * 500.f);
+    }
+    Want.Add(FVector2D(FeyMap::District(District).Hub));
+    for (const AFeyJelly::FBarrier& B : AFeyJelly::Barriers())
+    {
+        // (both sides: whichever way he crosses, two wait beyond)
+        const FVector2D Mid = (B.A + B.B) * .5f, N = FVector2D(-(B.B - B.A).Y, (B.B - B.A).X).GetSafeNormal();
+        Want.Add(Mid + N * 1500.f); Want.Add(Mid + N * 1500.f + (B.B - B.A).GetSafeNormal() * 400.f);
+        Want.Add(Mid - N * 1500.f); Want.Add(Mid - N * 1500.f + (B.B - B.A).GetSafeNormal() * 400.f);
+    }
+    const FDistrict& Ds = FeyMap::District(District);
+    int32 Why[5] = {};   // (bounds, mouth, hollow, overhead, room)
+    auto Good = [&](const FVector2D& Q) -> bool
+    {
+        if (Q.X < Ds.X0 + 600.f || Q.X > Ds.X1 - 600.f || Q.Y < Ds.Y0 + 600.f || Q.Y > Ds.Y1 - 600.f || FeyMap::DistrictAt(Q.X, Q.Y) != District) { ++Why[0]; return false; }
+        for (int32 Th = 0; Th < FeyMap::Thresholds; ++Th)
+        {
+            const FeyMap::FThreshold& W = FeyMap::Threshold(Th);
+            if ((W.A == District && FVector2D::Distance(W.PA, Q) < 1800.f) || (W.B == District && FVector2D::Distance(W.PB, Q) < 1800.f)) { ++Why[1]; return false; }
+        }
+        if (FVector2D::Distance(FeyMap::RedcapAt(), Q) < AFeyJelly::HollowKeep + 600.f) { ++Why[2]; return false; }
+        const float Z = LandZ(District, Q.X, Q.Y);
+        FHitResult Hit; FCollisionQueryParams Qp(SCENE_QUERY_STAT(FeyJellyHome), false, this);
+        if (GetWorld()->LineTraceSingleByChannel(Hit, FeyWorld(FVector(Q.X, Q.Y, Z + 45.f)), FeyWorld(FVector(Q.X, Q.Y, Z + 420.f)), ECC_Visibility, Qp)) { ++Why[3]; return false; }
+        if (GetWorld()->OverlapAnyTestByChannel(FeyWorld(FVector(Q.X, Q.Y, Z + 220.f)), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(95.f, 160.f), Qp)) { ++Why[4]; return false; }
+        return true;
+    };
+    FActorSpawnParameters Sp; Sp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    for (int32 K = 0; K < Want.Num(); ++K)
+    {
+        FVector2D Home = Want[K]; bool bFound = false;
+        for (int32 Ring = 0; Ring <= 6 && !bFound; ++Ring)
+            for (int32 I = 0; I < FMath::Max(1, Ring * 6) && !bFound; ++I)
+            {
+                const float Ang = 2.f * PI * I / FMath::Max(1, Ring * 6) + Ring * .7f;
+                const FVector2D Q = Want[K] + FVector2D(FMath::Cos(Ang), FMath::Sin(Ang)) * (Ring * 400.f);
+                if (Good(Q)) { Home = Q; bFound = true; }
+            }
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_HOME district=%s jelly=%d home=%.0f,%.0f found=%d moved=%.0f rejected=%d/%d/%d/%d/%d"), Ds.Name, K, Home.X, Home.Y, bFound ? 1 : 0, FVector2D::Distance(Home, Want[K]), Why[0], Why[1], Why[2], Why[3], Why[4]);
+        FMemory::Memzero(Why);
+        if (!bFound) continue;
+        const FVector World = FeyWorld(FVector(Home.X, Home.Y, LandZ(District, Home.X, Home.Y)));
+        if (AFeyJelly* J = GetWorld()->SpawnActor<AFeyJelly>(World + FVector(0, 0, 200.f), FRotator::ZeroRotator, Sp)) { J->Init(District, World, Jellies.Num()); Jellies.Add(J); }
+    }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLIES district=%s jellies=%d"), Ds.Name, Jellies.Num());
 }

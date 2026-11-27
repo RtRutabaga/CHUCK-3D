@@ -4769,4 +4769,10 @@ void ADockHUD::DrawHUD()
         float W=0,H=0;GetTextSize(Prompt,W,H,GEngine->GetSmallFont(),1.2f);
         DrawText(Prompt,FLinearColor(.95f,.95f,.95f),(Canvas->SizeX-W)*.5f,Canvas->SizeY*.8f,GEngine->GetSmallFont(),1.2f);
     }
+    else if(Chuck->GetJellyPrompt())   // (a Deepwood jellyfish over him, 2026-11-26)
+    {
+        const FString Prompt=TEXT("F   Hold on");
+        float W=0,H=0;GetTextSize(Prompt,W,H,GEngine->GetSmallFont(),1.2f);
+        DrawText(Prompt,FLinearColor(.95f,.95f,.95f),(Canvas->SizeX-W)*.5f,Canvas->SizeY*.8f,GEngine->GetSmallFont(),1.2f);
+    }
 }

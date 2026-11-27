@@ -1231,6 +1231,7 @@ bool FeyMap::IsPad(float X, float Y) { for (const FVector& P : MoatPads()) if (F
 bool FeyMap::InDeepWater(float X, float Y) { return MoatK(X, Y) > .5f; }
 const TArray<FVector>& FeyMap::LilyPads() { return MoatPads(); }
 FVector2D FeyMap::OverlookAt() { return Overlook; }
+FVector2D FeyMap::RedcapAt() { return Redcap; }
 float FeyMap::RapidXAt(float Y) { return RapidX(Y); }
 float FeyMap::RapidWLAt(float Y) { return RapidWL(Y); }
 bool FeyMap::InRiver(int32 D, float X, float Y) { float Wet; Land(D, X, Y, nullptr, &Wet); return Wet > .3f; }

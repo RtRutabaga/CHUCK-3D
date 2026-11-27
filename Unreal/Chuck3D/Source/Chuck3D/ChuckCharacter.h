@@ -17,6 +17,7 @@ class UCurveFloat;
 class UInstancedStaticMeshComponent;
 class ADockNPC;
 class AFeyHare;
+class AFeyJelly;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -455,7 +456,14 @@ public:
     bool CanBeginRide() const;
     bool BeginRide(AFeyHare* Hare);
     void EndRide(bool bThrown, const FVector& Velocity);
-    bool IsRiding() const { return Gait == EGait::Ride; }
+    /** On a mount: the great hare, or hanging from a Deepwood jellyfish (2026-11-26). */
+    bool IsRiding() const { return Gait == EGait::Ride || Gait == EGait::JellyHang; }
+    // Hanging from the Deepwood's jellyfish (2026-11-26; FeyJelly.h).
+    bool BeginJellyHang(AFeyJelly* Jelly);
+    void EndJellyHang(bool bShaken);
+    bool IsJellyHanging() const { return Gait == EGait::JellyHang; }
+    AFeyJelly* GetJellyMount() const { return IsJellyHanging() ? JellyMount.Get() : nullptr; }
+    AFeyJelly* GetJellyPrompt() const;
     bool IsRideMounting() const;
     AFeyHare* GetRideMount() const { return IsRiding() ? RideMount.Get() : nullptr; }
     /** The stick, camera-relative, in the world (the hare steers by it). */
@@ -533,7 +541,7 @@ private:
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
     enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Crawl, SwingSlip, FallFlail, HeldLeg, Tumble, CrashLand, WallSlam, RideSit, RideBound, Mount, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held, Crawl, Thrown, Ride };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held, Crawl, Thrown, Ride, JellyHang };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -859,6 +867,8 @@ private:
     void RunPressed() { bRunHeld = !bRunHeld; }
     // Riding the Feywild's great hare (2026-11-25, FeyHare.h): seated on its back, the stick and Run steering it.
     TWeakObjectPtr<AFeyHare> RideMount;
+    TWeakObjectPtr<AFeyJelly> JellyMount;
+    void UpdateJellyHang(float DeltaSeconds);
     FVector RideFrom = FVector::ZeroVector;
     float RideClock = 0.f, RideIdle = 0.f, RideDraw = 0.f, RideStartYaw = 0.f;
     bool bRideThrown = false;   // (thrown off it: the throw's crash costs nothing, and no wall slam)

@@ -8,6 +8,7 @@
 #include "FeyDelights.h"
 #include "FeyCreatures.h"
 #include "FeyHare.h"
+#include "FeyJelly.h"
 #include "ChultFoliageFade.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "UObject/UObjectIterator.h"
@@ -1028,13 +1029,13 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                             const FVector D = FRotator(0, 45.f * K, 0).Vector() * 550.f; FHitResult Hb; FCollisionQueryParams Qb(SCENE_QUERY_STAT(HareRunIn), false, Hares[0]); Qb.AddIgnoredActor(Chuck);
                             if (!Chuck->GetWorld()->SweepSingleByChannel(Hb, FeyWorld(H + D + FVector(0, 0, 60.f)), FeyWorld(H + D * .2f + FVector(0, 0, 60.f)), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(34.f, 50.f), Qb)) { From = D; break; }
                         }
-                        Put(H + From, -From); R->PadAt = H; R->Hits0 = AFeyHare::Shies; R->MinDist = 1e9f; R->bPlaced = true; R->PhaseStart = Now; return; }
-                    R->MinDist = FMath::Min(R->MinDist, static_cast<float>(FVector::Dist2D(C, HL(0))));
+                        Put(H + From, -From); R->PadAt = H; R->Aimed0 = 0; R->Hits0 = AFeyHare::Shies; R->MinDist = 1e9f; R->bPlaced = true; R->PhaseStart = Now; return; }
+                    R->MinDist = FMath::Min(R->MinDist, static_cast<float>(FVector::Dist2D(C, HL(0)))); if (Hares[0]->GetState() == AFeyHare::EState::Shy || Hares[0]->GetState() == AFeyHare::EState::Bolt) R->Aimed0 = 1;
                     if (Since < 4.5f && FVector::Dist2D(C, HL(0)) > 110.f && R->OrchidSub == 0) { Drive(HL(0) - C); return; }
                     if (R->OrchidSub == 0) { R->OrchidSub = 1; R->MinDist = FMath::Min(R->MinDist, static_cast<float>(FVector::Dist2D(C, HL(0)))); R->PhaseStart = Now; return; }   // (he has arrived: a still, then the checks)
                     if (Since < .5f) { Chuck->SetRunHeld(false); Chuck->SetTestStickWorld(FVector::ZeroVector); Behind(Hares[0], 300.f, 60.f); if (R->OrchidSub == 1 && Since > .3f) { Shot(TEXT("HareStays")); R->OrchidSub = 2; } return; }
-                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_STAYS shies=%d closest=%.0f state=%s"), AFeyHare::Shies - R->Hits0, R->MinDist, Hares[0]->GetStateName());
-                    Check(AFeyHare::Shies == R->Hits0 && R->MinDist < 200.f && FVector::Dist2D(HL(0), R->PadAt) < 150.f, TEXT("hare_stays_when_run_at"));
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_STAYS shies=%d ran=%d closest=%.0f state=%s moved=%.0f"), AFeyHare::Shies - R->Hits0, R->Aimed0, R->MinDist, Hares[0]->GetStateName(), FVector::Dist2D(HL(0), R->PadAt));
+                    Check(AFeyHare::Shies == R->Hits0 && R->MinDist < 200.f && R->Aimed0 == 0, TEXT("hare_stays_when_run_at"));   // (it may hop about as it grazes; it must not run)
                     Uncam(); Chuck->SetRunHeld(false); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 84; R->PhaseStart = Now; return;
                 case 84:   // a calm hare: walk up beside it, the prompt, the talk key, up its side and seated
                 {
@@ -1174,7 +1175,228 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_TEST_RESET home=%d of %d riding=%d respawns=%d"), Home, Hares.Num(), Chuck->IsRiding() ? 1 : 0, Chuck->GetRespawns());
                     Check(!Chuck->IsRiding() && Home == Hares.Num(), TEXT("hare_reset"));
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARES_TEST mounts=%d dismounts=%d throws=%d refusals=%d thumps=%d shies=%d leaps=%d top=%.0f"), AFeyHare::Mounts, AFeyHare::Dismounts, AFeyHare::Throws, AFeyHare::Refusals, AFeyHare::Thumps, AFeyHare::Shies, AFeyHare::Leaps, AFeyHare::TopSpeed);
-                    R->bPlaced = false; R->CrackStep = 99; R->PhaseStart = Now; return;
+                    R->bPlaced = false; R->CrackStep = 101; R->PhaseStart = Now; return;
+                }
+                }
+                return;
+            }
+            // ---- (2026-11-26) the Deepwood's jellyfish (FeyJelly.h): 101 they drift at their homes, 102 he runs under one and
+            // takes hold, 103 full push (5 m/s, his feet clear of the ground over roots), the swing at a stop, 104 straight at
+            // a trunk it goes round, 105 at a way out it drifts back, 106 put on the way out it shakes him off, 107 a bite
+            // and he holds on, Roll lets go, the talk key takes hold again, 108 a death sends every one home.
+            case 101: case 102: case 103: case 104: case 105: case 106: case 107: case 108:
+            {
+                if (Step == 101 && !R->bPlaced) { Map->LoadNow(Deepwood); Chuck->ResetAtLocation(FeyCheckpointWorld(Deepwood)); AFeyJelly::bTestStick = false; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return; }
+                AFeyLife* Dl = LifeOf(Deepwood);
+                const TArray<AFeyJelly*> Js = Dl ? Dl->GetJellies() : TArray<AFeyJelly*>();
+                if (Js.Num() < 4 && Step == 101 && Since < 14.f) return;
+                if (Js.Num() < 2) { Check(false, TEXT("jellies_spawned")); R->CrackStep = 99; return; }
+                auto JL = [&](int32 I) { return FeyLocal(Js[I]->GetActorLocation()); };
+                const FVector C = FeyLocal(Chuck->GetActorLocation());
+                auto Side = [&](AFeyJelly* J, float Back, float Up) { const FVector L = FeyLocal(J->GetActorLocation()); const FVector F = FRotator(0, J->GetFacingYaw(), 0).Vector(), Rt(-F.Y, F.X, 0); Cam(L + Rt * Back - F * Back * .35f + FVector(0, 0, Up), L - FVector(0, 0, 90.f)); };
+                AFeyJelly* Held = Chuck->GetJellyMount();
+                switch (Step)
+                {
+                case 101:
+                {
+                    if (R->OrchidSub == 0)
+                    {
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_SPAWN jellies=%d"), Js.Num());
+                        Check(Js.Num() >= 4, TEXT("jellies_spawned"));
+                        // (one near each way in)
+                        for (int32 Th = 0; Th < Thresholds; ++Th)
+                        {
+                            const FThreshold& Wy = Threshold(Th);
+                            if (Wy.A != Deepwood && Wy.B != Deepwood) continue;
+                            const FVector2D Mouth = Wy.A == Deepwood ? Wy.PA : Wy.PB;
+                            float Near = 1e9f; for (AFeyJelly* J : Js) Near = FMath::Min(Near, static_cast<float>(FVector2D::Distance(FVector2D(FeyLocal(J->GetHome())), Mouth)));
+                            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_ENTRANCE mouth=%.0f,%.0f nearest=%.0f"), Mouth.X, Mouth.Y, Near);
+                            Check(Near < 4000.f, TEXT("jelly_near_entrance"));
+                        }
+                        R->OrchidSub = 1; R->MinDist = Since;
+                    }
+                    Side(Js[0], 420.f, 60.f);
+                    if (R->OrchidSub == 1 && Since - R->MinDist > 2.5f) { Shot(TEXT("JellyDrift")); R->OrchidSub = 2; }
+                    if (Since - R->MinDist < 3.f) return;
+                    Uncam(); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 102; R->PhaseStart = Now; return;
+                }
+                case 102:   // he runs in under jelly 0 from 4 m and takes hold
+                {
+                    AFeyJelly* J = Js[0];
+                    if (!R->bPlaced)
+                    {
+                        if (Since < .5f) return;
+                        const FVector G = FeyLocal(J->GetGrip()); FVector From = FVector(400.f, 0, 0);
+                        for (int32 K = 0; K < 8; ++K)
+                        {
+                            const FVector D = FRotator(0, 45.f * K, 0).Vector() * 400.f; FHitResult Hb; FCollisionQueryParams Qb(SCENE_QUERY_STAT(JellyRunIn), false, J); Qb.AddIgnoredActor(Chuck);
+                            if (!Chuck->GetWorld()->SweepSingleByChannel(Hb, FeyWorld(FVector(G.X, G.Y, C.Z) + D + FVector(0, 0, 30.f)), FeyWorld(FVector(G.X, G.Y, C.Z) + D * .15f + FVector(0, 0, 30.f)), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(34.f, 50.f), Qb)) { From = D; break; }
+                        }
+                        Put(FVector(G.X, G.Y, 0.f) + From, -From); R->Hits0 = AFeyJelly::Holds; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return;
+                    }
+                    if (R->OrchidSub == 0)
+                    {
+                        if (Chuck->GetJellyPrompt() == J || Since > 6.f)
+                        {
+                            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_PROMPT prompt=%d dist=%.0f"), Chuck->GetJellyPrompt() == J ? 1 : 0, FVector::Dist2D(FeyLocal(J->GetGrip()), C));
+                            Check(Chuck->GetJellyPrompt() == J, TEXT("jelly_prompt"));
+                            Chuck->SetRunHeld(false); Chuck->SetTestStickWorld(FVector::ZeroVector);
+                            Chuck->Interact(); R->OrchidSub = 1; R->MinDist = Since;
+                        }
+                        else Drive(FeyLocal(J->GetGrip()) - C);
+                        return;
+                    }
+                    Side(J, 300.f, 20.f);
+                    if (R->OrchidSub == 1 && Since - R->MinDist > .3f) { Shot(TEXT("JellyTakeHold")); R->OrchidSub = 2; }
+                    if (R->OrchidSub == 2 && Since - R->MinDist > 2.2f) { Shot(TEXT("JellyHeld")); R->OrchidSub = 3; }
+                    if (Since - R->MinDist < 2.5f) return;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_HOLD holds=%d hanging=%d state=%s feet=%.0f"), AFeyJelly::Holds - R->Hits0, Chuck->IsJellyHanging() ? 1 : 0, J->GetStateName(), J->GetFeetClearance());
+                    Check(AFeyJelly::Holds > R->Hits0 && Chuck->GetJellyMount() == J && J->GetState() == AFeyJelly::EState::Held, TEXT("jelly_hold"));
+                    Check(J->GetFeetClearance() > 80.f && J->GetFeetClearance() < 170.f, TEXT("jelly_lifts_him"));
+                    Uncam(); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = Chuck->IsJellyHanging() ? 103 : 107; R->PhaseStart = Now; return;
+                }
+                case 103:   // full push toward the middle of the Deepwood: 5 m/s at most, his feet clear of the ground; then let go of the stick
+                {
+                    if (!Held) { Check(false, TEXT("jelly_speed")); R->CrackStep = 107; return; }
+                    if (!R->bPlaced) { R->Aimed0 = 0; AFeyJelly::TopSpeed = 0.f; R->SpeedIn = 1e9f; R->SpeedOut = 0.f; R->SpeedOutN = 0; R->MinDist = 0.f; R->Hits0 = 0; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return; }
+                    const FVector L = FeyLocal(Held->GetActorLocation());
+                    if (Since < 6.f)
+                    {
+                        const FVector Way = (FVector(FeyMap::District(Deepwood).Hub, 0.f) - L).GetSafeNormal2D();
+                        AFeyJelly::bTestStick = true; AFeyJelly::TestStick = Way;
+                        if (Since > .5f) { R->SpeedOut += FApp::GetDeltaTime() * 1000.f; ++R->SpeedOutN; R->SpeedIn = FMath::Min(R->SpeedIn, Held->GetFeetClearance()); R->MinDist = FMath::Max(R->MinDist, Held->GetFeetClearance()); }
+                        if (Since > 2.f && Since < 3.2f) { Uncam(); if (R->Aimed0 == 0 && Since > 2.9f) { Shot(TEXT("JellyPlayerView")); R->Aimed0 = 1; } }
+                        else Side(Held, 380.f, 40.f);
+                        if (R->OrchidSub == 0 && Since > 4.f) { Shot(TEXT("JellySpeed")); R->OrchidSub = 1; }
+                        if (R->Frame % 30 == 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_RIDE t=%.1f speed=%.0f feet=%.0f swing=%.0f at=%s"), Since, Held->GetDriftVelocity().Size2D(), Held->GetFeetClearance(), Held->GetSwingForwardDeg(), *L.ToCompactString());
+                        return;
+                    }
+                    AFeyJelly::TestStick = FVector::ZeroVector;
+                    Side(Held, 380.f, 40.f);
+                    if (R->OrchidSub == 1 && Since > 6.45f) { Shot(TEXT("JellyStopSwing")); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_STOP swing=%.0f speed=%.0f"), Held->GetSwingForwardDeg(), Held->GetDriftVelocity().Size2D()); R->Hits0 = FMath::RoundToInt(Held->GetSwingForwardDeg()); R->OrchidSub = 2; }
+                    if (Since < 8.f) return;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_SPEED top=%.0f feet_min=%.0f feet_max=%.0f stop_swing=%d frame_ms=%.2f blocks=%d dips=%d"), AFeyJelly::TopSpeed, R->SpeedIn, R->MinDist, R->Hits0, R->SpeedOutN ? R->SpeedOut / R->SpeedOutN : 0.f, AFeyJelly::Blocks, AFeyJelly::Dips);
+                    Check(AFeyJelly::TopSpeed > 470.f && AFeyJelly::TopSpeed < 506.f, TEXT("jelly_speed"));
+                    Check(R->SpeedIn >= 25.f && R->MinDist < 200.f, TEXT("jelly_feet_clear"));
+                    Check(R->Hits0 > 4, TEXT("jelly_swing_on_stop"));
+                    Uncam(); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 104; R->PhaseStart = Now; return;
+                }
+                case 104:   // straight at a trunk: it goes round
+                {
+                    if (!Held) { Check(false, TEXT("jelly_round_trunk")); R->CrackStep = 107; return; }
+                    if (!R->bPlaced)
+                    {
+                        AFeyJelly::TestStick = FVector::ZeroVector;
+                        if (Since < .5f) return;
+                        // (the nearest solid thing at his height, within 15 m round)
+                        const FVector At = Held->GetActorLocation() - FVector(0, 0, 60.f);
+                        float Best = 1e9f; FVector Hit = FVector::ZeroVector, Dir = FVector::ZeroVector;
+                        FCollisionQueryParams Qb(SCENE_QUERY_STAT(JellyTrunk), false, Held); Qb.AddIgnoredActor(Chuck);
+                        for (int32 K = 0; K < 24; ++K)
+                        {
+                            const FVector D = FRotator(0, 15.f * K, 0).Vector(); FHitResult Hb;
+                            if (Chuck->GetWorld()->LineTraceSingleByChannel(Hb, At, At + D * 1500.f, ECC_Pawn, Qb) && FMath::Abs(Hb.ImpactNormal.Z) < .5f && Hb.Distance < Best && Hb.Distance > 350.f) { Best = Hb.Distance; Hit = Hb.ImpactPoint; Dir = D; }
+                        }
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_TRUNK found=%d dist=%.0f"), Best < 1e8f ? 1 : 0, Best);
+                        if (Best > 1e8f) { R->CrackStep = 105; R->PhaseStart = Now; return; }
+                        R->PadAt = FeyLocal(Hit); R->Aimed0 = 0; R->SpeedIn = 0; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now;
+                        R->Hits1 = FMath::RoundToInt(Dir.Rotation().Yaw); return;
+                    }
+                    const FVector Dir = FRotator(0, static_cast<float>(R->Hits1), 0).Vector();
+                    const FVector L = FeyLocal(Held->GetActorLocation());
+                    // (the way past it: how far beyond the trunk's face it has got, along the push)
+                    R->SpeedIn = FMath::Max(R->SpeedIn, static_cast<float>(FVector::DotProduct(L - R->PadAt, Dir)));
+                    if (Since < 7.f) { AFeyJelly::bTestStick = true; AFeyJelly::TestStick = Dir; Cam(L - Dir * 380.f + FVector(-Dir.Y, Dir.X, 0) * 300.f + FVector(0, 0, 140.f), L - FVector(0, 0, 60.f)); if (R->OrchidSub == 0 && Since > 2.f) { Shot(TEXT("JellyTrunk")); R->OrchidSub = 1; } return; }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_ROUND beyond=%.0f"), R->SpeedIn);
+                    Check(R->SpeedIn > 100.f, TEXT("jelly_round_trunk"));
+                    AFeyJelly::TestStick = FVector::ZeroVector; Uncam(); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 105; R->PhaseStart = Now; return;
+                }
+                case 105:   // at a way out (toward the Crossroads): it drifts back, he stays on
+                {
+                    if (!Held) { Check(false, TEXT("jelly_refuses")); R->CrackStep = 107; return; }
+                    FVector2D Mouth = FVector2D::ZeroVector; for (int32 Th = 0; Th < Thresholds; ++Th) if (Threshold(Th).A == FeyMap::Crossroads && Threshold(Th).B == Deepwood) Mouth = Threshold(Th).PB;
+                    if (!R->bPlaced)
+                    {
+                        AFeyJelly::TestStick = FVector::ZeroVector;
+                        if (Since < .5f) return;
+                        const FVector2D Start = Mouth + FVector2D(300.f, -1600.f);
+                        float Z = 0; GroundAt(Start.X, Start.Y, Z);
+                        Held->SetActorLocation(FeyWorld(FVector(Start.X, Start.Y, Z + AFeyJelly::RideGripUp + AFeyJelly::ArmDrop)), false, nullptr, ETeleportType::TeleportPhysics);
+                        R->Hits0 = AFeyJelly::Refusals; R->Hits1 = AFeyJelly::Shakes; R->MinDist = 1e9f; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return;
+                    }
+                    const FVector L = FeyLocal(Held->GetActorLocation());
+                    R->MinDist = FMath::Min(R->MinDist, static_cast<float>(FVector2D::Distance(FVector2D(L), Mouth)));
+                    if (Since < 6.f) { AFeyJelly::bTestStick = true; AFeyJelly::TestStick = (FVector(Mouth, 0.f) - L).GetSafeNormal2D(); Cam(L + FVector(-450.f, -300.f, 160.f), L - FVector(0, 0, 60.f)); return; }
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_REFUSE refusals=%d shakes=%d closest=%.0f hanging=%d"), AFeyJelly::Refusals - R->Hits0, AFeyJelly::Shakes - R->Hits1, R->MinDist, Chuck->IsJellyHanging() ? 1 : 0);
+                    Check(AFeyJelly::Refusals > R->Hits0 && AFeyJelly::Shakes == R->Hits1 && Chuck->IsJellyHanging() && R->MinDist > 450.f, TEXT("jelly_refuses"));
+                    AFeyJelly::TestStick = FVector::ZeroVector; Uncam(); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 106; R->PhaseStart = Now; return;
+                }
+                case 106:   // put on the way out itself: it shakes him off; no Sanity lost; he lands on his feet
+                {
+                    int32 Way = -1; for (int32 Th = 0; Th < Thresholds; ++Th) if (Threshold(Th).A == FeyMap::Crossroads && Threshold(Th).B == Deepwood) Way = Th;
+                    if (!R->bPlaced)
+                    {
+                        if (!Held || Way < 0) { Check(false, TEXT("jelly_shakes_leaving")); R->CrackStep = 107; return; }
+                        AFeyJelly::TestStick = FVector::ZeroVector;
+                        if (Since < .5f) return;
+                        const FVector P = ThresholdAtT(Way, .85f);
+                        Held->SetActorLocation(FeyWorld(P + FVector(0, 0, AFeyJelly::RideGripUp + AFeyJelly::ArmDrop)), false, nullptr, ETeleportType::TeleportPhysics);
+                        R->Hits0 = AFeyJelly::Shakes; R->Aimed0 = Chuck->GetSanity(); R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return;
+                    }
+                    Cam(C + FVector(-350.f, -300.f, 150.f), C);
+                    if (R->OrchidSub == 0 && Since > .35f) { Shot(TEXT("JellyShaken")); R->OrchidSub = 1; }
+                    if (Since < 3.f) return;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_SHAKE shakes=%d hanging=%d ground=%d sanity=%d->%d"), AFeyJelly::Shakes - R->Hits0, Chuck->IsJellyHanging() ? 1 : 0, Chuck->GetCharacterMovement()->IsMovingOnGround() ? 1 : 0, R->Aimed0, Chuck->GetSanity());
+                    Check(AFeyJelly::Shakes > R->Hits0 && !Chuck->IsJellyHanging() && Chuck->GetCharacterMovement()->IsMovingOnGround() && Chuck->GetSanity() == R->Aimed0, TEXT("jelly_shakes_leaving"));
+                    Uncam(); R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 107; R->PhaseStart = Now; return;
+                }
+                case 107:   // under another: hold on; a bite, he holds on; Roll lets go; the talk key takes hold again
+                {
+                    AFeyJelly* J = Js[Js.Num() > 1 ? 1 : 0];
+                    if (!R->bPlaced)
+                    {
+                        AFeyJelly::bTestStick = false;
+                        if (Since < 1.f || J->GetRider()) return;
+                        const FVector G = FeyLocal(J->GetGrip());
+                        Put(FVector(G.X + 20.f, G.Y, 0.f), FVector(-1, 0, 0)); R->Hits0 = AFeyJelly::Releases; R->Hits1 = AFeyJelly::Holds; R->bPlaced = true; R->OrchidSub = 0; R->PhaseStart = Now; return;
+                    }
+                    if (R->OrchidSub == 0 && Since > .6f) { Chuck->Interact(); R->OrchidSub = 1; R->MinDist = Since; R->Aimed0 = Chuck->GetSanity(); }
+                    if (R->OrchidSub == 1 && Since - R->MinDist > 2.f)
+                    {
+                        Chuck->TakeBite(Chuck->GetActorLocation() + FVector(60.f, 0, 0), 1);
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_BITE hanging=%d sanity=%d->%d"), Chuck->IsJellyHanging() ? 1 : 0, R->Aimed0, Chuck->GetSanity());
+                        Check(Chuck->IsJellyHanging() && Chuck->GetSanity() == R->Aimed0 - 1, TEXT("jelly_holds_through_bite"));
+                        R->OrchidSub = 2; R->MinDist = Since;
+                    }
+                    if (R->OrchidSub == 2 && Since - R->MinDist > .8f) { Chuck->DodgeToward(FVector2D::ZeroVector); R->OrchidSub = 3; R->MinDist = Since; }
+                    if (R->OrchidSub == 3 && Since - R->MinDist > 1.6f)
+                    {
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_OFF releases=%d hanging=%d ground=%d"), AFeyJelly::Releases - R->Hits0, Chuck->IsJellyHanging() ? 1 : 0, Chuck->GetCharacterMovement()->IsMovingOnGround() ? 1 : 0);
+                        Check(AFeyJelly::Releases > R->Hits0 && !Chuck->IsJellyHanging() && Chuck->GetCharacterMovement()->IsMovingOnGround(), TEXT("jelly_let_go"));
+                        R->OrchidSub = 4; R->MinDist = Since;
+                    }
+                    if (R->OrchidSub == 4 && Since - R->MinDist > 1.2f)
+                    {
+                        if (Chuck->GetJellyPrompt() != J) { if (Since - R->MinDist < 5.f) { Drive(FeyLocal(J->GetGrip()) - FeyLocal(Chuck->GetActorLocation())); return; } }
+                        Chuck->SetRunHeld(false); Chuck->SetTestStickWorld(FVector::ZeroVector);
+                        Chuck->Interact(); R->OrchidSub = 5; R->MinDist = Since;
+                    }
+                    if (R->OrchidSub == 5 && Since - R->MinDist > 1.f)
+                    {
+                        Check(AFeyJelly::Holds >= R->Hits1 + 2 && Chuck->IsJellyHanging(), TEXT("jelly_hold_again"));
+                        R->bPlaced = false; R->OrchidSub = 0; R->CrackStep = 108; R->PhaseStart = Now;
+                    }
+                    return;
+                }
+                case 108:   // a death: every jellyfish home, him on his feet
+                {
+                    if (!R->bPlaced) { Chuck->SetSanity(1); Chuck->TakeBite(Chuck->GetActorLocation() + FVector(50.f, 0, 0), 1, false, true); R->bPlaced = true; R->PhaseStart = Now; return; }
+                    if (Since < 6.f) return;
+                    int32 Home = 0; for (AFeyJelly* J : Js) Home += FVector::Dist2D(J->GetActorLocation(), J->GetHome()) < 150.f && !J->GetRider();
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLY_TEST_RESET home=%d of %d hanging=%d"), Home, Js.Num(), Chuck->IsJellyHanging() ? 1 : 0);
+                    Check(!Chuck->IsJellyHanging() && Home == Js.Num(), TEXT("jelly_reset"));
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_JELLIES_TEST holds=%d releases=%d shakes=%d refusals=%d blocks=%d dips=%d top=%.0f"), AFeyJelly::Holds, AFeyJelly::Releases, AFeyJelly::Shakes, AFeyJelly::Refusals, AFeyJelly::Blocks, AFeyJelly::Dips, AFeyJelly::TopSpeed);
+                    AFeyJelly::bTestStick = false; R->bPlaced = false; R->CrackStep = 99; R->PhaseStart = Now; return;
                 }
                 }
                 return;

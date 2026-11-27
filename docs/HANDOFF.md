@@ -6,6 +6,14 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Feywild: the Deepwood jellyfish (November 26, Claude):** the user's Deepwood mount, built from
+  [regions/FEYWILD-JELLYFISH.md](regions/FEYWILD-JELLYFISH.md). Four drift in the Deepwood, one inside each way in and
+  one in the middle. Walk under one and press F/Y to hold on.
+  - **Control:** the stick steers it at up to 5 m/s, with no toggle and no up or down. It follows the ground with his
+    feet about 1.2 m up, and goes round trunks.
+  - **The ride:** he swings under it like a pendulum. Roll or F lets go.
+  - **The edges:** it drifts back from the ways out and from Redcap Hollow. It shakes him off only on its way out.
+  - Verified 50/50 and promoted as FeywildJelly. Not played by hand.
 - **Feywild: hares no longer run from him; the Deepwood jellyfish planned (November 26, Claude):** he can run straight
   up to a hare and ride (verified 50/50 with phleg retried once, promoted as FeywildHareCalm). The user's Deepwood mount
   is planned in [regions/FEYWILD-JELLYFISH.md](regions/FEYWILD-JELLYFISH.md): a jellyfish he hangs from, at 5 m/s. The

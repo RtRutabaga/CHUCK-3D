@@ -1,6 +1,6 @@
 # The Feywild: the Deepwood jellyfish (plan)
 
-**Status: proposed 2026-11-26 (Claude), awaiting the user's approval. Nothing is built.** The Deepwood's mount: a drifting
+**Status: approved by the user 2026-11-26 with its recommendations (Redcap Hollow kept on foot; pale teal with a violet rim); built 2026-11-26 (see [What was built](#what-was-built-2026-11-26) at the end).** The Deepwood's mount: a drifting
 jellyfish that Chuck hangs from by its tendrils. It was the user's idea, after the great hare
 ([FEYWILD-HARE.md](FEYWILD-HARE.md)) was kept out of the Deepwood. Part of [FEYWILD.md](FEYWILD.md).
 
@@ -142,3 +142,66 @@ data the jellyfish read.
    foot. The alternative is to let him ride straight through it.
 2. **Its colour.** Recommendation: pale teal with a violet rim, from the Deepwood's blue lights. Any other colour is
    possible, apart from purple sky, which the Feywild never has.
+
+## What was built (2026-11-26)
+
+- **Changes from the plan:**
+  - **The bell is drawn in code, not in Blender.** It is a procedural mesh: a dome with a curled, scalloped rim and
+    four faint horseshoe marks, pulsing each beat. This takes `Tools/build_fey_jelly.py`'s place; no FBX is imported.
+  - **His hang reuses his brachiation `Swing` clip**, not a new `HangDrift`: both paws overhead, legs dangling, posed by
+    the swing angle. The rig and his clips are unchanged.
+  - **New gait:** `EGait::JellyHang`, appended. `IsRiding()` now means "on a mount", the hare or a jellyfish.
+- **The jellyfish:** `AFeyJelly` (`FeyJelly.h/.cpp`).
+  - **Movement:** kinematic, not a character.
+    - It eases toward the stick's push at up to 5 m/s, then sweeps a capsule from his feet to the bell's top. Trunks
+      slide it round, and a head-on push is turned to one side.
+    - It follows the highest ground under him (five traces), so it rises over roots and logs.
+    - A lookahead stops it where even the lowest hang will not fit under something.
+  - **His swing:** a two-axis pendulum (from the bell's rim to his middle, about 1 m) driven by its acceleration.
+  - **Body:** four frilled oral arms (the front two pinned at his paws while he holds on) and twelve fine tendrils, all
+    simulated strands drawn as tubes.
+  - **Light and material:** a small unshadowed teal light. `M_FeyJelly` is translucent and unlit, fresnel-weighted,
+    pulse-driven (`Tools/create_fey_jelly_assets.py`).
+  - **Sounds:** a soft wet pulse each beat and a looping airy hum, synthesised by `Tools/build_fey_jelly_sfx.py`.
+- **Chuck:**
+  - **Controls:** the talk key ("F   Hold on") takes hold under one. The talk key or Roll lets go. Jump and Slash do
+    nothing while hanging.
+  - **Bites:** a bite costs Sanity, and he holds on.
+  - **Camera:** it follows the jellyfish's velocity and draws back with its speed.
+- **Placement:** `AFeyLife::SpawnJellies`.
+  - One about 25 m inside each of the Deepwood's three ways in, and one at the middle of its loop.
+  - Homes are searched at runtime: open overhead, away from mouths and out of Redcap Hollow's clearing.
+  - Two more go beyond each crossing's barrier (`AFeyJelly::Barriers()`). It is empty until the crossings are built.
+- **Rules:**
+  - It drifts back from threshold mouths (8 m), from Redcap Hollow (26 m from the fire pit) and from barriers.
+  - It shakes him off only on a threshold's way, or off its district's land.
+  - A death sends every jellyfish home.
+- **Checks:** `-ChuckFeyMapTest=life` steps 101 to 108.
+
+  | Check | Result |
+  |---|---|
+  | `jellies_spawned` | 4 |
+  | `jelly_near_entrance` | 25.5 m from each of 3 mouths |
+  | `jelly_prompt`, `jelly_hold` | Pass |
+  | `jelly_lifts_him` | Feet 114 cm |
+  | `jelly_speed` | Top 500 cm/s |
+  | `jelly_feet_clear` | 102 to 145 cm over the Deepwood's ground |
+  | `jelly_swing_on_stop` | 23 degrees forward |
+  | `jelly_round_trunk` | 170 cm past a trunk's face, pushed straight at it |
+  | `jelly_refuses` | Closest 6.4 m to the mouth; no shake |
+  | `jelly_shakes_leaving` | Pass |
+  | `jelly_holds_through_bite` | Pass |
+  | `jelly_let_go` | Pass |
+  | `jelly_hold_again` | Pass |
+  | `jelly_reset` | Pass |
+
+  Frame time while riding: 17.8 ms (the Deepwood alone runs about 17.6).
+- **Stills:** `Life_JellyDrift`, `Life_JellyTakeHold`, `Life_JellyHeld`, `Life_JellyPlayerView`, `Life_JellySpeed`,
+  `Life_JellyStopSwing`, `Life_JellyTrunk`, `Life_JellyShaken`.
+- **Not done or not tested:**
+  - Not played by hand.
+  - Sinking under a low arch is coded but no ride met one: dips=0 in the test, and one lookahead block was logged in an
+    earlier run.
+  - The crossings and their barriers do not exist yet.
+  - The bell is a smooth dome with marks, not a detailed sculpt.
+  - The arms are thin tubes with a frill wobble, not true ribbons.

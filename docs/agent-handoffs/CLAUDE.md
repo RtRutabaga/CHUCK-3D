@@ -2,6 +2,72 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 26 (third) — Feywild: the Deepwood jellyfish (Claude)
+
+- **Asked:** approve and build the jellyfish plan with its recommendations: Redcap Hollow stays on foot; pale teal with
+  a violet rim.
+- **Source:** `main` at 4f535744; this commit. The receipt names 4f53574.
+- **Built:** see [regions/FEYWILD-JELLYFISH.md](../regions/FEYWILD-JELLYFISH.md), "What was built".
+  - **`AFeyJelly` (`FeyJelly.h/.cpp`):**
+    - Kinematic hover, steered by the stick's push up to 500 cm/s.
+    - Moves by capsule sweep, sliding round trunks (a head-on push is turned aside).
+    - Follows the highest ground under him, with a lookahead block for passages too low to fit.
+    - A two-axis pendulum for his swing.
+    - A procedural bell that pulses with each beat.
+    - Simulated arms and tendrils.
+    - An unshadowed teal light, and a hum and pulse sounds.
+  - **Rules:** threshold mouths, Redcap Hollow (26 m) and `Barriers()` are refused. It shakes him off only on a
+    threshold's way or off its land.
+  - **Chuck:** `EGait::JellyHang` (appended), on the existing `Swing` clip.
+    - Hold on and let go: the talk key, or Roll to let go.
+    - The "F   Hold on" prompt.
+    - The camera follows its velocity.
+  - **`AFeyLife::SpawnJellies`:** four in the Deepwood, plus two beyond each barrier once crossings exist.
+  - **Assets:**
+    - `M_FeyJelly` (`Tools/create_fey_jelly_assets.py`).
+    - `SFX_FeyJellyPulse_00-02` and `SFX_FeyJellyHum` (`Tools/build_fey_jelly_sfx.py`, synthesised, imported by
+      `import_fey_sfx.py`).
+  - **Tests:** life steps 101 to 108.
+  - **Hare check fixed:** `hare_stays_when_run_at` now fails only if the hare shied or bolted. It no longer fails if it
+    hopped while grazing; the first package run failed on that.
+- **Changed:**
+  - New: `FeyJelly.h/.cpp`, `Tools/create_fey_jelly_assets.py`, `Tools/build_fey_jelly_sfx.py`.
+  - Edited: `ChuckCharacter.h/.cpp`, `DockGameMode.cpp`, `FeyLife.h/.cpp`, `FeyMap.h/.cpp` (`RedcapAt`),
+    `FeyMapTest.cpp`, `Tools/import_fey_sfx.py`, `docs/regions/FEYWILD-JELLYFISH.md`.
+  - Content: `Art/Feywild/Creatures/Jelly/M_FeyJelly`, `Art/Audio/SFX/SFX_FeyJelly*`.
+- **Contract:**
+  - The rig and clips are unchanged.
+  - `EGait::JellyHang` is appended.
+  - `IsRiding()` now covers both mounts.
+- **Validation (actual):**
+  - Editor steps 82 to 108: failures=0 (`Local/jelly-life-5.log`).
+
+    | Measure | Result |
+    |---|---|
+    | Top speed | 500 cm/s |
+    | Feet over the ground | 92 to 145 cm |
+    | Swing at a stop | 24 degrees |
+    | Past a trunk's face | 1.7 to 21.5 m |
+    | Closest to the mouth | 6.4 m |
+    | Shaken off on the threshold | Sanity unchanged |
+    | Through a bite | Held on |
+    | Reset | 4 of 4 |
+    | Riding frame time | 17.4 to 17.8 ms |
+
+  - Package:
+    - First run: feyLife failed on the hare check, which was then fixed (`Local/verify-fey-life-20261126-200426.log`).
+    - Second run: Verify-Package 50/50 with no retries, 182 passes (`Local/verify-package-20261126-201537.log`).
+    - Promoted as FeywildJelly.
+- **Evidence:** `Local/jelly-sheet-1.png` to `-4.png` (look passes); `Life_Jelly*.png`.
+- **Known flaws:**
+  - Not played by hand.
+  - Sinking under a low arch is coded but no test ride met one.
+  - The bell is a smooth dome and the arms are tubes.
+  - The crossings and their barriers are not built.
+- **Binary/LFS:** one material and four small wavs.
+- **Launcher:** current.
+- **Next owner:** Next part of the work can be done here (a hand playtest of the jellyfish and the hare).
+
 ## November 26 (second) — Feywild: calm hares; the Deepwood jellyfish plan (Claude)
 
 - **Asked:**

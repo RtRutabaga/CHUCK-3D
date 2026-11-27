@@ -59,6 +59,7 @@
 #include "PhlegethosSetting.h"
 #include "PhlegethosFall.h"
 #include "FeyHare.h"
+#include "FeyJelly.h"
 
 AChuckCharacter::AChuckCharacter()
 {
@@ -269,8 +270,8 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap"), TEXT("Held"), TEXT("Crawl"), TEXT("Thrown"), TEXT("Ride")};
-    static_assert(UE_ARRAY_COUNT(Names) == static_cast<int32>(EGait::Ride) + 1, "a name for every gait");
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap"), TEXT("Held"), TEXT("Crawl"), TEXT("Thrown"), TEXT("Ride"), TEXT("JellyHang")};
+    static_assert(UE_ARRAY_COUNT(Names) == static_cast<int32>(EGait::JellyHang) + 1, "a name for every gait");
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -302,6 +303,7 @@ void AChuckCharacter::Right(float Value) { InputRight = Value; if (!OwnsCapsule(
 void AChuckCharacter::StrafeKeysAxis(float Value) { StrafeKeys = Value; if (!OwnsCapsule() && !IsTalking()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
 void AChuckCharacter::Dodge()
 {
+    if (IsJellyHanging()) { if (JellyMount.IsValid()) JellyMount->Release(false); return; }   // (Roll: he lets go of the jellyfish)
     if (IsRiding()) { if (!IsRideMounting() && RideMount.IsValid()) RideMount->Dismount(); return; }   // (Roll: he slides off)
     // Action events dispatch before this frame's axis events: read the stick
     // directly so a direction pressed together with C counts.
@@ -344,7 +346,7 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
     // behind Chuck while he walks away from the camera. Strafing or walking
     // toward the lens leaves it alone.
     LookIdle += DeltaSeconds;
-    const FVector Velocity = IsRiding() && RideMount.IsValid() ? RideMount->GetRideVelocity() : GetVelocity();
+    const FVector Velocity = IsJellyHanging() && JellyMount.IsValid() ? JellyMount->GetDriftVelocity() : IsRiding() && RideMount.IsValid() ? RideMount->GetRideVelocity() : GetVelocity();
     const float Speed = Velocity.Size2D();
     if (DeltaSeconds > 0 && LookIdle > AutoFollowDelay && Speed > 10.f && (GetCharacterMovement()->IsMovingOnGround() || IsRiding()))
     {
@@ -454,6 +456,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
 {
     ++ResetGeneration;
     if (Gait == EGait::Ride || RideMount.IsValid()) { if (RideMount.IsValid()) RemoveTickPrerequisiteActor(RideMount.Get()); RideMount.Reset(); SetActorEnableCollision(true); RideDraw = 0; }
+    if (Gait == EGait::JellyHang || JellyMount.IsValid()) { if (JellyMount.IsValid()) RemoveTickPrerequisiteActor(JellyMount.Get()); JellyMount.Reset(); SetActorEnableCollision(true); RideDraw = 0; }
     bRideThrown = false;
     GetCharacterMovement()->RemoveRootMotionSource(TEXT("ZombieImpact"));
     ImpactAt = -1;
@@ -654,6 +657,7 @@ namespace
 
 void AChuckCharacter::DodgeToward(FVector2D Stick)
 {
+    if (IsJellyHanging()) { if (JellyMount.IsValid()) JellyMount->Release(false); return; }
     if (IsRiding()) { if (!IsRideMounting() && RideMount.IsValid()) RideMount->Dismount(); return; }   // (Roll on the hare: he slides off)
     auto* Movement = GetCharacterMovement();
     if (IsAstral() || IsTalking()) return;
@@ -2502,6 +2506,7 @@ bool AChuckCharacter::GetDialogue(FString& Speaker, FString& Text) const
 void AChuckCharacter::Interact()
 {
     // On the great hare: the talk key slides him off (once he is up).
+    if (IsJellyHanging()) { if (JellyMount.IsValid()) JellyMount->Release(false); return; }   // (the jellyfish: he lets go)
     if (IsRiding()) { if (!IsRideMounting() && RideMount.IsValid()) RideMount->Dismount(); return; }
     if (IsTalking())
     {
@@ -2519,6 +2524,8 @@ void AChuckCharacter::Interact()
     }
     // A calm great hare in reach (the Feywild, 2026-11-25): up onto its back.
     if (AFeyHare* Hare = GetMountPrompt()) { Hare->Mount(this); return; }
+    // A Deepwood jellyfish over him (2026-11-26): he takes hold of its arms.
+    if (AFeyJelly* Jelly = GetJellyPrompt()) { Jelly->Hold(this); return; }
     // The captain's chest aboard the ship (2026-11-03): interacting opens it, as scratching it does.
     if (AShipChest* Chest = AShipChest::Get(GetWorld()))
         if (Chest->CanInteract(this)) Chest->Open();
@@ -4080,6 +4087,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
     GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > FMath::Lerp(70.f, 30.f, CrawlCam),true);
     if (Gait == EGait::Ride) { UpdateRide(DeltaSeconds); return; }   // (on the great hare: it moves him)
+    if (Gait == EGait::JellyHang) { UpdateJellyHang(DeltaSeconds); return; }   // (hanging from a jellyfish: it carries him)
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
     // (The temple's sanctum, enlarged on 2026-10-23, has its floor below this line: it is not off the world.)
@@ -4136,7 +4144,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
 // ------------------------------------------------------------------ riding the great hare (2026-11-25; FeyHare.h)
 bool AChuckCharacter::CanBeginRide() const
 {
-    if (bCutscene || bSceneHold || bDemoEnded || IsTalking() || IsAstral() || bPendingVanish || RideMount.IsValid()) return false;
+    if (bCutscene || bSceneHold || bDemoEnded || IsTalking() || IsAstral() || bPendingVanish || RideMount.IsValid() || JellyMount.IsValid()) return false;
     if (!GetCharacterMovement()->IsMovingOnGround()) return false;
     return Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Turn || Gait == EGait::Land || Gait == EGait::Strafe;
 }
@@ -4274,4 +4282,79 @@ void AChuckCharacter::UpdateRidePose(float DeltaSeconds)
         P.ClipRun = Bound; P.PeriodRun = Bound->GetPlayLength(); P.TimeRun = RideMount->GetPhase() * P.PeriodRun;
         P.WeightRun = FMath::Clamp(RideMount->GetBoundWeight() * 1.2f, 0.f, 1.f); P.bRunOnA = true;
     }
+}
+
+// ------------------------------------------------------------------ hanging from a Deepwood jellyfish (2026-11-26; FeyJelly.h)
+AFeyJelly* AChuckCharacter::GetJellyPrompt() const
+{
+    return CanBeginRide() ? AFeyJelly::HoldPrompt(this) : nullptr;
+}
+bool AChuckCharacter::BeginJellyHang(AFeyJelly* Jelly)
+{
+    if (!Jelly || !CanBeginRide()) return false;
+    auto* Movement = GetCharacterMovement();
+    if (IsSprinting()) EndSprint(false);
+    LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = SprintWeight = 0;
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    SetActorEnableCollision(false);
+    JellyMount = Jelly; RideClock = 0.f; bRunHeld = false;
+    RideFrom = GetMesh()->GetComponentLocation();
+    RideStartYaw = static_cast<float>(GetActorRotation().Yaw);
+    AddTickPrerequisiteActor(Jelly);
+    Gait = EGait::JellyHang;
+    // His brachiation hang (both paws overhead, legs dangling), posed by the swing as on a ring.
+    SetClip(EClip::Swing, .5f * Clips[static_cast<int32>(EClip::Swing)]->GetPlayLength(), .3f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_JELLY_HOLD at=%s"), *GetActorLocation().ToCompactString());
+    return true;
+}
+void AChuckCharacter::EndJellyHang(bool bShaken)
+{
+    if (Gait != EGait::JellyHang) return;
+    AFeyJelly* Jelly = JellyMount.Get();
+    if (Jelly) RemoveTickPrerequisiteActor(Jelly);
+    JellyMount.Reset();
+    auto* Movement = GetCharacterMovement();
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    SetActorEnableCollision(true);
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0, 0, -Half), FRotator::ZeroRotator);
+    bRunJump = bSprintLeap = false; RunWeight = SprintWeight = 0;
+    // He lets go (or is shaken off): down onto his feet, carrying a little of its way.
+    FVector At = GetActorLocation();
+    FCollisionQueryParams Q(SCENE_QUERY_STAT(ChuckJellyOff), false, this); if (Jelly) Q.AddIgnoredActor(Jelly);
+    if (GetWorld()->OverlapAnyTestByChannel(At, FQuat::Identity, ECC_Pawn, GetCapsuleComponent()->GetCollisionShape(), Q))
+    {
+        FHitResult Floor;
+        if (GetWorld()->LineTraceSingleByChannel(Floor, At, At - FVector(0, 0, 400.f), ECC_Visibility, Q)) At = Floor.ImpactPoint + FVector(0, 0, Half + 2.f);
+    }
+    SetActorLocationAndRotation(At, FRotator(0, GetActorRotation().Yaw, 0), false, nullptr, ETeleportType::TeleportPhysics);
+    Movement->SetMovementMode(MOVE_Falling);
+    Movement->Velocity = Jelly ? Jelly->GetDriftVelocity() * FVector(.5f, .5f, 0.f) : FVector::ZeroVector;
+    Gait = EGait::Air;
+    SetClip(EClip::JumpLoop, 0, .15f);
+    PreviousMotionLocation = GetActorLocation();
+    RideDraw = 0.f;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_JELLY_OFF shaken=%d at=%s"), bShaken ? 1 : 0, *At.ToCompactString());
+}
+void AChuckCharacter::UpdateJellyHang(float DeltaSeconds)
+{
+    AFeyJelly* Jelly = JellyMount.Get();
+    const float Now = GetWorld()->GetTimeSeconds();
+    if (!Jelly || (bPendingVanish && Now >= PendingVanishAt)) { if (Jelly) Jelly->Release(false); else EndJellyHang(false); return; }
+    RideClock += DeltaSeconds;
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    // Paws at its grip, his body pitched back to hang straight under it (the swing clip's rest), then swung with it.
+    const FVector Forward = FRotator(0, Jelly->GetFacingYaw(), 0).Vector();
+    const FQuat Rest(FVector::CrossProduct(Forward, FVector::UpVector).GetSafeNormal(), FMath::Atan2(ChuckClipData::SwingGripX, ChuckClipData::SwingGripZ - 32.5f));
+    const FQuat MeshQ = Jelly->GetSwingQuat() * Rest * FRotator(0, Jelly->GetFacingYaw(), 0).Quaternion();
+    const FVector MeshAt = Jelly->GetGrip() - MeshQ.RotateVector(FVector(ChuckClipData::SwingGripX, 0.f, ChuckClipData::SwingGripZ));
+    const float Take = FMath::SmoothStep(0.f, .35f, RideClock);   // (reaching up and taking hold)
+    const FVector P = FMath::Lerp(RideFrom, MeshAt, Take);
+    const FQuat R = FQuat::Slerp(FRotator(0, RideStartYaw, 0).Quaternion(), MeshQ, Take);
+    SetActorLocationAndRotation(Jelly->GetGrip() - FVector(0, 0, AFeyJelly::PawsUp - Half), FRotator(0, Jelly->GetFacingYaw(), 0), false, nullptr, ETeleportType::TeleportPhysics);
+    GetMesh()->SetWorldLocationAndRotation(P, R);
+    const float Length = Clips[static_cast<int32>(EClip::Swing)] ? Clips[static_cast<int32>(EClip::Swing)]->GetPlayLength() : 1.f;
+    BaseTime = (FMath::Clamp(Jelly->GetSwingForwardDeg() / ChuckClipData::SwingMaxAngle, -1.f, 1.f) + 1.f) * .5f * Length;
+    RideDraw = FMath::FInterpTo(RideDraw, Jelly->GetSpeedFraction() * .8f, DeltaSeconds, 2.f);
+    UpdateRidePose(DeltaSeconds);
 }

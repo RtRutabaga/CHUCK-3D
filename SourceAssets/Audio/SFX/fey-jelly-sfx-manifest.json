@@ -1,0 +1,25 @@
+{
+ "sources": "Synthesised (Tools/build_fey_jelly_sfx.py); no recordings.",
+ "sounds": {
+  "SFX_FeyJellyPulse_00": {
+   "seconds": 0.62,
+   "loop": false,
+   "sha256": "e932c6b6d2892a3435dccedebf01600780cd98c21433f0e6c40012f3a4c527b4"
+  },
+  "SFX_FeyJellyPulse_01": {
+   "seconds": 0.68,
+   "loop": false,
+   "sha256": "9518cee67f796b1b3cfb62dd4e32dd6e57764b643da8bd22006a72aa1049e223"
+  },
+  "SFX_FeyJellyPulse_02": {
+   "seconds": 0.74,
+   "loop": false,
+   "sha256": "711b81ac7e657f344dc9c5f7fc4f4cd12664dfb948885612a819672f6136056c"
+  },
+  "SFX_FeyJellyHum": {
+   "seconds": 8.0,
+   "loop": true,
+   "sha256": "dc824ef33582227994a933a1c52e63adc2c2bd1fa1f261f9f90da57a75b5901a"
+  }
+ }
+}
