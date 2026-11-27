@@ -1,6 +1,6 @@
 # The Feywild: the way on through the Deepwood (plan)
 
-**Status: planned 2026-11-27, awaiting the user's approval. Nothing is built.** Part of [FEYWILD.md](FEYWILD.md); written
+**Status: approved by the user 2026-11-27 with both recommendations (nothing left where the road was; the hidden way plainly findable). Not built yet.** Part of [FEYWILD.md](FEYWILD.md); written
 separately so as not to collide with work on that file.
 
 ## The idea
@@ -10,6 +10,13 @@ go straight on to the maze. The user wants more of the Feywild seen before the m
 is removed. The only way on is then through the Deepwood and its hidden way into Highmeadow.
 
 The Lily Mere stays an optional loop off the Crossroads, as now.
+
+## The user's decisions (2026-11-27)
+
+1. **The Crossroads' direct road to Highmeadow is removed.** The Deepwood becomes the only way on; the Lily Mere stays
+   optional.
+2. **Nothing is left where the road was.** No stub, no arch, no clearing: the ring has six roads.
+3. **The hidden way is made plainly findable.** It keeps its name in the docs only.
 
 ## The map now and after
 
@@ -48,8 +55,16 @@ Crossroads.
 
 - The road from the ring to that mouth, its rune arch and the notch in the district's rim are removed. The Crossroads
   has six roads instead of seven.
-- The land and planting fill the place. No sealed arch or dead end is left behind: a road that ends at a wall would
-  look like a locked door and send players looking for a key.
+- The land and planting fill the place (decision 2): grass, foxgloves, ferns and flowers, the purple-moss oaks and fly
+  agarics of its edges, and the district's wooded rise running on unbroken where the cutting opened, with the painted
+  forest beyond. No sealed arch or dead end is left behind: a road that ends at a wall would look like a locked door and
+  send players looking for a key.
+- **It must look as if nothing was ever there.** No widened paving where the road met the ring, no straight clearing
+  through the trees along its line, no signpost arrow pointing at nothing. Anything planted or kept clear because of
+  that road (`FeyLifeClearings`, the threshold-mouth margins used by the hares and the planting) goes with it.
+- **The tower still pulls that way.** Highmeadow and the maze lie beyond that side, so Zephyros' tower stands over the
+  trees there with no road to it. A player who walks toward it meets a natural wooded slope (ordinary ground and trees,
+  not an invisible wall), and turning back from it shows the Deepwood's roads from the ring.
 - Its signposts lose their arrow to Highmeadow and point to the Deepwood instead, as the way on.
 
 **The Highmeadow end.**
@@ -63,8 +78,8 @@ Crossroads.
 
 **The Deepwood's hidden way.**
 
-It is now the only way forward, so it must not be hidden from someone who goes looking for it. With no marker and no
-minimap, it should be findable by landmarks alone:
+It is now the only way forward, so it must not be hidden from someone who goes looking for it (decision 3). With no
+marker and no minimap, it should be findable by landmarks alone. Its mouth is in the district's north-west corner:
 
 - The Deepwood's blue lanterns line the road to it the whole way from the ring, as they line its other paths.
 - Its signposts point to it as plainly as to the Crossroads.
@@ -72,6 +87,18 @@ minimap, it should be findable by landmarks alone:
   glimpse of Zephyros' tower.
 
 The road keeps its name, but nothing about it is hidden.
+
+**The Deepwood's climbs become compulsory.** Both crossings ([FEYWILD-DEEPWOOD-CROSSINGS.md](FEYWILD-DEEPWOOD-CROSSINGS.md),
+built 2026-11-26) are arcs round the hidden way's mouth, so every player now climbs them: the root crossing (speed vault,
+four-legged sprint leap over a 1.6 m strip of thorns, speed vault) and the thorn crossing (five ivy hoops). The sprint
+leap needs full stamina and a straight run-up.
+
+- **No player may be stuck there.** A player who misses the leap or the hoops lands in the thorns, which slow him, prick
+  him and stumble him back the way he came. Check by hand and in a test that walking straight through each corridor's
+  thorns, without the moves, still gets him through at a Sanity cost, and never pushes him back out for good. If it
+  does, shorten the stumble inside the crossings' corridors, not the thorns elsewhere.
+- **They should be readable.** Each corridor sits where the road meets its arc, so following the road leads to it. The
+  stills check that the corridor reads as the way through from the road.
 
 **The Deepwood's dangers.**
 
@@ -94,6 +121,11 @@ the main way.
 - **Life tests** (`=life`): the hare steps that measured from the Crossroads mouth (`hare_near_entrance`) measure from
   the Deepwood mouth instead. Every other step passes unchanged.
 - **The hidden way's mouth**: stills from the Deepwood's ring and from halfway along its road, to show it can be found.
+- **The old road's place**: stills of the Crossroads' west side from the ring and from the great tree, to show nothing is
+  left (no paving, clearing or arrow) and the rise reads as a natural slope. A walk toward the tower from the ring meets
+  ground and trees, not an invisible wall.
+- **The crossings on foot without the moves**: walked straight through each corridor's thorns, he gets through (life
+  steps 109 to 112 still pass as well).
 - **Frame time**: unchanged in every district. The Crossroads and Highmeadow have slightly less to build.
 - **Package verification**, then the user's hand play.
 
@@ -106,10 +138,11 @@ the main way.
 - **Backtracking.** A player who has already done the Lily Mere and then walks to Highmeadow goes Crossroads, Deepwood,
   Highmeadow; there is no shortcut back. This is the same as the Feywild's other one-way legs.
 - **The Lily Mere can still be missed.** Only the redirect plan (not taken) would force it as well.
+- **The Deepwood's two climbs are compulsory**, including a sprint leap. They were built as the way to Highmeadow, so
+  this is their intent, but a player who struggles with them can no longer go round by the Crossroads' road.
 
-## Open for the user
+## Answered by the user (2026-11-27)
 
-1. **The old road's place at the Crossroads.** Recommendation: nothing left behind, the ring simply has six roads. The
-   alternative is a rune arch left standing over grass, as a ruin.
-2. **The hidden way's name.** Recommendation: keep the "hidden way" in the docs only, and make it plainly findable in
-   the game. The alternative is to keep it hard to find, which would make the only way on a puzzle.
+1. **The old road's place at the Crossroads:** nothing left behind (the recommendation). The alternative, a ruined rune
+   arch standing over grass, was not taken.
+2. **The hidden way:** plainly findable in the game (the recommendation).
