@@ -201,3 +201,6 @@ The user found the forelegs wrong, too few hares where they come in, and many th
       throw.
     - `hare_refuses`: it now also requires no throw.
     - `hare_throws_leaving` (step 88, replacing `hare_throws_maze`): put on the maze stair itself, it throws him.
+- **No running away (the user, same day).** A hare no longer lollops off when he runs at it: he can run straight up to
+  one and ride. The `hare_shies` check is now `hare_stays_when_run_at`: he runs in from 5.5 m along a clear line, and
+  the hare does not shy or move away.

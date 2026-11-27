@@ -372,20 +372,8 @@ void AFeyHare::Tick(float DeltaSeconds)
 
 void AFeyHare::Think(float Dt)
 {
-    AChuckCharacter* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     const FVector At = GetActorLocation();
-    // Run or sprint straight at it from close by and it lollops off (a walking approach, 72 cm/s, does not trouble it).
-    if (Chuck && !Chuck->IsRiding() && State != EState::Shy && State != EState::Bolt && Clock > CalmUntil)
-    {
-        const FVector To = At - Chuck->GetActorLocation(); const FVector V = Chuck->GetVelocity();
-        if (To.Size2D() < ShyRange && V.Size2D() > 180.f && FVector::DotProduct(V.GetSafeNormal2D(), To.GetSafeNormal2D()) > .5f)
-        {
-            FVector Away = To.GetSafeNormal2D() * 700.f + FVector(Rand.FRandRange(-200.f, 200.f), Rand.FRandRange(-200.f, 200.f), 0.f);
-            FVector G; if (!PickGoal(At + Away, 350.f, G)) PickGoal(At, 700.f, G);
-            Goal = G; SetState(EState::Shy, 2.2f); ++Shies;
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_HARE_SHY hare=%d"), Index);
-        }
-    }
+    // (2026-11-26, the user) It no longer lollops off when he runs at it: he can run straight up to one and ride.
     switch (State)
     {
     case EState::Graze:

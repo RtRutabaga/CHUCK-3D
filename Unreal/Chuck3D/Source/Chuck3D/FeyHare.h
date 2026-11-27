@@ -14,8 +14,8 @@ class AChuckCharacter;
 // Mere, spawned and reset by AFeyLife with their district. Mesh by Tools/build_fey_hare.py, posed here in code (a
 // procedural gait on a poseable mesh: foot paths and two-bone IK, the back flexing with the bound).
 //
-//  - Unridden it grazes, sits up with its ears turning, hops a few metres and settles, within Leash of its home. Run or
-//    sprint straight at it from close and it lollops off; walk up to it and it lets him near. Within MountReach of a calm
+//  - Unridden it grazes, sits up with its ears turning, hops a few metres and settles, within Leash of its home. It lets
+//    him near however he comes (2026-11-26, the user: it no longer runs from him running). Within MountReach of a calm
 //    hare the talk key (F / Y) shows "Ride" and puts him on its back.
 //  - Ridden, the stick steers it (camera-relative, as his walking): a light push a hop-along (HopSpeed), Run the bound
 //    (BoundSpeed; the displacer beasts chase at 250), Jump a long leap, Roll or the talk key again slides him off and it
@@ -86,7 +86,6 @@ public:
     static constexpr float BoundSpeed = 550.f;
     static constexpr float MountReach = 120.f;
     static constexpr float Leash = 2500.f;
-    static constexpr float ShyRange = 600.f;
     static constexpr float RefuseRange = 800.f;    // from a threshold's mouth
     static constexpr float BrinkRange = 1700.f;    // from Highmeadow's western edge (the overlook's drop)
     static constexpr float HalfHeight = 40.f;

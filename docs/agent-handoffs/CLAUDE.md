@@ -2,6 +2,32 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 26 (second) — Feywild: calm hares; the Deepwood jellyfish plan (Claude)
+
+- **Asked:**
+  - Take out the hares' running away from a running Chuck, and don't add it to the jellyfish.
+  - Plan the user's Deepwood mount: a jellyfish Chuck hangs from, at 5 m/s with no toggle, with no up or down control.
+    It can float over hills. The Deepwood's crossings stay on foot, with more jellyfish beyond them.
+- **Source:** `main` at 63e921b3; this commit. The receipt names 63e921b.
+- **Done:**
+  - `AFeyHare::Think` no longer shies. `ShyRange` was removed.
+  - Life step 83 is now `hare_stays_when_run_at`: from 5.5 m along a clear line, he runs up to the hare. It came within
+    0.65 m, and the hare did not shy or move away.
+  - [regions/FEYWILD-JELLYFISH.md](../regions/FEYWILD-JELLYFISH.md) is written with the user's decisions. Two points
+    stay open: Redcap Hollow and the colour.
+- **Changed:** `FeyHare.h/.cpp`, `FeyMapTest.cpp`, `docs/regions/FEYWILD-HARE.md`, the new
+  `docs/regions/FEYWILD-JELLYFISH.md`, and HANDOFF.
+- **Contract:** unchanged.
+- **Validation (actual):**
+  - Editor hare steps from 82: failures=0 (`Local/hare3-life-3.log`).
+  - Package: Verify-Package 50/50. Phleg failed once (`Local/verify-phlegethos-20261126-151858.log`) and passed on
+    retry; that step has been flaky before, and the hare does not touch it. 182 passes
+    (`Local/verify-package-20261126-140043.log`).
+  - Promoted as FeywildHareCalm.
+- **Known flaws:** as in the previous entry. Not played by hand.
+- **Launcher:** current.
+- **Next owner:** Next part of the work can be done here (building the Deepwood jellyfish once the user approves its plan).
+
 ## November 26 — Feywild: the hare's legs, entrance herds, throws only when leaving (Claude)
 
 - **Asked:**
